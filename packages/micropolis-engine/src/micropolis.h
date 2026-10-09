@@ -2547,6 +2547,9 @@ public:
     double getParam(const std::string &name) const;
     void setOriginalPowerScanForTests(bool enabled);
     void markBaseline();
+    int autoBuild(int kind, int count);
+    int getAiZoneCount() const;
+    void setServiceFunding(double road, double police, double fire);
     ToolResult buildOwnedResidential(short x, short y, int owner);
     ToolResult buildFarm(short x, short y);
     int checkOwnerInvariant();

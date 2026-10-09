@@ -303,9 +303,9 @@ noMoney:
             Quad moreDough = (Quad)(taxFund - total);
             spend(-moreDough);
 
-            fireSpend = fireFund;
-            policeSpend = policeFund;
-            roadSpend = roadFund;
+            fireSpend = fireValue;
+            policeSpend = policeValue;
+            roadSpend = roadValue;
 
             mustDrawBudget = 1;
             doUpdateHeads();

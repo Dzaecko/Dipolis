@@ -434,6 +434,9 @@ export interface Micropolis extends ClassHandle {
   getParam(_0: EmbindString): number;
   setOriginalPowerScanForTests(_0: boolean): void;
   markBaseline(): void;
+  autoBuild(_0: number, _1: number): number;
+  getAiZoneCount(): number;
+  setServiceFunding(_0: number, _1: number, _2: number): void;
   buildOwnedResidential(_0: number, _1: number, _2: number): ToolResult;
   buildFarm(_0: number, _1: number): ToolResult;
   checkOwnerInvariant(): number;

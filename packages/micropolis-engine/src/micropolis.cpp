@@ -1344,6 +1344,24 @@ ToolResult Micropolis::buildFarm(short x, short y)
     return result;
 }
 
+int Micropolis::getAiZoneCount() const
+{
+    int count = 0;
+    for (int x = 0; x < WORLD_W; ++x)
+        for (int y = 0; y < WORLD_H; ++y)
+            if (ownerMap.worldGet(x, y) == 2 && (map[x][y] & ZONEBIT) &&
+                (map[x][y] & LOMASK) < HOSPITAL) ++count;
+    return count;
+}
+
+void Micropolis::setServiceFunding(double road, double police, double fire)
+{
+    if (!std::isfinite(road) || !std::isfinite(police) || !std::isfinite(fire) ||
+        road < 0 || road > 1 || police < 0 || police > 1 || fire < 0 || fire > 1) return;
+    roadPercent = (float)road;
+    policePercent = (float)police;
+    firePercent = (float)fire;
+}
 
 int Micropolis::checkOwnerInvariant()
 {

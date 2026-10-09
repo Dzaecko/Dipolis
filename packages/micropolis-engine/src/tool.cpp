@@ -78,6 +78,7 @@
 
 
 #include "micropolis.h"
+#include <algorithm>
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -1288,6 +1289,243 @@ static const BuildingProperties seaportBuilding =
 /** Building properties of a airport. */
 static const BuildingProperties airportBuilding =
     BuildingProperties(6, 6, AIRPORTBASE, TOOL_AIRPORT, "Airp", false);
+
+
+/** Place owned zones/plants with non-destructive, atomically funded access. */
+int Micropolis::autoBuild(int kind, int count)
+{
+    if (kind < 0 || kind > 4 || count <= 0 || count > 1000) return 0;
+
+    const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
+        : kind == 2 ? &industrialZoneBuilding
+        : kind == 3 ? &coalPowerBuilding : &nuclearPowerBuilding;
+    const int size = building->sizeX;
+    const int limit = 12;
+    const int cells = WORLD_W * WORLD_H;
+    // Coordinate order also defines all BFS and placement ties.
+    const int dx[] = {-1, 0, 0, 1};
+    const int dy[] = {0, -1, 1, 0};
+    const auto freeTerrain = [](MapValue value) {
+        const MapTile tile = value & LOMASK;
+        return !(value & (ZONEBIT | CONDBIT)) &&
+            (tile == DIRT || (tile >= TREEBASE && tile <= LASTTREE));
+    };
+    const auto roadTile = [](MapValue value) {
+        const MapTile tile = value & LOMASK;
+        return tile >= ROADBASE && tile < POWERBASE;
+    };
+    const auto wireTerrain = [&](MapValue value) {
+        if (freeTerrain(value) || (value & CONDBIT)) return true;
+        MapTile tile = value & LOMASK;
+        // layWire only accepts straight roads (including traffic variants).
+        if (tile >= ROADBASE && tile < POWERBASE)
+            tile = (tile & 15) + ROADBASE;
+        return tile == ROADS || tile == ROADS2;
+    };
+
+    struct AutoBulldozeRestore {
+        bool &flag;
+        bool previous;
+        ~AutoBulldozeRestore() { flag = previous; }
+    } restore = {autoBulldoze, autoBulldoze};
+    autoBulldoze = true;
+
+    struct Candidate {
+        int x, y, road, power, distance, neighbors, clearing;
+        bool vacantZone;
+    };
+    int built = 0;
+    while (built < count) {
+        if (totalFunds < gCostOf[building->tool]) break;
+
+        // Stable physical connectivity, not a simulation power scan. Flood
+        // through new zones/wires as well as old conductors, without changing
+        // power maps, the scan stack, capacity accounting, or plant census.
+        std::vector<unsigned char> connected(cells, 0);
+        std::vector<int> queue;
+        queue.reserve(cells);
+        for (int x = 0; x < WORLD_W; ++x) {
+            for (int y = 0; y < WORLD_H; ++y) {
+                if ((map[x][y] & CONDBIT) &&
+                    ((map[x][y] & PWRBIT) || powerReachableMap.worldGet(x, y))) {
+                    const int id = x * WORLD_H + y;
+                    connected[id] = 1;
+                    queue.push_back(id);
+                }
+            }
+        }
+        for (size_t head = 0; head < queue.size(); ++head) {
+            const int x = queue[head] / WORLD_H, y = queue[head] % WORLD_H;
+            for (int direction = 0; direction < 4; ++direction) {
+                const int nx = x + dx[direction], ny = y + dy[direction];
+                if (!testBounds(nx, ny)) continue;
+                const int next = nx * WORLD_H + ny;
+                if (!connected[next] && (map[nx][ny] & CONDBIT)) {
+                    connected[next] = 1;
+                    queue.push_back(next);
+                }
+            }
+        }
+
+        std::vector<int> roadDistance(cells, -1), roadParent(cells, -1);
+        std::vector<int> powerDistance(cells, -1), powerParent(cells, -1);
+        // Two global multi-source BFS passes per successful construction,
+        // never a BFS for each possible footprint.
+        const auto routeMap = [&](bool power, std::vector<int> &distance,
+                                  std::vector<int> &parent) {
+            queue.clear();
+            for (int x = 0; x < WORLD_W; ++x) {
+                for (int y = 0; y < WORLD_H; ++y) {
+                    const int id = x * WORLD_H + y;
+                    if (power ? connected[id] != 0 : roadTile(map[x][y])) {
+                        distance[id] = 0;
+                        queue.push_back(id);
+                    }
+                }
+            }
+            for (size_t head = 0; head < queue.size(); ++head) {
+                const int id = queue[head];
+                if (distance[id] >= limit) continue;
+                const int x = id / WORLD_H, y = id % WORLD_H;
+                for (int direction = 0; direction < 4; ++direction) {
+                    const int nx = x + dx[direction], ny = y + dy[direction];
+                    if (!testBounds(nx, ny)) continue;
+                    const int next = nx * WORLD_H + ny;
+                    if (distance[next] >= 0) continue;
+                    const MapValue value = map[nx][ny];
+                    if (!(power ? wireTerrain(value)
+                                : freeTerrain(value) || roadTile(value))) continue;
+                    distance[next] = distance[id] + 1;
+                    parent[next] = id;
+                    queue.push_back(next);
+                }
+            }
+        };
+        routeMap(false, roadDistance, roadParent);
+        routeMap(true, powerDistance, powerParent);
+
+        std::vector<Candidate> candidates;
+        for (int x = 0; x + size <= WORLD_W; ++x) {
+            for (int y = 0; y + size <= WORLD_H; ++y) {
+                const bool vacantZone = size == 3 &&
+                    (map[x + 1][y + 1] & ZONEBIT) &&
+                    (map[x + 1][y + 1] & LOMASK) == FREEZ &&
+                    ownerMap.worldGet(x + 1, y + 1) == 0 &&
+                    doFreePop(Position(x + 1, y + 1)) == 0;
+                bool free = true;
+                int clearing = 0;
+                for (int bx = x; bx < x + size && free; ++bx) {
+                    for (int by = y; by < y + size; ++by) {
+                        if (!freeTerrain(map[bx][by]) && !(vacantZone &&
+                            (map[bx][by] & LOMASK) >= RESBASE &&
+                            (map[bx][by] & LOMASK) <= RESBASE + 8)) { free = false; break; }
+                        if (!vacantZone && (map[bx][by] & LOMASK) != DIRT) ++clearing;
+                    }
+                }
+                if (!free || totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) continue;
+
+                // Every path must stay outside the building, including its
+                // seed; a global shortest path may otherwise cut through it.
+                const auto outside = [&](int id) {
+                    const int px = id / WORLD_H, py = id % WORLD_H;
+                    return px < x || px >= x + size || py < y || py >= y + size;
+                };
+                const auto bestEndpoint = [&](int id, int &best,
+                                              const std::vector<int> &distance,
+                                              const std::vector<int> &parent) {
+                    if (distance[id] < 0 || distance[id] > limit) return;
+                    if (best >= 0 && (distance[id] > distance[best] ||
+                        (distance[id] == distance[best] && id >= best))) return;
+                    for (int step = id; step >= 0; step = parent[step])
+                        if (!outside(step)) return;
+                    best = id;
+                };
+                int road = -1, power = -1, neighbors = 0;
+                const auto perimeter = [&](int px, int py) {
+                    if (!testBounds(px, py)) return;
+                    const int id = px * WORLD_H + py;
+                    if (map[px][py] & CONDBIT) ++neighbors;
+                    bestEndpoint(id, road, roadDistance, roadParent);
+                    bestEndpoint(id, power, powerDistance, powerParent);
+                };
+                // Cardinal edges only: no diagonal corner connections.
+                for (int offset = 0; offset < size; ++offset) {
+                    perimeter(x - 1, y + offset);
+                    perimeter(x + size, y + offset);
+                    perimeter(x + offset, y - 1);
+                    perimeter(x + offset, y + size);
+                }
+                if (road < 0 || power < 0) continue;
+                candidates.push_back({x, y, road, power,
+                    roadDistance[road] + powerDistance[power], neighbors, clearing, vacantZone});
+            }
+        }
+        std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b) {
+                if (a.distance != b.distance) return a.distance < b.distance;
+                if (a.neighbors != b.neighbors) return a.neighbors > b.neighbors;
+                if (a.clearing != b.clearing) return a.clearing < b.clearing;
+                if (a.x != b.x) return a.x < b.x;
+                return a.y < b.y;
+            });
+
+        bool placed = false;
+        for (const Candidate &candidate : candidates) {
+            ToolEffects effects(this);
+            const auto stagePath = [&](int endpoint, const std::vector<int> &parent,
+                                       bool power) {
+                std::vector<int> path;
+                for (int step = endpoint; step >= 0; step = parent[step])
+                    path.push_back(step);
+                // Work outward from existing infrastructure so tools see
+                // previous staged neighbors, not just the unmodified map.
+                for (auto step = path.rbegin(); step != path.rend(); ++step) {
+                    const int px = *step / WORLD_H, py = *step % WORLD_H;
+                    MapValue value = effects.getMapValue(px, py);
+                    if (power ? (value & CONDBIT) != 0 : roadTile(value)) continue;
+                    if (!(power ? wireTerrain(value) : freeTerrain(value))) return false;
+                    const MapTile tile = value & LOMASK;
+                    if (tile >= TREEBASE && tile <= LASTTREE) {
+                        effects.setMapValue(px, py, DIRT);
+                        effects.addCost(gCostOf[TOOL_BULLDOZER]);
+                    }
+                    const ToolResult result = power ? wireTool(px, py, &effects)
+                                                    : roadTool(px, py, &effects);
+                    if (result != TOOLRESULT_OK) return false;
+                }
+                return true;
+            };
+            if (!stagePath(candidate.road, roadParent, false) ||
+                !stagePath(candidate.power, powerParent, true)) continue;
+            const int centerX = candidate.x + 1, centerY = candidate.y + 1;
+            if (candidate.vacantZone) {
+                // Reuse an entirely uninhabited zoned lot, never evict houses.
+                for (int px = candidate.x; px < candidate.x + size; ++px)
+                    for (int py = candidate.y; py < candidate.y + size; ++py)
+                        effects.setMapValue(px, py, DIRT);
+                effects.addCost(gCostOf[TOOL_BULLDOZER]);
+            }
+            if (buildBuildingTool(centerX, centerY, building, &effects) != TOOLRESULT_OK)
+                continue;
+            // Clearing, both routes, and the building share one transaction.
+            // Failed tools or funding leave the entire world untouched.
+            if (!effects.modifyIfEnoughFunding()) continue;
+            if (kind < 3) {
+                setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : 3);
+                if (kind == 1) {
+                    for (int px = candidate.x; px < candidate.x + size; ++px)
+                        for (int py = candidate.y; py < candidate.y + size; ++py)
+                            aiHouseMap.worldSet(px, py, 0);
+                }
+            }
+            ++built;
+            placed = true;
+            break;
+        }
+        if (!placed) break;
+    }
+    return built;
+}
 
 
 /**

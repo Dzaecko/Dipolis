@@ -2,6 +2,7 @@ import { commandBus, type Command, type CommandContext } from './CommandBus';
 import type { MicropolisSimulator } from './MicropolisSimulator';
 import type { TileRenderer } from '@micropolis/tile-renderer';
 import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync';
+import coexistence from './params/koexistenz.json';
 
 export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
@@ -16,6 +17,13 @@ export interface MicropolisCommandContext extends CommandContext {
 }
 
 const keyFramesPerSecondValues = [1, 5, 10, 30, 60, 120, 120, 120, 120];
+
+// Transitional typing until the engine agent regenerates the WASM declarations.
+type ScenarioEngine = NonNullable<MicropolisSimulator['micropolis']> & {
+  autoBuild?: (kind: number, count: number) => number;
+  getAiZoneCount?: () => number;
+  setServiceFunding?: (road: number, police: number, fire: number) => void;
+};
 
 let registered = false;
 
@@ -32,6 +40,36 @@ export function registerMicropolisCommands(): void {
 
 function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
   return [
+    {
+      id: 'scenario.start',
+      label: 'Start deterministic Haight scenario',
+      icon: 'random',
+      context: ['script'],
+      policy: { risk: 'destructive', allowLLM: false },
+      enabled: (context) => context.source === 'script' && hasMicropolis(context),
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const seed = args?.seed ?? 42;
+        // A closed preset prevents arbitrary paths, profiles, or implicit unsafe settings.
+        if (!m || !args || Object.keys(args).some((key) =>
+          !['city', 'profile', 'seed', 'disasters', 'speed'].includes(key)) ||
+          args.city !== 'haight' || args.profile !== 'koexistenz' ||
+          (args.seed !== undefined && args.seed !== 42) || args.disasters !== false || args.speed !== 3) {
+          return { handled: false, message: 'expected city haight, profile koexistenz, seed 42 (default), disasters false, speed 3' };
+        }
+        // The caller owns the callback and establishes it before dispatching this command.
+        m.setFixedSeed(42);
+        m.init();
+        for (const [name, value] of Object.entries(coexistence)) {
+          if (!m.setParam(name, value)) return { handled: false, message: `could not set scenario parameter ${name}` };
+        }
+        m.setEnableDisasters(false);
+        if (!m.loadCity('/cities/haight.cty')) return { handled: false, message: 'could not load Haight' };
+        m.setSpeed(3);
+        m.setPasses(1);
+        return { data: { city: 'haight', profile: 'koexistenz', seed, disasters: false, speed: 3, passes: 1 } };
+      },
+    },
     {
       id: 'sim.toggle-pause',
       label: 'Pause / Resume',
@@ -125,8 +163,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         syncWelfareState?.();
       },
     },
-    {
-      id: 'city.set-tax',
+    ...['city.set-tax', 'tax.set'].map((id): Command<MicropolisCommandContext> => ({
+      id,
       label: 'Set city tax rate',
       icon: 'tax',
       context: ['simulator', 'button', 'chat', 'llm'],
@@ -141,6 +179,80 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         }
         micropolis.setCityTax(rate);
         syncPowerState?.();
+        return { data: { built: 0, cost: 0, rate: micropolis.cityTax } };
+      },
+    })),
+    ...[
+      { id: 'build.residential', kind: 0, label: 'Build human residential zones' },
+      { id: 'build.ai-zones', kind: 1, label: 'Build AI residential zones' },
+      { id: 'build.farms', kind: 2, label: 'Build farms' },
+    ].map(({ id, kind, label }): Command<MicropolisCommandContext> => ({
+      id,
+      label,
+      icon: 'build',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'reversible', allowLLM: true, requiresApproval: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const count = args?.count;
+        if (typeof count !== 'number' || !Number.isInteger(count) || count < 0 || count > 1000) {
+          return { handled: false, message: 'count must be an integer from 0 to 1000' };
+        }
+        return autoBuild(simulator?.micropolis, kind, count);
+      },
+    })),
+    {
+      id: 'build.power-plant',
+      label: 'Build a power plant',
+      icon: 'power',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'reversible', allowLLM: true, requiresApproval: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const type = args?.type;
+        if (type !== 'coal' && type !== 'nuclear') {
+          return { handled: false, message: 'type must be coal or nuclear' };
+        }
+        return autoBuild(simulator?.micropolis, type === 'coal' ? 3 : 4, 1);
+      },
+    },
+    {
+      id: 'budget.set-funding',
+      label: 'Set service funding percentages',
+      icon: 'tax',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis as ScenarioEngine | undefined;
+        const road = args?.road;
+        const police = args?.police;
+        const fire = args?.fire;
+        if (!isFundingPercent(road) || !isFundingPercent(police) || !isFundingPercent(fire)) {
+          return { handled: false, message: 'road, police, and fire must all be finite numbers from 0 to 100' };
+        }
+        if (!m?.setServiceFunding) {
+          return { handled: false, message: 'engine setServiceFunding binding is unavailable' };
+        }
+        m.setServiceFunding(road / 100, police / 100, fire / 100);
+        return { data: { built: 0, cost: 0, road, police, fire } };
+      },
+    },
+    {
+      id: 'treasury.set',
+      label: 'Set scenario treasury',
+      icon: 'tax',
+      context: ['simulator', 'script'],
+      policy: { risk: 'destructive', allowLLM: false },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const amount = args?.amount;
+        if (!m || typeof amount !== 'number' || !Number.isInteger(amount) || amount < 0 || amount > 2147483647) {
+          return { handled: false, message: 'amount must be an integer from 0 to 2147483647' };
+        }
+        m.setFunds(amount);
+        return { data: { built: 0, cost: 0, totalFunds: m.totalFunds } };
       },
     },
     {
@@ -150,9 +262,10 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       context: ['simulator', 'chat', 'llm', 'script'],
       policy: { risk: 'safe', allowLLM: true },
       enabled: hasMicropolis,
-      run: ({ simulator }) => {
-        const m = simulator?.micropolis;
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis as ScenarioEngine | undefined;
         if (!m) return { handled: false, message: 'simulator is unavailable' };
+        if (!m.getAiZoneCount) return { handled: false, message: 'engine getAiZoneCount binding is unavailable' };
         return {
           data: {
             year: m.cityYear,
@@ -168,10 +281,10 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             resPop: m.resPop,
             aiPop: m.aiPop,
             baselineResPop: m.baselineResPop,
-            gainedResPop: m.gainedResPop,
+            netResPopChange: m.resPop - m.baselineResPop,
             lostToPower: m.lostToPower,
             lostToHunger: m.lostToHunger,
-            lostToDemand: m.lostToDemand,
+            aiZoneCount: m.getAiZoneCount(),
             unemploymentRate: m.unemploymentRate,
             automationShare: m.automationShare,
             foodCoverage: m.foodCoverage,
@@ -185,6 +298,12 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             powerPriority: m.getParam('powerPriority'),
             foodImportEnabled: m.getParam('foodImportEnabled'),
             welfareLevel: m.getParam('welfareLevel'),
+            // Opt-in diagnostics keep the default report contract unchanged.
+            ...(args?.serviceEffects === true ? {
+              roadEffect: m.roadEffect,
+              policeEffect: m.policeEffect,
+              fireEffect: m.fireEffect,
+            } : {}),
           },
         };
       },
@@ -226,15 +345,50 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         let guard = months * 4 * 32 + 32;
         try {
           while (m.cityTime < targetTime && guard-- > 0) m.simTick();
+          // phaseCycle names the NEXT phase: reaching 10 means phase 9 is complete.
+          // Do not wrap through phase 0 or change a zero-month request.
+          while (months > 0 && m.cityTime === targetTime &&
+            Number.isInteger(m.phaseCycle) && m.phaseCycle >= 1 && m.phaseCycle <= 9 && guard-- > 0) {
+            m.simTick();
+          }
         } finally {
           m.setSpeed(previousSpeed);
           m.setPasses(previousPasses);
           if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(previousFramesPerSecond);
         }
-        if (m.cityTime < targetTime) {
+        if (m.cityTime < targetTime || (months > 0 && m.phaseCycle >= 1 && m.phaseCycle <= 9)) {
           return { handled: false, message: 'simulation did not advance to the requested month' };
         }
         return { data: { monthsAdvanced: months, cityTime: m.cityTime, year: m.cityYear } };
+      },
+    },
+    {
+      id: 'sim.advance-ticks',
+      label: 'Advance simulation by ticks',
+      icon: 'forward',
+      context: ['simulator', 'script'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const ticks = args?.ticks;
+        if (!m || typeof ticks !== 'number' || !Number.isSafeInteger(ticks) || ticks < 0) {
+          return { handled: false, message: 'ticks must be a nonnegative safe integer' };
+        }
+        const previousSpeed = m.simSpeed;
+        const previousPasses = m.simPasses;
+        const previousFramesPerSecond = simulator?.framesPerSecond;
+        if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(0);
+        m.setSpeed(3);
+        m.setPasses(1);
+        try {
+          for (let tick = 0; tick < ticks; tick++) m.simTick();
+        } finally {
+          m.setSpeed(previousSpeed);
+          m.setPasses(previousPasses);
+          if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(previousFramesPerSecond);
+        }
+        return { data: { ticksAdvanced: ticks, cityTime: m.cityTime, year: m.cityYear } };
       },
     },
     {
@@ -463,6 +617,18 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
 
 function hasSimulator(context: MicropolisCommandContext): boolean {
   return !!context.simulator;
+}
+
+function isFundingPercent(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: number, requested: number) {
+  const m = engine as ScenarioEngine | null | undefined;
+  if (!m?.autoBuild) return { handled: false, message: 'engine autoBuild binding is unavailable' };
+  const fundsBefore = m.totalFunds;
+  const built = m.autoBuild(kind, requested);
+  return { data: { requested, built, cost: fundsBefore - m.totalFunds, totalFunds: m.totalFunds } };
 }
 
 function hasMicropolis(context: MicropolisCommandContext): boolean {

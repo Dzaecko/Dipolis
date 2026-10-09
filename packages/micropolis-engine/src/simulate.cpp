@@ -1017,7 +1017,16 @@ void Micropolis::collectTax()
                 totalFunds -= foodImportCost + welfareCost;
                 updateFunds();
             }
+            const Quad fundsBeforeBudget = totalFunds;
             doBudget();
+            if (params.foodPerHumanPop > 0.0f) {
+                updateFundEffects();
+                // The report is the actual booking, including reduced service
+                // funding. Classic retains its historical cashFlow semantics.
+                const long long booked = (long long)totalFunds - fundsBeforeBudget - foodImportCost - welfareCost;
+                cashFlow = (short)clamp(booked, (long long)std::numeric_limits<short>::min(),
+                    (long long)std::numeric_limits<short>::max());
+            }
         } else {
             /* Nobody lives here. */
             roadEffect   = MAX_ROAD_EFFECT;
