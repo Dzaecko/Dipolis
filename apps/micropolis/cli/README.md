@@ -8,6 +8,7 @@ pnpm run micropolis -- api --format yaml
 pnpm run micropolis -- city info ../../../content/micropolis/cities/haight.cty --format yaml
 pnpm run micropolis -- city export ../../../content/micropolis/cities/haight.cty --include-map --format csv
 pnpm run micropolis -- sim smoke --ticks 10 --format yaml
+pnpm run micropolis sim run --city /cities/haight.cty --seed 42 --ticks 30000 --speed 3 --no-disasters
 pnpm run micropolis -- bus list --format yaml
 ```
 

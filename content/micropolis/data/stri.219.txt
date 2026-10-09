@@ -22,6 +22,7 @@ Draw Bridge
 Radar Dish
 Fountain
 Industrial
+Solar Power
 Steelers 38  Bears 3
 Draw Bridge
 Ur 238

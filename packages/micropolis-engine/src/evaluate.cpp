@@ -170,6 +170,7 @@ void Micropolis::getAssessedValue()
     z += airportPop * 10000;
     z += coalPowerPop * 3000;
     z += nuclearPowerPop * 6000;
+    z += solarPowerPop * 5000;
 
     cityAssessedValue = z * 1000;
 }

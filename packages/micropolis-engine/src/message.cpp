@@ -100,7 +100,7 @@ void Micropolis::sendMessages()
     checkGrowth();
 
     totalZonePop = resZonePop + comZonePop + indZonePop;
-    PowerPop = nuclearPowerPop + coalPowerPop;
+    PowerPop = nuclearPowerPop + coalPowerPop + solarPowerPop;
 
     switch (cityTime & 63) {
 

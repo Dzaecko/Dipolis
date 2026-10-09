@@ -17,7 +17,11 @@
     type MapTileRendererBackend,
     type TileRenderer,
   } from '@micropolis/tile-renderer';
-  import { MicropolisSimulator } from '$lib/MicropolisSimulator';
+  import {
+    HUMAN_TILESET,
+    MICROPOLIS_TILESET_COUNT,
+    MicropolisSimulator,
+  } from '$lib/MicropolisSimulator';
   import { commandBus, shortcutFromKeyboardEvent } from '$lib/CommandBus';
   import { commandRecorder } from '$lib/CommandRecorder';
   import { registerMicropolisCommands, type MicropolisCommandContext } from '$lib/micropolisCommands';
@@ -49,8 +53,80 @@
   const tileWidth = 16;
   const tileHeight = 16;
   const tileCount = 960;
-  let tileSetCount = 10;
-  let tileSet: number = 0;
+  const tilesPerSet = 1024;
+  const tileSetCount = MICROPOLIS_TILESET_COUNT;
+
+  async function createSolarAtlasUrl(): Promise<string> {
+    const image = new Image();
+    image.src = tileLayer_all10;
+    await image.decode();
+
+    const tilesPerRow = image.width / tileWidth;
+    const rowsPerSet = tilesPerSet / tilesPerRow;
+    const setHeight = rowsPerSet * tileHeight;
+    if (!Number.isInteger(tilesPerRow) || !Number.isInteger(rowsPerSet) || image.height % setHeight !== 0) {
+      throw new Error('Unexpected Micropolis tile atlas dimensions; cannot add Solar Farm artwork.');
+    }
+
+    const atlas = document.createElement('canvas');
+    atlas.width = image.width;
+    atlas.height = image.height;
+    const context = atlas.getContext('2d');
+    if (!context) throw new Error('Could not create a canvas for Solar Farm artwork.');
+    context.imageSmoothingEnabled = false;
+    context.drawImage(image, 0, 0);
+
+    const palettes = [
+      ['#183b59', '#28749a', '#8adbe0'],
+      ['#283d55', '#39749c', '#a3dce0'],
+      ['#263952', '#4b78a0', '#9bd7df'],
+      ['#203a55', '#307796', '#8fd4cf'],
+      ['#263b5b', '#3b779c', '#b5d9d4'],
+    ];
+    const solarTileBase = 884;
+    const solarTileCount = 16;
+    const atlasSetCount = image.height / setHeight;
+
+    for (let set = 0; set < atlasSetCount; set += 1) {
+      const [panel, shade, grid] = palettes[set % palettes.length];
+      for (let cell = 0; cell < solarTileCount; cell += 1) {
+        const tileId = solarTileBase + cell;
+        const sourceX = (tileId % tilesPerRow) * tileWidth;
+        const sourceY = (set * rowsPerSet + Math.floor(tileId / tilesPerRow)) * tileHeight;
+        const column = cell % 4;
+        const row = Math.floor(cell / 4);
+
+        context.fillStyle = '#617452';
+        context.fillRect(sourceX, sourceY, tileWidth, tileHeight);
+        context.fillStyle = '#c4c0a7';
+        context.fillRect(sourceX + 1, sourceY + 1, 14, 14);
+        context.fillStyle = panel;
+        context.fillRect(sourceX + 3, sourceY + 3, 10, 10);
+        context.fillStyle = shade;
+        context.fillRect(sourceX + 4, sourceY + 4, 8, 8);
+        context.fillStyle = grid;
+        context.fillRect(sourceX + 7, sourceY + 4, 1, 8);
+        context.fillRect(sourceX + 4, sourceY + 7, 8, 1);
+        context.fillStyle = '#e0d8b6';
+        if (row === 0) context.fillRect(sourceX + 1, sourceY + 1, 14, 1);
+        if (row === 3) context.fillRect(sourceX + 1, sourceY + 14, 14, 1);
+        if (column === 0) context.fillRect(sourceX + 1, sourceY + 1, 1, 14);
+        if (column === 3) context.fillRect(sourceX + 14, sourceY + 1, 1, 14);
+
+        if (cell === 5) {
+          context.fillStyle = '#f2d45c';
+          context.fillRect(sourceX + 11, sourceY + 2, 3, 3);
+          context.fillStyle = '#fff3a8';
+          context.fillRect(sourceX + 12, sourceY + 3, 1, 1);
+        }
+      }
+    }
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      atlas.toBlob((result) => result ? resolve(result) : reject(new Error('Could not encode Solar Farm artwork.')), 'image/png');
+    });
+    return URL.createObjectURL(blob);
+  }
 
   let canvasGL: HTMLCanvasElement | null = null;
   let ctxGL: WebGL2RenderingContext | null = null;
@@ -144,6 +220,7 @@
       tileLayersLength: tileLayers.length,
       heatFlowRangeLow,
       heatFlowRangeHigh,
+      tileSetCount,
       args: {},
     };
   }
@@ -304,16 +381,21 @@
     if (!eng) return;
 
     const renderer = created.renderer;
-    await renderer.initialize(
-      canvasGL,
-      created.context,
-      micropolisSimulator.mapData!,
-      micropolisSimulator.mopData!,
-      eng.WORLD_W,
-      eng.WORLD_H,
-      tileWidth,
-      tileHeight,
-      tileLayers);
+    const solarAtlasUrl = await createSolarAtlasUrl();
+    try {
+      await renderer.initialize(
+        canvasGL,
+        created.context,
+        micropolisSimulator.mapData!,
+        micropolisSimulator.mopData!,
+        eng.WORLD_W,
+        eng.WORLD_H,
+        tileWidth,
+        tileHeight,
+        [{ url: solarAtlasUrl, tileCount, tilesPerSet }]);
+    } finally {
+      URL.revokeObjectURL(solarAtlasUrl);
+    }
 
     tileRenderer = renderer;
     renderReady = true;
@@ -322,7 +404,8 @@
     tileRenderer.zoomTo(1.0);
     tileRenderer.tileLayer = 0;
 
-    micropolisSimulator.fillMopTiles(tileSet);
+    micropolisSimulator.setHumanTileSet(HUMAN_TILESET);
+    micropolisSimulator.syncOwnerToMop();
 
     micropolisReactive.registerMapPan((x, y) => {
       tileRenderer?.panTo(x, y);
@@ -381,6 +464,8 @@
   export function render(): void {
     if (!renderReady || !tileRenderer || !micropolisSimulator) return;
     if (!micropolisSimulator.syncMapViews()) return;
+    micropolisReactive.syncPopulationFromEngine();
+    micropolisSimulator.syncOwnerToMop();
     tileRenderer.mapData = micropolisSimulator.mapData!;
     tileRenderer.mopData = micropolisSimulator.mopData!;
     try {
@@ -491,8 +576,14 @@
     if (lastAppliedToolTile?.[0] === tileX && lastAppliedToolTile[1] === tileY) return;
     lastAppliedToolTile = [tileX, tileY];
 
-    const tool = resolveEditingTool(eng, toolState.activeToolId);
-    const result = micropolisReactive.poke.doTool(tool, tileX, tileY);
+    const activeTool = toolState.activeToolId;
+    const result = activeTool === 'res'
+      ? micropolisReactive.poke.buildOwnedResidential(tileX, tileY, 1)
+      : activeTool === 'res-ai'
+        ? micropolisReactive.poke.buildOwnedResidential(tileX, tileY, 2)
+        : activeTool === 'farm'
+          ? micropolisReactive.poke.buildFarm(tileX, tileY)
+        : micropolisReactive.poke.doTool(resolveEditingTool(eng, activeTool), tileX, tileY);
     const feedback = toolResultMessage(result as { value: number });
     toolState.setLastToolFeedback(feedback);
     micropolisSimulator.render();
@@ -657,6 +748,7 @@
       tileLayersLength: tileLayers.length,
       heatFlowRangeLow,
       heatFlowRangeHigh,
+      tileSetCount,
       args,
     };
   }
@@ -723,11 +815,10 @@
   }
 
   export function setTileSet(index: number) {
-    
     if (!micropolisSimulator) return;
 
-    tileSet = index;
-    micropolisSimulator.fillMopTiles(tileSet);
+    micropolisSimulator.setHumanTileSet(index);
+    micropolisSimulator.syncOwnerToMop();
 
     micropolisSimulator.render();
   }

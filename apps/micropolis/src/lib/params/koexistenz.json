@@ -1,0 +1,11 @@
+{
+  "aiPowerPerPop": 2,
+  "aiReserveLow": 0.05,
+  "aiReserveHigh": 0.15,
+  "aiYieldPerPop": 0.25,
+  "powerPriority": 2,
+  "foodPerHumanPop": 5,
+  "foodPerFarmPop": 300,
+  "foodImportEnabled": 1,
+  "foodImportPrice": 0.13
+}

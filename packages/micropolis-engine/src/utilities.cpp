@@ -201,6 +201,13 @@ void Micropolis::setPasses(int passes)
     callback->updatePasses(this, callbackVal, passes);
 }
 
+
+void Micropolis::setAiValve(short valve)
+{
+    aiValve = valve;
+    aiValveOverride = true;
+}
+
 /**
  * Set the game level and initial funds.
  * @param level New game level.

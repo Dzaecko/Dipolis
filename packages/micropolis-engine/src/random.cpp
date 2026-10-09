@@ -123,6 +123,49 @@ short Micropolis::getRandom(short range)
 }
 
 
+/** Food-shortage draws use a seed-derived substream so only human housing is affected. */
+short Micropolis::getFoodRandom(short range)
+{
+    int maxMultiple, rnum;
+    range++;
+    maxMultiple = 0xffff / range;
+    maxMultiple *= range;
+    do {
+        foodRandomState = foodRandomState * 1103515245 + 12345;
+        rnum = (int)((foodRandomState & 0xffff00) >> 8) & 0x0000ffff;
+    } while (rnum >= maxMultiple);
+    return (short)(rnum % range);
+}
+
+
+/** Draw from a reproducible AI-zone substream so human food failures cannot shift AI growth rolls. */
+short Micropolis::getAiRandom(short range)
+{
+    int maxMultiple, rnum;
+    range++;
+    maxMultiple = 0xffff / range;
+    maxMultiple *= range;
+    do {
+        aiRandomState = aiRandomState * 1103515245 + 12345;
+        rnum = (int)((aiRandomState & 0xffff00) >> 8) & 0x0000ffff;
+    } while (rnum >= maxMultiple);
+    return (short)(rnum % range);
+}
+
+int Micropolis::getAiRandom16()
+{
+    aiRandomState = aiRandomState * 1103515245 + 12345;
+    return (int)((aiRandomState & 0xffff00) >> 8) & 0x0000ffff;
+}
+
+int Micropolis::getAiRandom16Signed()
+{
+    int value = getAiRandom16();
+    if (value > 0x7fff) value = 0x7fff - value;
+    return value;
+}
+
+
 /**
  * Get random 16 bit number.
  * @return Unsigned 16 bit random number.
@@ -177,6 +220,8 @@ void Micropolis::randomlySeedRandom()
 void Micropolis::seedRandom(int seed)
 {
     nextRandom = seed;
+    foodRandomState = (UQuad)seed ^ (UQuad)0x51f15e5d;
+    aiRandomState = (UQuad)seed ^ (UQuad)0xa17a11;
 }
 
 

@@ -651,6 +651,11 @@ enum Tiles {
     TINYEXPLAST    = 883,
     // tile 884 -- 915 ?
 
+    // Solar power plant (4x4); tile IDs 884--899 were previously unused.
+    SOLARPOWERBASE = 884,
+    SOLARPOWER     = 889, ///< Center tile of the solar power plant.
+    LASTSOLARPOWER = 899,
+
     COALSMOKE1     = 916, ///< Chimney animation at coal power plant (2, 0).
     ///< 919 last animation tile for chimney at coal power plant (2, 0).
 
@@ -937,6 +942,18 @@ public:
  *       instead of a floating point fraction
  * @todo Micropolis::crimeMaxX and Micropolis::crimeMaxY seem unused.
  */
+struct MicropolisParams {
+    short aiPowerPerPop = 2;
+    float aiReserveLow = 0.05f;
+    float aiReserveHigh = 0.15f;
+    float aiYieldPerPop = 0.25f;
+    short powerPriority = 0;
+    float foodPerHumanPop = 0.0f;
+    float foodPerFarmPop = 0.0f;
+    bool foodImportEnabled = false;
+    float foodImportPrice = 0.0f;
+};
+
 class Micropolis {
 
 
@@ -997,6 +1014,18 @@ public:
      * Depends on level of zone development.
      */
     short resPop;
+
+    /** Population assigned to AI-owned residential zones. */
+    short aiPop;
+
+    /** Powered population in zones marked as farms. */
+    short farmPop;
+
+    Quad foodProduction = 0;
+    Quad foodDemand = 0;
+    Quad foodImported = 0;
+    Quad foodImportCost = 0;
+    float foodCoverage = 1.0f;
 
     /**
      * Commercial zone population.
@@ -1060,6 +1089,22 @@ public:
      * Nuclear power plant population.
      */
     short nuclearPowerPop;
+
+    /** Number of solar power plants. */
+    short solarPowerPop;
+
+    /** Power production and consumption from the latest power scan. */
+    Quad powerCapacity = 0;
+    Quad powerDemand = 0;
+    /** Historical flood-fill work units T, including branch-point revisits. */
+    Quad powerNetworkSteps = 0;
+    /** Unique reachable conductive tiles and AI-residential subset. */
+    Quad powerNetworkReachableTiles = 0;
+    Quad powerAiResidentialNetworkTiles = 0;
+    /** Priority-weighted reserve fraction used by the AI demand valve. */
+    float powerReserve = 0.0f;
+    /** Fraction of AI residential demand covered by the latest power scan. */
+    float aiCoverage = 1.0f;
 
     /**
      * Seaport population.
@@ -1236,6 +1281,9 @@ public:
      */
     Quad taxFund;
 
+    /** Tax income contributed by AI-owned residential population. */
+    Quad aiTaxFund = 0;
+
     /**
      * City tax rate.
      */
@@ -1297,6 +1345,15 @@ public:
      * Power grid map.
      */
     MapByte1 powerGridMap;
+
+    /** Transient set of all tiles reachable from power plants, before budgeting. */
+    MapByte1 powerReachableMap;
+
+    /** Residential-zone ownership: 0=default/human, 1=human, 2=AI. */
+    MapByte1 ownerMap;
+
+    /** House tiles grown by AI-owned FREEZ zones; prevents counting human houses as AI residents. */
+    MapByte1 aiHouseMap;
 
     /**
      * Rate of growth map.
@@ -1495,6 +1552,8 @@ public:
     void showBudgetWindowAndStartWaiting();
 
     void setCityTax(short tax);
+
+    void setAiValve(short valve);
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -1924,6 +1983,10 @@ public:
 
     long getMopSize();
 
+    long getOwnerMapAddress();
+
+    long getOwnerMapSize();
+
 public:
 
     std::string cityFileName; ///< Filename of the last loaded city
@@ -2039,10 +2102,19 @@ public:
 
 
     UQuad nextRandom;
+    UQuad foodRandomState = 0;
+    UQuad aiRandomState = 0;
+
+    /** Optional deterministic seed used whenever city state is initialized. */
+    int fixedSeed = -1;
 
     int simRandom();
 
     short getRandom(short range);
+    short getFoodRandom(short range);
+    short getAiRandom(short range);
+    int getAiRandom16();
+    int getAiRandom16Signed();
 
     int getRandom16();
     int getRandom16Signed();
@@ -2052,6 +2124,8 @@ public:
     void randomlySeedRandom();
 
     void seedRandom(int seed);
+
+    void setFixedSeed(int seed);
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -2130,6 +2204,8 @@ public:
 
     short poweredZoneCount; ///< Number of powered tiles in all zone
     short unpoweredZoneCount; ///< Number of unpowered tiles in all zones
+    short aiUnpoweredZoneCount; ///< Number of unpowered AI-owned residential zones.
+    short hungryZoneCount = 0; ///< Powered human residential zones failing the food check.
 
     bool newPower; /* post */
 
@@ -2148,8 +2224,12 @@ public:
 public:
 
     short resValve;
+    short aiValve = 0;
+    bool aiValveOverride = false;
     short comValve;
     short indValve;
+
+    MicropolisParams params;
 
 
 public:
@@ -2435,6 +2515,13 @@ public:
     int getTile(int x, int y);
 
     void setTile(int x, int y, int tile);
+
+    bool setZoneOwner(int x, int y, int owner);
+    bool setParam(const std::string &name, double value);
+    double getParam(const std::string &name) const;
+    ToolResult buildOwnedResidential(short x, short y, int owner);
+    ToolResult buildFarm(short x, short y);
+    int checkOwnerInvariant();
 
     void *getMapBuffer();
 

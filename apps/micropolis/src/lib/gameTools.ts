@@ -8,12 +8,15 @@ export type ToolId =
 	| 'rail'
 	| 'park'
 	| 'res'
+	| 'res-ai'
 	| 'com'
 	| 'ind'
+	| 'farm'
 	| 'police'
 	| 'fire'
 	| 'seaport'
 	| 'coal'
+	| 'solar'
 	| 'stadium'
 	| 'nuclear'
 	| 'airport';
@@ -58,8 +61,10 @@ export const GAME_TOOL_GROUPS: ToolGroup[] = [
 		label: 'Zones',
 		tools: [
 			{ id: 'res', label: 'Residential', shortcut: 'U', cost: 100 },
+			{ id: 'res-ai', label: 'KI-Wohnkomplex', shortcut: 'M', cost: 100 },
 			{ id: 'com', label: 'Commercial', shortcut: 'E', cost: 100 },
 			{ id: 'ind', label: 'Industrial', shortcut: 'T', cost: 100 },
+			{ id: 'farm', label: 'Farm', shortcut: 'G', cost: 100 },
 		],
 	},
 	{
@@ -77,6 +82,7 @@ export const GAME_TOOL_GROUPS: ToolGroup[] = [
 		tools: [
 			{ id: 'seaport', label: 'Seaport', shortcut: 'H', cost: 3000 },
 			{ id: 'coal', label: 'Coal Power', shortcut: 'Y', cost: 3000 },
+			{ id: 'solar', label: 'Solar Farm', shortcut: 'V', cost: 8000 },
 			{ id: 'stadium', label: 'Stadium', shortcut: 'S', cost: 5000 },
 			{ id: 'nuclear', label: 'Nuclear', shortcut: 'N', cost: 5000 },
 			{ id: 'airport', label: 'Airport', shortcut: 'A', cost: 10000 },
@@ -110,10 +116,12 @@ export function resolveEditingTool(module: MainModule, id: ToolId): EditingTool 
 		case 'park':
 			return t.TOOL_PARK;
 		case 'res':
+		case 'res-ai':
 			return t.TOOL_RESIDENTIAL;
 		case 'com':
 			return t.TOOL_COMMERCIAL;
 		case 'ind':
+		case 'farm':
 			return t.TOOL_INDUSTRIAL;
 		case 'police':
 			return t.TOOL_POLICESTATION;
@@ -123,6 +131,8 @@ export function resolveEditingTool(module: MainModule, id: ToolId): EditingTool 
 			return t.TOOL_SEAPORT;
 		case 'coal':
 			return t.TOOL_COALPOWER;
+		case 'solar':
+			return t.TOOL_SOLARPOWER;
 		case 'stadium':
 			return t.TOOL_STADIUM;
 		case 'nuclear':
@@ -143,12 +153,15 @@ const TOOL_FOOTPRINT_SIZE: Record<ToolId, number> = {
 	rail: 1,
 	park: 1,
 	res: 3,
+	'res-ai': 3,
 	com: 3,
 	ind: 3,
+	farm: 3,
 	police: 3,
 	fire: 3,
 	seaport: 4,
 	coal: 4,
+	solar: 4,
 	stadium: 4,
 	nuclear: 4,
 	airport: 6,

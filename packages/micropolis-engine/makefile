@@ -145,11 +145,11 @@ OUTPUTFILES = \
 	$(LIBRARY).data \
 	$(LIBRARY).html
 
-all: $(LIBRARY)
+all: $(LIBRARY).html
 
 # Compilation rule for wasm
-$(LIBRARY): $(OBJECTS)
-	mkdir -p build
+$(LIBRARY).html: $(OBJECTS)
+	python -c "from pathlib import Path; Path('build').mkdir(exist_ok=True)"
 	$(EMCC) \
 		$(EMLDFLAGS) \
 		-o $(LIBRARY).html \
@@ -163,13 +163,9 @@ $(LIBRARY): $(OBJECTS)
 
 install: all
 	echo "MicropolisEngine: makefile: make install"
-	pwd
-	ls -la .
-	ls -la build
-	cp build/micropolisengine.wasm ../../apps/micropolis/src/lib
-	cp build/micropolisengine.data ../../apps/micropolis/src/lib
-	{ printf '%s\n' '// @ts-nocheck'; cat build/micropolisengine.js; } > ../../apps/micropolis/src/lib/micropolisengine.js
-	if [ -f build/micropolisengine.d.ts ]; then cp build/micropolisengine.d.ts ../../apps/micropolis/src/types; else echo "micropolisengine.d.ts was not generated; keeping existing TypeScript bindings"; fi
+	python -c "import shutil; from pathlib import Path; src=Path('build'); dst=Path('../../apps/micropolis/src/lib'); shutil.copy2(src/'micropolisengine.wasm', dst); shutil.copy2(src/'micropolisengine.data', dst)"
+	python -c "from pathlib import Path; generated=Path('build/micropolisengine.js'); output=Path('../../apps/micropolis/src/lib/micropolisengine.js'); source=generated.read_text(encoding='utf-8'); output.write_text('// @ts-nocheck' + chr(10) + chr(10).join(line.rstrip() for line in source.splitlines()) + chr(10), encoding='utf-8')"
+	python -c "import shutil; from pathlib import Path; generated=Path('build/micropolisengine.d.ts'); generated.exists() and shutil.copy2(generated, Path('../../apps/micropolis/src/types')) or print('micropolisengine.d.ts was not generated; keeping existing TypeScript bindings')"
 
 clean:
 	rm -rf \

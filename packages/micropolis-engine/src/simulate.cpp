@@ -79,6 +79,8 @@
 #include "micropolis.h"
 #include "text.h"
 
+#include <limits>
+
 
 ////////////////////////////////////////////////////////////////////////
 // Constants
@@ -557,6 +559,7 @@ void Micropolis::setCommonInits()
     fireEffect = MAX_FIRE_STATION_EFFECT;
     taxFlag = false;
     taxFund = 0;
+    aiTaxFund = 0;
 }
 
 
@@ -668,6 +671,32 @@ void Micropolis::setValves()
     indRatio = (indRatio - 1) * taxTableScale + taxTable[z];
 
     // Ratios are velocity changes to valves.
+    if (!aiValveOverride) {
+        const float humanWeight = params.powerPriority == 1 ? 1.0f : params.powerPriority == 2 ? 0.0f : 0.5f;
+        const Quad aiDemand = (Quad)aiPop * params.aiPowerPerPop;
+        const Quad aiNetworkTiles = powerAiResidentialNetworkTiles;
+        const Quad otherNetworkTiles = max((Quad)0, powerNetworkReachableTiles - aiNetworkTiles);
+        const float reserve = powerCapacity > 0
+            ? ((float)powerCapacity - (float)aiDemand - (float)aiNetworkTiles - humanWeight * (float)otherNetworkTiles) / (float)powerCapacity
+            : 0.0f;
+        powerReserve = reserve;
+        if (reserve >= params.aiReserveHigh) {
+            aiValve = 2000;
+        } else if (reserve <= params.aiReserveLow || params.aiReserveHigh <= params.aiReserveLow) {
+            aiValve = -2000;
+        } else {
+            const float proportion = (reserve - params.aiReserveLow) / (params.aiReserveHigh - params.aiReserveLow);
+            aiValve = (short)(-2000.0f + proportion * 4000.0f);
+        }
+    }
+
+    foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
+    foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+    const long long availableFood = (long long)foodProduction + (long long)foodImported;
+    foodCoverage = foodDemand > 0
+        ? min(1.0f, (float)availableFood / (float)foodDemand)
+        : 1.0f;
+
     resValve = clamp(resValve + (short)resRatio, -RES_VALVE_RANGE, RES_VALVE_RANGE);
     comValve = clamp(comValve + (short)comRatio, -COM_VALVE_RANGE, COM_VALVE_RANGE);
     indValve = clamp(indValve + (short)indRatio, -IND_VALVE_RANGE, IND_VALVE_RANGE);
@@ -693,10 +722,14 @@ void Micropolis::clearCensus()
 {
     poweredZoneCount = 0;
     unpoweredZoneCount = 0;
+    aiUnpoweredZoneCount = 0;
+    hungryZoneCount = 0;
     firePop = 0;
     roadTotal = 0;
     railTotal = 0;
     resPop = 0;
+    aiPop = 0;
+    farmPop = 0;
     comPop = 0;
     indPop = 0;
     resZonePop = 0;
@@ -709,6 +742,7 @@ void Micropolis::clearCensus()
     stadiumPop = 0;
     coalPowerPop = 0;
     nuclearPowerPop = 0;
+    solarPowerPop = 0;
     seaportPop = 0;
     airportPop = 0;
     powerStackPointer = 0; /* Reset before Mapscan */
@@ -885,10 +919,64 @@ void Micropolis::collectTax()
         fireFund = (long)fireStationPop * 100;
         roadFund = (long)((roadTotal + (railTotal * 2)) * RLevels[gameLevel]);
         taxFund = (long)((((Quad)totalPop * landValueAverage) / 120) * cityTax * FLevels[gameLevel]);
+        const long double aiTaxAmount = (long double)aiPop * params.aiYieldPerPop * cityTax;
+        if (aiTaxAmount > (long double)std::numeric_limits<Quad>::max()) {
+            aiTaxFund = std::numeric_limits<Quad>::max();
+        } else if (aiTaxAmount < (long double)std::numeric_limits<Quad>::min()) {
+            aiTaxFund = std::numeric_limits<Quad>::min();
+        } else {
+            aiTaxFund = (Quad)aiTaxAmount;
+        }
+        const long long combinedTaxFund = (long long)taxFund + (long long)aiTaxFund;
+        if (combinedTaxFund > (long long)std::numeric_limits<Quad>::max()) {
+            taxFund = std::numeric_limits<Quad>::max();
+        } else if (combinedTaxFund < (long long)std::numeric_limits<Quad>::min()) {
+            taxFund = std::numeric_limits<Quad>::min();
+        } else {
+            taxFund = (Quad)combinedTaxFund;
+        }
 
-        if (totalPop > 0) {
-            /* There are people to tax. */
-            cashFlow = (short)(taxFund - (policeFund + fireFund + roadFund));
+        foodImportCost = 0;
+        foodImported = 0;
+        // collectTax runs after the current map-scan census. Refresh the
+        // balance here so imports cover demand first observed in this census.
+        foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
+        foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+        if (params.foodImportEnabled && foodDemand > foodProduction) {
+            const Quad foodDeficit = foodDemand - foodProduction;
+            if (params.foodImportPrice <= 0.0f) {
+                foodImported = foodDeficit;
+            } else if ((long long)totalFunds + (long long)taxFund > 0) {
+                const long long availableFunds = max((long long)0, (long long)totalFunds + (long long)taxFund);
+                const long double affordableFood = (long double)availableFunds / params.foodImportPrice;
+                foodImported = (Quad)min((long double)foodDeficit, affordableFood);
+                long double cost = ceill((long double)foodImported * params.foodImportPrice);
+                if (cost > (long double)availableFunds) {
+                    foodImported = (Quad)((long double)availableFunds / params.foodImportPrice);
+                    cost = ceill((long double)foodImported * params.foodImportPrice);
+                }
+                foodImportCost = (Quad)cost;
+            }
+        }
+        foodCoverage = foodDemand > 0
+            ? min(1.0f, (float)((long long)foodProduction + (long long)foodImported) / (float)foodDemand)
+            : 1.0f;
+
+        if (totalPop > 0 || aiPop > 0) {
+            /* Human or AI residents make the city inhabited for budgeting. */
+            const long long netCashFlow = (long long)taxFund -
+                ((long long)policeFund + (long long)fireFund + (long long)roadFund + (long long)foodImportCost);
+            if (netCashFlow > std::numeric_limits<short>::max()) {
+                cashFlow = std::numeric_limits<short>::max();
+            } else if (netCashFlow < std::numeric_limits<short>::min()) {
+                cashFlow = std::numeric_limits<short>::min();
+            } else {
+                cashFlow = (short)netCashFlow;
+            }
+            if (foodImportCost > 0) {
+                totalFunds -= foodImportCost;
+                updateFunds();
+            }
             doBudget();
         } else {
             /* Nobody lives here. */
@@ -955,6 +1043,13 @@ void Micropolis::mapScan(int x1, int x2)
 
             MapValue mapVal = map[x][y];
             MapTile tile = mapVal & LOMASK;  /* Mask off status bits  */
+
+            const Byte owner = ownerMap.worldGet(x, y);
+            const bool residentialCenter = (mapVal & ZONEBIT) && tile < HOSPITAL;
+            const bool farmCenter = (mapVal & ZONEBIT) &&
+                (tile == INDCLR || (tile >= IZB && tile <= IZB + 7 * 9 && ((tile - IZB) % 9) == 0));
+            if ((owner == 1 || owner == 2) && !residentialCenter) ownerMap.worldSet(x, y, 0);
+            if (owner == 3 && !farmCenter) ownerMap.worldSet(x, y, 0);
 
             if (tile == DIRT) {
                 continue;
@@ -1483,6 +1578,18 @@ void Micropolis::doSpecialZone(const Position &pos, bool powerOn)
 
             if ((cityTime & 7) == 0) {
                 repairZone(pos, NUCLEAR, 4); /* post */
+            }
+
+            pushPowerStack(pos);
+
+            return;
+
+        case SOLARPOWER:
+
+            solarPowerPop++;
+
+            if ((cityTime & 7) == 0) {
+                repairZone(pos, SOLARPOWER, 4);
             }
 
             pushPowerStack(pos);

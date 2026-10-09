@@ -219,6 +219,7 @@ static const short gCostOf[] = {
       20,     10,   5000,     10, /* rail, road, stadium, park */
     3000,   3000,   5000,  10000, /* seaport, coal, nuclear, airport */
      100,      0,      0,      0, /* network, water, land, forest */
+    8000,                              /* solar power plant */
        0,
 };
 
@@ -233,6 +234,7 @@ static const short gToolSize[] = {
     1, 1, 4, 1,
     4, 4, 4, 6,
     1, 1, 1, 1,
+    4,
     0,
 };
 
@@ -406,6 +408,7 @@ static short checkBigZone(MapTile id, short *deltaHPtr, short *deltaVPtr)
     case POWERPLANT:      /* check coal plant */
     case PORT:            /* check sea port */
     case NUCLEAR:         /* check nuc plant */
+    case SOLARPOWER:      /* check solar plant */
     case STADIUM:         /* check stadium */
         *deltaHPtr = 0;
         *deltaVPtr = 0;
@@ -417,6 +420,7 @@ static short checkBigZone(MapTile id, short *deltaHPtr, short *deltaVPtr)
     case COALSMOKE3 + 2:  /* check coal plant, smoke */
     case PORT + 1:        /* check sea port */
     case NUCLEAR + 1:     /* check nuc plant */
+    case SOLARPOWER + 1:  /* check solar plant */
     case STADIUM + 1:     /* check stadium */
         *deltaHPtr = -1;
         *deltaVPtr = 0;
@@ -425,6 +429,7 @@ static short checkBigZone(MapTile id, short *deltaHPtr, short *deltaVPtr)
     case POWERPLANT + 4:  /* check coal plant */
     case PORT + 4:        /* check sea port */
     case NUCLEAR + 4:     /* check nuc plant */
+    case SOLARPOWER + 4:  /* check solar plant */
     case STADIUM + 4:     /* check stadium */
         *deltaHPtr = 0;
         *deltaVPtr = -1;
@@ -433,6 +438,7 @@ static short checkBigZone(MapTile id, short *deltaHPtr, short *deltaVPtr)
     case POWERPLANT + 5:  /* check coal plant */
     case PORT + 5:        /* check sea port */
     case NUCLEAR + 5:     /* check nuc plant */
+    case SOLARPOWER + 5:  /* check solar plant */
     case STADIUM + 5:     /* check stadium */
         *deltaHPtr = -1;
         *deltaVPtr = -1;
@@ -556,6 +562,7 @@ short Micropolis::checkSize(short tileValue)
 
     if ((tileValue >= PORTBASE    && tileValue <= LASTPORT) ||
         (tileValue >= COALBASE    && tileValue <= LASTPOWERPLANT) ||
+        (tileValue >= SOLARPOWERBASE && tileValue <= LASTSOLARPOWER) ||
         (tileValue >= STADIUMBASE && tileValue <= LASTZONE)) {
         return 4;
     }
@@ -740,14 +747,14 @@ ToolResult Micropolis::buildBuilding(int mapH, int mapV,
 /* Query */
 
 /* search table for zone status string match */
-static short idArray[29] = {
+static short idArray[30] = {
     DIRT, RIVER, TREEBASE, RUBBLE,
     FLOOD, RADTILE, FIRE, ROADBASE,
     POWERBASE, RAILBASE, RESBASE, COMBASE,
     INDBASE, PORTBASE, AIRPORTBASE, COALBASE,
     FIRESTBASE, POLICESTBASE, STADIUMBASE, NUCLEARBASE,
     // FIXME: I think HBRDG_END should be HBRDG0...?
-    HBRDG0, RADAR0, FOUNTAIN, INDBASE2,
+    HBRDG0, RADAR0, FOUNTAIN, INDBASE2, SOLARPOWERBASE,
     // FIXME: What are tiles 952 and 956?
     FOOTBALLGAME1, VBRDG0, 952, 956,
     9999, // a huge short
@@ -760,7 +767,7 @@ static short idArray[29] = {
     612, 693, 709, 745,
     761, 770, 779, 811,
     827, 832, 840, 844,
-    932, 948, 952, 956
+    884, 932, 948, 952, 956
 
     Clear, Water, Trees, Rubble,
     Flood, Radioactive Waste, Fire, Road,
@@ -768,7 +775,7 @@ static short idArray[29] = {
     Industrial, Port, AirPort, Coal Power,
     Fire Department, Police Department, Stadium, Nuclear Power,
     Draw Bridge, Radar Dish, Fountain, Industrial,
-    49er's 38  Bears 3, Draw Bridge, Ur 238, Unknown
+    Solar Power, 49er's 38  Bears 3, Draw Bridge, Ur 238, Unknown
 */
 
 
@@ -857,7 +864,7 @@ void Micropolis::doZoneStatus(short mapH, short mapV)
 
     i--;
     // i contains the category that the tile belongs to (in theory 0..27).
-    // However, it is 0..26, since 956 is the first unused tile
+    // The Solar Power plant adds one zone type to the existing status table.
 
     // FIXME: This needs to be fixed to support plug-in churches.
 
@@ -1270,6 +1277,10 @@ static const BuildingProperties coalPowerBuilding =
 static const BuildingProperties nuclearPowerBuilding =
     BuildingProperties(4, 4, NUCLEARBASE, TOOL_NUCLEARPOWER, "Nuc", true);
 
+/** Building properties of a solar power station. */
+static const BuildingProperties solarPowerBuilding =
+    BuildingProperties(4, 4, SOLARPOWERBASE, TOOL_SOLARPOWER, "Solar", false);
+
 /** Building properties of a seaport. */
 static const BuildingProperties seaportBuilding =
     BuildingProperties(4, 4, PORTBASE, TOOL_SEAPORT, "Seap", false);
@@ -1488,6 +1499,11 @@ ToolResult Micropolis::doTool(EditingTool tool, short tileX, short tileY)
 
     case TOOL_FOREST:
         result = forestTool(tileX, tileY, &effects);
+        break;
+
+    case TOOL_SOLARPOWER:
+        result = buildBuildingTool(tileX, tileY, &solarPowerBuilding,
+                                   &effects);
         break;
 
     default:

@@ -215,6 +215,27 @@ describe('micropolisReactive poke / peek / memory', () => {
 		expect(validValues).toContain(result.value);
 	});
 
+	it('poke.buildOwnedResidential records human and AI ownership', () => {
+		try {
+			micropolisReactive.poke.clearMap();
+			micropolisReactive.poke.setFunds(100_000);
+			const human = micropolisReactive.poke.buildOwnedResidential(40, 40, 1);
+			const ai = micropolisReactive.poke.buildOwnedResidential(48, 40, 2);
+			expect(human.value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
+			expect(ai.value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
+
+			const owners = new Uint8Array(
+				engine.wasmMemory.buffer,
+				micropolis.getOwnerMapAddress(),
+				micropolis.getOwnerMapSize(),
+			);
+			expect(owners[40 * engine.WORLD_H + 40]).toBe(1);
+			expect(owners[48 * engine.WORLD_H + 40]).toBe(2);
+		} finally {
+			micropolisReactive.poke.loadCity('/cities/haight.cty');
+		}
+	});
+
 	// --- Memory helpers ---
 
 	it('memory.mapU16 length matches world size', () => {
@@ -257,7 +278,7 @@ describe('micropolisReactive poke / peek / memory', () => {
 			'cityYes', 'cityClass', 'gameLevel', 'simSpeed', 'simPasses',
 			'cityTax', 'mapSerial', 'trafficAverage', 'pollutionAverage',
 			'crimeAverage', 'landValueAverage', 'resPop', 'comPop', 'indPop', 'cashFlow',
-			'poweredZoneCount', 'unpoweredZoneCount',
+			'poweredZoneCount', 'unpoweredZoneCount', 'solarPowerPop', 'aiPop',
 		] as const;
 		for (const field of expectedFields) {
 			expect(s).toHaveProperty(field);
@@ -265,6 +286,39 @@ describe('micropolisReactive poke / peek / memory', () => {
 		}
 		expect(typeof s!.simPaused).toBe('boolean');
 		expect(typeof s!.generatedCitySeed).toBe('number');
+	});
+
+	it('solar plant costs $8,000, supplies clean power, and is counted by the engine', () => {
+		try {
+			micropolis.clearMap();
+			micropolis.setFunds(20_000);
+
+			const result = micropolis.doTool(engine.EditingTool.TOOL_SOLARPOWER, 50, 50);
+			expect(result.value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
+			expect(micropolis.totalFunds).toBe(12_000);
+			expect(micropolis.getTile(50, 50) & engine.MapTileBits.LOMASK.value).toBe(engine.Tiles.SOLARPOWER.value);
+			const pollutionBeforeTicks = micropolis.pollutionAverage;
+
+			for (let tick = 0; tick < 256 && micropolis.solarPowerPop === 0; tick += 1) {
+				micropolis.simTick();
+			}
+
+			expect(micropolis.solarPowerPop).toBe(1);
+			expect(micropolis.pollutionAverage).toBe(pollutionBeforeTicks);
+			expect(micropolisReactive.peek.scalars()?.solarPowerPop).toBe(1);
+			const zoneResult = micropolis.doTool(engine.EditingTool.TOOL_RESIDENTIAL, 54, 50);
+			expect(zoneResult.value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
+			for (let tick = 0; tick < 256 && micropolis.poweredZoneCount === 0; tick += 1) {
+				micropolis.simTick();
+			}
+			expect(micropolis.poweredZoneCount).toBeGreaterThan(0);
+			micropolis.doTool(engine.EditingTool.TOOL_QUERY, 50, 50);
+			const solarStatus = micropolisReactive.zoneStatus;
+			expect(solarStatus.visible).toBe(true);
+			if (solarStatus.visible) expect(solarStatus.tileCategory).toBe(25);
+		} finally {
+			micropolisReactive.poke.loadCity('/cities/haight.cty');
+		}
 	});
 
 	// --- getSnapshot completeness ---
@@ -278,6 +332,7 @@ describe('micropolisReactive poke / peek / memory', () => {
 			'evaluationRevision', 'historyRevision',
 			'messageIndex', 'messageX', 'messageY', 'messagePicture', 'messageImportant',
 			'budgetModalRequested', 'zoneStatus', 'cityPop', 'cityScore', 'cityTime',
+			'aiPop',
 			'worldWidth', 'worldHeight',
 		] as const;
 		for (const field of expectedFields) {

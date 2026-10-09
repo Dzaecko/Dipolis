@@ -7,8 +7,11 @@ export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
   tileRenderer?: TileRenderer<unknown> | null;
   tileLayersLength?: number;
+  tileSetCount?: number;
   heatFlowRangeLow?: number;
   heatFlowRangeHigh?: number;
+  syncPowerState?: () => void;
+  syncFoodState?: () => void;
 }
 
 const keyFramesPerSecondValues = [1, 5, 10, 30, 60, 120, 120, 120, 120];
@@ -62,6 +65,46 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       },
     })),
     {
+      id: 'power.set-priority',
+      label: 'Set Power Priority',
+      icon: 'power',
+      context: ['simulator', 'button', 'chat', 'llm'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      preview: ({ args }) => ({ label: `Set power priority to ${String(args?.priority ?? '')}` }),
+      run: ({ simulator, args, syncPowerState }) => {
+        const micropolis = simulator?.micropolis;
+        const priority = args?.priority;
+        if (!micropolis || typeof priority !== 'number' || !Number.isInteger(priority) || priority < 0 || priority > 2) {
+          return { handled: false, message: 'priority must be 0, 1, or 2' };
+        }
+        if (!micropolis.setParam('powerPriority', priority)) {
+          return { handled: false, message: 'priority must be 0, 1, or 2' };
+        }
+        syncPowerState?.();
+      },
+    },
+    {
+      id: 'food.set-import',
+      label: 'Toggle food imports',
+      icon: 'food',
+      context: ['simulator', 'button', 'chat', 'llm'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      preview: ({ args }) => ({ label: `${args?.enabled ? 'Enable' : 'Disable'} food imports` }),
+      run: ({ simulator, args, syncFoodState }) => {
+        const micropolis = simulator?.micropolis;
+        const enabled = args?.enabled;
+        if (!micropolis || typeof enabled !== 'boolean') {
+          return { handled: false, message: 'enabled must be a boolean' };
+        }
+        if (!micropolis.setParam('foodImportEnabled', enabled ? 1 : 0)) {
+          return { handled: false, message: 'could not update food import setting' };
+        }
+        syncFoodState?.();
+      },
+    },
+    {
       id: 'city.generate-random',
       label: 'Generate Random City',
       icon: 'random',
@@ -90,9 +133,10 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       shortcut: '=',
       policy: { risk: 'safe', allowLLM: true },
       enabled: hasView,
-      run: ({ simulator, tileRenderer, tileLayersLength }) => {
-        if (!simulator || !tileRenderer || !tileLayersLength) return;
-        simulator.fillMopTiles((tileRenderer.tileLayer + 1) % tileLayersLength);
+      run: ({ simulator, tileSetCount }) => {
+        if (!simulator || !tileSetCount) return;
+        simulator.setHumanTileSet(simulator.humanTileSet + 1);
+        simulator.syncOwnerToMop();
         simulator.render();
       },
     },
@@ -104,9 +148,10 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       shortcut: '-',
       policy: { risk: 'safe', allowLLM: true },
       enabled: hasView,
-      run: ({ simulator, tileRenderer, tileLayersLength }) => {
-        if (!simulator || !tileRenderer || !tileLayersLength) return;
-        simulator.fillMopTiles((tileRenderer.tileLayer + tileLayersLength - 1) % tileLayersLength);
+      run: ({ simulator, tileSetCount }) => {
+        if (!simulator || !tileSetCount) return;
+        simulator.setHumanTileSet(simulator.humanTileSet - 1);
+        simulator.syncOwnerToMop();
         simulator.render();
       },
     },

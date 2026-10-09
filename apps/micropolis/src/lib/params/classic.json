@@ -1,0 +1,9 @@
+{
+  "aiPowerPerPop": 2,
+  "aiReserveLow": 0.05,
+  "aiReserveHigh": 0.15,
+  "aiYieldPerPop": 0.25,
+  "powerPriority": 0,
+  "foodPerHumanPop": 0,
+  "foodPerFarmPop": 0
+}

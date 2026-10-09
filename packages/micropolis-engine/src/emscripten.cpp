@@ -364,6 +364,7 @@ EMSCRIPTEN_BINDINGS(MicropolisEngine) {
     .value("TOOL_WATER", TOOL_WATER)
     .value("TOOL_LAND", TOOL_LAND)
     .value("TOOL_FOREST", TOOL_FOREST)
+    .value("TOOL_SOLARPOWER", TOOL_SOLARPOWER)
     .value("TOOL_COUNT", TOOL_COUNT)
     .value("TOOL_FIRST", TOOL_FIRST)
     .value("TOOL_LAST", TOOL_LAST);
@@ -924,6 +925,9 @@ function createTypedArrayFromMap(mapInstance) {
     .value("NUCLEARBASE", NUCLEARBASE) // 811: First tile nuclear power plant.
     .value("NUCLEAR", NUCLEAR) // 816: 'Center' tile nuclear power plant.
     .value("LASTZONE", LASTZONE) // 826: Also last tile nuclear power plant.
+    .value("SOLARPOWERBASE", SOLARPOWERBASE)
+    .value("SOLARPOWER", SOLARPOWER)
+    .value("LASTSOLARPOWER", LASTSOLARPOWER)
     .value("LIGHTNINGBOLT", LIGHTNINGBOLT) // 827
     .value("HBRDG0", HBRDG0) // 828
     .value("HBRDG1", HBRDG1) // 829
@@ -1083,6 +1087,8 @@ function createTypedArrayFromMap(mapInstance) {
     .function("getMapSize", &Micropolis::getMapSize)
     .function("getMopAddress", &Micropolis::getMopAddress)
     .function("getMopSize", &Micropolis::getMopSize)
+    .function("getOwnerMapAddress", &Micropolis::getOwnerMapAddress)
+    .function("getOwnerMapSize", &Micropolis::getOwnerMapSize)
     .function("animateTiles", &Micropolis::animateTiles)
     .function("setSpeed", &Micropolis::setSpeed)
     .function("setGameLevel", &Micropolis::setGameLevel)
@@ -1102,6 +1108,13 @@ function createTypedArrayFromMap(mapInstance) {
     .function("updateFunds", &Micropolis::updateFunds)
     .function("setPasses", &Micropolis::setPasses)
     .function("setCityTax", &Micropolis::setCityTax)
+    .function("setAiValve", &Micropolis::setAiValve)
+    .function("setZoneOwner", &Micropolis::setZoneOwner)
+    .function("setParam", &Micropolis::setParam)
+    .function("getParam", &Micropolis::getParam)
+    .function("buildOwnedResidential", &Micropolis::buildOwnedResidential)
+    .function("buildFarm", &Micropolis::buildFarm)
+    .function("checkOwnerInvariant", &Micropolis::checkOwnerInvariant)
 
     // Game State and Statistics
     .property("initSimLoad", &Micropolis::initSimLoad)
@@ -1160,6 +1173,23 @@ function createTypedArrayFromMap(mapInstance) {
     .property("stadiumPop", &Micropolis::stadiumPop)
     .property("coalPowerPop", &Micropolis::coalPowerPop)
     .property("nuclearPowerPop", &Micropolis::nuclearPowerPop)
+    .property("solarPowerPop", &Micropolis::solarPowerPop)
+    .property("aiPop", &Micropolis::aiPop)
+    .property("aiValve", &Micropolis::aiValve)
+    .property("aiValveOverride", &Micropolis::aiValveOverride)
+    .property("aiTaxFund", &Micropolis::aiTaxFund)
+    .property("taxFund", &Micropolis::taxFund)
+    .property("roadFund", &Micropolis::roadFund)
+    .property("aiCoverage", &Micropolis::aiCoverage)
+    .property("powerReserve", &Micropolis::powerReserve)
+    .property("powerCapacity", &Micropolis::powerCapacity)
+    .property("powerDemand", &Micropolis::powerDemand)
+    .property("farmPop", &Micropolis::farmPop)
+    .property("foodProduction", &Micropolis::foodProduction)
+    .property("foodDemand", &Micropolis::foodDemand)
+    .property("foodImported", &Micropolis::foodImported)
+    .property("foodImportCost", &Micropolis::foodImportCost)
+    .property("foodCoverage", &Micropolis::foodCoverage)
     .property("valveFlag", &Micropolis::valveFlag)
     .property("crimeRamp", &Micropolis::crimeRamp)
     .property("pollutionRamp", &Micropolis::pollutionRamp)
@@ -1175,6 +1205,8 @@ function createTypedArrayFromMap(mapInstance) {
     .property("scoreWait", &Micropolis::scoreWait)
     .property("poweredZoneCount", &Micropolis::poweredZoneCount)
     .property("unpoweredZoneCount", &Micropolis::unpoweredZoneCount)
+    .property("hungryZoneCount", &Micropolis::hungryZoneCount)
+    .property("aiUnpoweredZoneCount", &Micropolis::aiUnpoweredZoneCount)
     .property("newPower", &Micropolis::newPower)
     .property("simCycle", &Micropolis::simCycle)
     .property("phaseCycle", &Micropolis::phaseCycle)
@@ -1246,10 +1278,13 @@ function createTypedArrayFromMap(mapInstance) {
     .function("getERandom", &Micropolis::getERandom)
     .function("randomlySeedRandom", &Micropolis::randomlySeedRandom)
     .function("seedRandom", &Micropolis::seedRandom)
+    .function("setFixedSeed", &Micropolis::setFixedSeed)
 
     // Game State and Data Access
     .function("getTile", &Micropolis::getTile)
     .function("setTile", &Micropolis::setTile)
+    .function("getLandValue", &Micropolis::getLandValue)
+    .function("getPollutionDensity", &Micropolis::getPollutionDensity)
     .function("setFunds", &Micropolis::setFunds)
     .function("updateMaps", &Micropolis::updateMaps)
     .function("updateGraphs", &Micropolis::updateGraphs)

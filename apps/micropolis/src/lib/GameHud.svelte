@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { micropolisReactive } from '$lib/MicropolisReactive.svelte';
 	import { toolState } from '$lib/ToolState.svelte';
+	import { commandBus } from '$lib/CommandBus';
 
 	const funds = $derived(micropolisReactive.totalFunds);
 	const dateLabel = $derived(
@@ -14,6 +15,33 @@
 				: 'Stopped'
 	);
 	const taxLabel = $derived(`Tax ${micropolisReactive.cityTax}%`);
+	const humanPopulationLabel = $derived(`Residents ${micropolisReactive.cityPop.toLocaleString()}`);
+	const aiPopulationLabel = $derived(`AI ${micropolisReactive.aiPop.toLocaleString()}`);
+	const reservePercent = $derived(micropolisReactive.powerReserve * 100);
+	const foodCoveragePercent = $derived(micropolisReactive.foodCoverage * 100);
+	const priorityOptions = [
+		{ value: 1, label: 'Menschen' },
+		{ value: 0, label: 'Gleich' },
+		{ value: 2, label: 'KI' },
+	] as const;
+
+	function setPowerPriority(priority: number): void {
+		void commandBus.dispatch('power.set-priority', {
+			source: 'button',
+			simulator: micropolisReactive.attachedSimulator,
+			syncPowerState: micropolisReactive.syncPowerFromEngine,
+			args: { priority },
+		});
+	}
+
+	function setFoodImport(enabled: boolean): void {
+		void commandBus.dispatch('food.set-import', {
+			source: 'button',
+			simulator: micropolisReactive.attachedSimulator,
+			syncFoodState: micropolisReactive.syncFoodFromEngine,
+			args: { enabled },
+		});
+	}
 </script>
 
 <div class="game-hud" aria-live="polite">
@@ -29,6 +57,36 @@
 		</span>
 		<span class="hud-tax">{taxLabel}</span>
 		<span class="hud-speed" class:paused={micropolisReactive.simPaused}>{simLabel}</span>
+	</div>
+	<div class="hud-row hud-population">
+		<span>{humanPopulationLabel}</span>
+		<span class="hud-ai-population">{aiPopulationLabel}</span>
+	</div>
+	<div class="power-priority" role="group" aria-label="Power priority">
+		{#each priorityOptions as option (option.value)}
+			<button
+				type="button"
+				class:active={micropolisReactive.powerPriority === option.value}
+				aria-pressed={micropolisReactive.powerPriority === option.value}
+				onclick={() => setPowerPriority(option.value)}
+			>{option.label}</button>
+		{/each}
+	</div>
+	<div class="power-stats" aria-label="Power balance">
+		<span>Reserve {reservePercent.toFixed(1)}%</span>
+		<span>KI-Abdeckung {(micropolisReactive.aiCoverage * 100).toFixed(1)}%</span>
+		<span>Unversorgt {micropolisReactive.unpoweredZoneCount}</span>
+		<span>KI-Ertrag ${micropolisReactive.aiTaxFund.toLocaleString()}</span>
+	</div>
+	<div class="food-stats" aria-label="Food balance">
+		<span>Nahrung {(foodCoveragePercent).toFixed(1)}%</span>
+		<span>Importkosten ${micropolisReactive.foodImportCost.toLocaleString()}</span>
+		<button
+			type="button"
+			class:active={micropolisReactive.foodImportEnabled}
+			aria-pressed={micropolisReactive.foodImportEnabled}
+			onclick={() => setFoodImport(!micropolisReactive.foodImportEnabled)}
+		>Import {micropolisReactive.foodImportEnabled ? 'An' : 'Aus'}</button>
 	</div>
 	{#if toolState.lastToolFeedback}
 		<div class="hud-feedback">{toolState.lastToolFeedback}</div>
@@ -50,7 +108,7 @@
 		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 6px;
 		padding: 0.45rem 0.65rem;
-		width: 20.5rem;
+		width: 22rem;
 		box-sizing: border-box;
 		backdrop-filter: blur(4px);
 	}
@@ -78,6 +136,18 @@
 		flex-wrap: wrap;
 		gap: 0.65rem;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.hud-population {
+		margin-top: 0.2rem;
+		grid-template-columns: 1fr 1fr;
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.hud-ai-population {
+		color: #ff8b8b;
+		text-align: right;
 	}
 
 	.rci-item {
@@ -117,6 +187,68 @@
 		font-size: 0.78rem;
 		font-weight: 600;
 		color: #ffc840;
+	}
+
+	.power-priority {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.2rem;
+		margin-top: 0.35rem;
+		pointer-events: auto;
+	}
+
+	.power-priority button {
+		border: 1px solid rgba(255, 255, 255, 0.22);
+		border-radius: 3px;
+		padding: 0.18rem 0.25rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: #dce4f8;
+		font: inherit;
+		font-size: 0.68rem;
+		cursor: pointer;
+	}
+
+	.power-priority button.active {
+		background: #284b70;
+		border-color: #8ec8ff;
+		color: #fff;
+	}
+
+	.power-stats {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.1rem 0.45rem;
+		margin-top: 0.25rem;
+		font-size: 0.68rem;
+		font-variant-numeric: tabular-nums;
+		color: #c7d5eb;
+	}
+
+	.food-stats {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.1rem 0.45rem;
+		margin-top: 0.2rem;
+		font-size: 0.68rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.food-stats button {
+		grid-column: 1 / -1;
+		border: 1px solid rgba(255, 255, 255, 0.22);
+		border-radius: 3px;
+		padding: 0.18rem 0.25rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: #dce4f8;
+		font: inherit;
+		cursor: pointer;
+		pointer-events: auto;
+	}
+
+	.food-stats button.active {
+		background: #315331;
+		border-color: #a6e09e;
+		color: #fff;
 	}
 
 	.hud-funds {

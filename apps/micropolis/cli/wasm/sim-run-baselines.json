@@ -1,0 +1,62 @@
+{
+  "seed": 42,
+  "ticks": 30000,
+  "speed": 3,
+  "disasters": false,
+  "cities": {
+    "/cities/haight.cty": {
+      "totalFunds": 656573,
+      "cityPop": 167460,
+      "resPop": 3664,
+      "comPop": 320,
+      "indPop": 268,
+      "aiTaxFund": 0,
+      "farmPop": 0,
+      "foodProduction": 0,
+      "foodDemand": 0,
+      "foodCoverage": 1,
+      "foodImportCost": 0,
+      "hungryZoneCount": 0,
+      "powerDemand": 9564,
+      "cityScore": 838,
+      "cityTime": 6714,
+      "mapSha1": "4157c602280d411ebb33645d5da16493a31ef454"
+    },
+    "/cities/radial.cty": {
+      "totalFunds": 314,
+      "cityPop": 27620,
+      "resPop": 588,
+      "comPop": 48,
+      "indPop": 42,
+      "aiTaxFund": 0,
+      "farmPop": 0,
+      "foodProduction": 0,
+      "foodDemand": 0,
+      "foodCoverage": 1,
+      "foodImportCost": 0,
+      "hungryZoneCount": 0,
+      "powerDemand": 3309,
+      "cityScore": 567,
+      "cityTime": 2896,
+      "mapSha1": "c1a4736a3436deb034046406ca4872671af27a4d"
+    },
+    "/cities/scenario_tokyo.cty": {
+      "totalFunds": 4306,
+      "cityPop": 68320,
+      "resPop": 1675,
+      "comPop": 78,
+      "indPop": 138,
+      "aiTaxFund": 0,
+      "farmPop": 0,
+      "foodProduction": 0,
+      "foodDemand": 0,
+      "foodCoverage": 1,
+      "foodImportCost": 0,
+      "hungryZoneCount": 0,
+      "powerDemand": 5082,
+      "cityScore": 617,
+      "cityTime": 4613,
+      "mapSha1": "7e8428da793561ac566904507eadc28ac313491f"
+    }
+  }
+}

@@ -78,6 +78,9 @@
 
 #include "micropolis.h"
 
+#include <cmath>
+#include <limits>
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -96,6 +99,9 @@ Micropolis::Micropolis() :
         tempMap2(0),
         tempMap3(0),
         powerGridMap(0),
+        powerReachableMap(0),
+        ownerMap(0),
+        aiHouseMap(0),
         rateOfGrowthMap(0),
         fireStationMap(0),
         fireStationEffectMap(0),
@@ -270,6 +276,7 @@ void Micropolis::init()
 
     // Quad taxFund;
     taxFund = 0;
+    aiTaxFund = 0;
 
     // short cityTax;
     cityTax = 0;
@@ -283,6 +290,9 @@ void Micropolis::init()
     landValueMap.clear();
     crimeRateMap.clear();
     powerGridMap.clear();
+    powerReachableMap.clear();
+    ownerMap.clear();
+    aiHouseMap.clear();
     terrainDensityMap.clear();
     rateOfGrowthMap.clear();
     fireStationMap.clear();
@@ -540,6 +550,16 @@ void Micropolis::init()
 
     // short unpoweredZoneCount;
     unpoweredZoneCount = 0;
+
+    // short aiUnpoweredZoneCount;
+    aiUnpoweredZoneCount = 0;
+
+    farmPop = 0;
+    foodProduction = 0;
+    foodDemand = 0;
+    foodImported = 0;
+    foodImportCost = 0;
+    foodCoverage = 1.0f;
 
     newPower = false;
 
@@ -1181,6 +1201,143 @@ void Micropolis::setTile(int x, int y, int tile)
 }
 
 
+static bool isIndustrialCenterTile(MapTile tile)
+{
+    return tile == INDCLR || (tile >= IZB && tile <= IZB + 7 * 9 && ((tile - IZB) % 9) == 0);
+}
+
+
+bool Micropolis::setZoneOwner(int x, int y, int owner)
+{
+    if (!testBounds(x, y) || owner < 0 || owner > 3) {
+        return false;
+    }
+
+    const MapValue value = map[x][y];
+    const MapTile tile = value & LOMASK;
+    const bool zoneCenter = (value & ZONEBIT) != 0;
+    const bool residentialCenter = zoneCenter && tile < HOSPITAL;
+    const bool farmCenter = zoneCenter && isIndustrialCenterTile(tile);
+    const bool validOwnerCenter = owner == 3
+        ? farmCenter
+        : owner == 0
+            ? (residentialCenter || farmCenter)
+            : residentialCenter;
+    if (!validOwnerCenter) {
+        return false;
+    }
+
+    ownerMap.worldSet(x, y, (Byte)owner);
+    return true;
+}
+
+
+bool Micropolis::setParam(const std::string &name, double value)
+{
+    if (!std::isfinite(value)) return false;
+
+    if (name == "aiPowerPerPop" || name == "powerPriority") {
+        if (std::floor(value) != value) return false;
+        if (name == "aiPowerPerPop") {
+            if (value < 0 || value > 32767) return false;
+            params.aiPowerPerPop = (short)value;
+        } else {
+            if (value < 0 || value > 2) return false;
+            params.powerPriority = (short)value;
+        }
+        return true;
+    }
+
+    if (name == "foodImportEnabled") {
+        if (value != 0.0 && value != 1.0) return false;
+        params.foodImportEnabled = value == 1.0;
+        return true;
+    }
+
+    if (value < 0.0) return false;
+    if (name == "aiReserveLow") params.aiReserveLow = (float)value;
+    else if (name == "aiReserveHigh") params.aiReserveHigh = (float)value;
+    else if (name == "aiYieldPerPop") params.aiYieldPerPop = (float)value;
+    else if (name == "foodPerHumanPop") params.foodPerHumanPop = (float)value;
+    else if (name == "foodPerFarmPop") params.foodPerFarmPop = (float)value;
+    else if (name == "foodImportPrice") params.foodImportPrice = (float)value;
+    else return false;
+    return true;
+}
+
+
+double Micropolis::getParam(const std::string &name) const
+{
+    if (name == "aiPowerPerPop") return params.aiPowerPerPop;
+    if (name == "aiReserveLow") return params.aiReserveLow;
+    if (name == "aiReserveHigh") return params.aiReserveHigh;
+    if (name == "aiYieldPerPop") return params.aiYieldPerPop;
+    if (name == "powerPriority") return params.powerPriority;
+    if (name == "foodPerHumanPop") return params.foodPerHumanPop;
+    if (name == "foodPerFarmPop") return params.foodPerFarmPop;
+    if (name == "foodImportEnabled") return params.foodImportEnabled ? 1.0 : 0.0;
+    if (name == "foodImportPrice") return params.foodImportPrice;
+    return std::numeric_limits<double>::quiet_NaN();
+}
+
+
+ToolResult Micropolis::buildOwnedResidential(short x, short y, int owner)
+{
+    if (owner != 1 && owner != 2) {
+        return TOOLRESULT_FAILED;
+    }
+
+    const ToolResult result = doTool(TOOL_RESIDENTIAL, x, y);
+    if (result == TOOLRESULT_OK && !setZoneOwner(x, y, owner)) {
+        return TOOLRESULT_FAILED;
+    }
+    if (result == TOOLRESULT_OK && owner == 2) {
+        for (int tileX = x - 1; tileX <= x + 1; tileX++) {
+            for (int tileY = y - 1; tileY <= y + 1; tileY++) aiHouseMap.worldSet(tileX, tileY, 0);
+        }
+    }
+    return result;
+}
+
+
+ToolResult Micropolis::buildFarm(short x, short y)
+{
+    const ToolResult result = doTool(TOOL_INDUSTRIAL, x, y);
+    if (result == TOOLRESULT_OK && !setZoneOwner(x, y, 3)) {
+        return TOOLRESULT_FAILED;
+    }
+    return result;
+}
+
+
+int Micropolis::checkOwnerInvariant()
+{
+    int orphaned = 0;
+    for (int x = 0; x < WORLD_W; x++) {
+        for (int y = 0; y < WORLD_H; y++) {
+            if (!ownerMap.worldGet(x, y)) {
+                continue;
+            }
+
+            const MapValue value = map[x][y];
+            const MapTile tile = value & LOMASK;
+            const Byte owner = ownerMap.worldGet(x, y);
+            const bool residentialCenter = tile < HOSPITAL;
+            const bool farmCenter = isIndustrialCenterTile(tile);
+            const bool validOwnerCenter = owner == 3
+                ? farmCenter
+                : (owner == 1 || owner == 2)
+                    ? residentialCenter
+                    : false;
+            if (!(value & ZONEBIT) || !validOwnerCenter) {
+                orphaned++;
+            }
+        }
+    }
+    return orphaned;
+}
+
+
 /**
  * Get the address of the internal buffer containing the map. This is
  * used to enable the tile engine to access the tiles directly.
@@ -1572,6 +1729,18 @@ long Micropolis::getMopAddress()
 long Micropolis::getMopSize()
 {
     return (long)(WORLD_W * WORLD_H * sizeof (short));
+}
+
+
+long Micropolis::getOwnerMapAddress()
+{
+    return (long)ownerMap.getBase();
+}
+
+
+long Micropolis::getOwnerMapSize()
+{
+    return (long)ownerMap.getTotalByteSize();
 }
 
 

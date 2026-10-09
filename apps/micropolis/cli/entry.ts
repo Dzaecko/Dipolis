@@ -23,6 +23,7 @@ let cli = yargs(hideBin(process.argv))
 	.example('$0 city info CITY.cty --format yaml', 'Inspect a city save')
 	.example('$0 city export CITY.cty --include-map --format csv', 'Export a tile grid')
 	.example('$0 sim smoke --ticks 10 --format yaml', 'Run the WASM engine headlessly')
+	.example('$0 sim run --seed 42 --ticks 30000 --speed 3 --no-disasters', 'Run a reproducible headless simulation')
 	.option('verbose', {
 		alias: 'v',
 		type: 'boolean',

@@ -94,15 +94,36 @@ void Micropolis::doZone(const Position &pos)
     
     // Set Power Bit in Map from powerGridMap
     bool zonePowerFlag = setZonePower(pos);
+    MapTile tile = map[pos.posX][pos.posY] & LOMASK;
+    const bool aiResidential = tile < HOSPITAL && ownerMap.worldGet(pos.posX, pos.posY) == 2;
+    if (aiResidential) {
+        // AI residential demand is virtual and allocated independently of
+        // which conductive map tiles the grid traversal reached.
+        if (params.powerPriority == 2 || aiCoverage >= 1.0f) {
+            zonePowerFlag = powerReachableMap.worldGet(pos.posX, pos.posY) != 0;
+        }
+        if (aiCoverage < 1.0f) {
+            zonePowerFlag = zonePowerFlag && getAiRandom(9999) < (short)(aiCoverage * 10000.0f);
+        }
+    }
+    const bool zoneHasPower = zonePowerFlag;
+    bool foodSatisfied = true;
+    if (!aiResidential && tile < HOSPITAL && foodCoverage < 1.0f) {
+        // Only human residential zones participate in the food rule. Skip
+        // the draw entirely at full coverage to preserve classic RNG behavior.
+        if (zoneHasPower) {
+            foodSatisfied = getFoodRandom(9999) < (short)(foodCoverage * 10000.0f);
+            if (!foodSatisfied) hungryZoneCount++;
+        }
+        zonePowerFlag = zoneHasPower && foodSatisfied;
+    }
 
-
-    if (zonePowerFlag) {
+    if (zoneHasPower) {
         poweredZoneCount++;
     } else {
         unpoweredZoneCount++;
+        if (aiResidential) aiUnpoweredZoneCount++;
     }
-
-    MapTile tile = map[pos.posX][pos.posY] & LOMASK;
 
     // Do special zones.
     if ((tile > PORTBASE) &&
@@ -113,6 +134,17 @@ void Micropolis::doZone(const Position &pos)
 
     // Do residential zones.
     if (tile < HOSPITAL) {
+        if (!aiResidential && foodCoverage < 1.0f) {
+            // Keep food-driven human-residential branches on the food RNG
+            // stream, so changes to their random call count cannot perturb
+            // industrial or AI growth elsewhere in the same map scan.
+            const UQuad simulationRandomState = nextRandom;
+            nextRandom = foodRandomState;
+            doResidential(pos, zonePowerFlag);
+            foodRandomState = nextRandom;
+            nextRandom = simulationRandomState;
+            return;
+        }
         doResidential(pos, zonePowerFlag);
         return;
     }
@@ -409,12 +441,13 @@ bool Micropolis::zonePlop(const Position &pos, int base)
 short Micropolis::doFreePop(const Position &pos)
 {
     short count = 0;
+    const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
 
     for (short x = pos.posX - 1; x <= pos.posX + 1; x++) {
         for (short y = pos.posY - 1; y <= pos.posY + 1; y++) {
             if (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) {
                 MapTile tile = map[x][y] & LOMASK;
-                if (tile >= LHTHR && tile <= HHTHR) {
+                if (tile >= LHTHR && tile <= HHTHR && (!aiOwned || aiHouseMap.worldGet(x, y))) {
                     count++;
                 }
             }
@@ -459,6 +492,7 @@ bool Micropolis::setZonePower(const Position &pos)
 void Micropolis::buildHouse(const Position &pos, int value)
 {
     short z, score, hscore, BestLoc;
+    const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
     static short ZeX[9] = { 0,-1, 0, 1,-1, 1,-1, 0, 1};
     static short ZeY[9] = { 0,-1,-1,-1, 0, 0, 1, 1, 1};
 
@@ -484,7 +518,7 @@ void Micropolis::buildHouse(const Position &pos, int value)
                 /// @todo Move the code below to a better place.
                 ///       If we just updated hscore above, we could
                 //        trigger this code too.
-                if (score == hscore && !(getRandom16() & 7)) {
+                if (score == hscore && !((aiOwned ? getAiRandom16() : getRandom16()) & 7)) {
                     BestLoc = z;
                 }
 
@@ -500,7 +534,8 @@ void Micropolis::buildHouse(const Position &pos, int value)
 
         if (testBounds(xx, yy)) {
             /// @todo Is HOUSE the proper constant here?
-            map[xx][yy] = HOUSE + BLBNCNBIT + getRandom(2) + value * 3;
+            map[xx][yy] = HOUSE + BLBNCNBIT + (aiOwned ? getAiRandom(2) : getRandom(2)) + value * 3;
+            if (aiOwned) aiHouseMap.worldSet(xx, yy, 1);
         }
 
     }
@@ -548,6 +583,9 @@ short Micropolis::evalLot(int x, int y)
 void Micropolis::doResidential(const Position &pos, bool zonePower)
 {
     short tpop, zscore, locvalve, value, TrfGood;
+    const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
+    const auto random16 = [this, aiOwned]() { return aiOwned ? getAiRandom16() : getRandom16(); };
+    const auto random16Signed = [this, aiOwned]() { return aiOwned ? getAiRandom16Signed() : getRandom16Signed(); };
 
     resZonePop++;
 
@@ -559,9 +597,15 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
         tpop = getResZonePop(tile);
     }
 
-    resPop += tpop;
+    if (aiOwned) {
+        aiPop += tpop;
+    } else {
+        resPop += tpop;
+    }
 
-    if (tpop > getRandom(35)) {
+    if (aiOwned) {
+        TrfGood = 0;
+    } else if (tpop > getRandom(35)) {
         /* Try driving from residential to commercial */
         TrfGood = makeTraffic(pos, ZT_COMMERCIAL);
     } else {
@@ -569,36 +613,36 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
     }
 
     if (TrfGood == -1) {
-        value = getLandPollutionValue(pos);
+        value = aiOwned ? 3 : getLandPollutionValue(pos);
         doResOut(pos, tpop, value);
         return;
     }
 
-    if (tile == FREEZ || !(getRandom16() & 7)) {
+    if (tile == FREEZ || !(random16() & 7)) {
 
-        locvalve = evalRes(pos, TrfGood);
-        zscore = resValve + locvalve;
+        locvalve = aiOwned ? 0 : evalRes(pos, TrfGood);
+        zscore = (aiOwned ? aiValve : resValve) + locvalve;
 
         if (!zonePower) {
             zscore = -500;
         }
 
         if (zscore > -350 &&
-            ((short)(zscore - 26380) > ((short)getRandom16Signed()))) {
+            ((short)(zscore - 26380) > ((short)random16Signed()))) {
 
-            if (!tpop && !(getRandom16() & 3)) {
+            if (!aiOwned && !tpop && !(getRandom16() & 3)) {
                 makeHospital(pos);
                 return;
             }
 
-            value = getLandPollutionValue(pos);
+            value = aiOwned ? 3 : getLandPollutionValue(pos);
             doResIn(pos, tpop, value);
             return;
         }
 
         if (zscore < 350 &&
-            (((short)(zscore + 26380)) < ((short)getRandom16Signed()))) {
-            value = getLandPollutionValue(pos);
+            (((short)(zscore + 26380)) < ((short)random16Signed()))) {
+            value = aiOwned ? 3 : getLandPollutionValue(pos);
             doResOut(pos, tpop, value);
         }
     }
@@ -614,14 +658,31 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
 void Micropolis::doResIn(const Position &pos, int pop, int value)
 {
     short pollution = pollutionDensityMap.worldGet(pos.posX, pos.posY);
+    const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
 
-    if (pollution > 128) {
+    if (!aiOwned && pollution > 128) {
         return;
     }
 
     MapTile tile = map[pos.posX][pos.posY] & LOMASK;
 
     if (tile == FREEZ) {
+
+        if (aiOwned) {
+            if (pop < 8) {
+                buildHouse(pos, value);
+                incRateOfGrowth(pos, 1);
+                return;
+            }
+            // AI lots graduate from their own accumulated houses; they do not
+            // depend on human population density, which food scarcity changes.
+            for (int x = pos.posX - 1; x <= pos.posX + 1; x++) {
+                for (int y = pos.posY - 1; y <= pos.posY + 1; y++) aiHouseMap.worldSet(x, y, 0);
+            }
+            resPlop(pos, 0, value);
+            incRateOfGrowth(pos, 8);
+            return;
+        }
 
         if (pop < 8) {
             buildHouse(pos, value);
@@ -656,12 +717,27 @@ void Micropolis::doResOut(const Position &pos, int pop, int value)
 {
     static short Brdr[9] = {0,3,6,1,4,7,2,5,8};
     short x, y, loc, z;
+    const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
+    const auto belongsToAiLot = [this, aiOwned](int tileX, int tileY) {
+        if (aiOwned) return false;
+        for (int centerX = tileX - 1; centerX <= tileX + 1; centerX++) {
+            for (int centerY = tileY - 1; centerY <= tileY + 1; centerY++) {
+                if (testBounds(centerX, centerY) && ownerMap.worldGet(centerX, centerY) == 2) return true;
+            }
+        }
+        return false;
+    };
 
     if (!pop) {
         return;
     }
 
     if (pop > 16) {
+        if (aiOwned) {
+            for (int x = pos.posX - 1; x <= pos.posX + 1; x++) {
+                for (int y = pos.posY - 1; y <= pos.posY + 1; y++) aiHouseMap.worldSet(x, y, 0);
+            }
+        }
         resPlop(pos, (pop - 24) / 8, value);
         incRateOfGrowth(pos, -8);
         return;
@@ -673,8 +749,9 @@ void Micropolis::doResOut(const Position &pos, int pop, int value)
         for (x = pos.posX - 1; x <= pos.posX + 1; x++) {
             for (y = pos.posY - 1; y <= pos.posY + 1; y++) {
                 if (testBounds(x, y)) {
-                    if ((map[x][y] & LOMASK) != FREEZ) {
-                        map[x][y] = LHTHR + value + getRandom(2) + BLBNCNBIT;
+                    if ((map[x][y] & LOMASK) != FREEZ && !belongsToAiLot(x, y)) {
+                        map[x][y] = LHTHR + value + (aiOwned ? getAiRandom(2) : getRandom(2)) + BLBNCNBIT;
+                        if (aiOwned) aiHouseMap.worldSet(x, y, 1);
                     }
                 }
             }
@@ -688,8 +765,9 @@ void Micropolis::doResOut(const Position &pos, int pop, int value)
             for (y = pos.posY - 1; y <= pos.posY + 1; y++) {
                 if (testBounds(x, y)) {
                     loc = map[x][y] & LOMASK;
-                    if ((loc >= LHTHR) && (loc <= HHTHR)) {
+                    if ((loc >= LHTHR) && (loc <= HHTHR) && !belongsToAiLot(x, y)) {
                         map[x][y] = Brdr[z] + BLBNCNBIT + FREEZ - 4;
+                        if (aiOwned) aiHouseMap.worldSet(x, y, 0);
                         return;
                     }
                 }
@@ -924,6 +1002,9 @@ void Micropolis::doIndustrial(const Position &pos, bool zonePower)
     setSmoke(pos, zonePower);
     tpop = getIndZonePop(tile);
     indPop += tpop;
+    if (zonePower && ownerMap.worldGet(pos.posX, pos.posY) == 3) {
+        farmPop += tpop;
+    }
 
     if (tpop > getRandom(5)) {
         /* Try driving from industrial to residential */

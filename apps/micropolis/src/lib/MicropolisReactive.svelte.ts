@@ -24,6 +24,7 @@ function requireMicropolis(): Micropolis {
 }
 
 // --- Reactive city / sim snapshot (callback-fed + syncFromEngine) ---
+
 let totalFunds = $state(0);
 let cityYear = $state(0);
 let cityMonth = $state(0);
@@ -70,8 +71,39 @@ let zoneStatus = $state<MicropolisZoneStatus>({ visible: false });
 
 /** Optional headline stats refreshed from the engine object (pull). */
 let cityPop = $state(0);
+let aiPop = $state(0);
 let cityScore = $state(0);
 let cityTime = $state(0);
+let powerCapacity = $state(0);
+let powerDemand = $state(0);
+let aiCoverage = $state(1);
+let powerReserve = $state(0);
+let unpoweredZoneCount = $state(0);
+let aiTaxFund = $state(0);
+let powerPriority = $state(0);
+let foodCoverage = $state(1);
+let foodImportCost = $state(0);
+let foodImportEnabled = $state(false);
+
+function syncPowerFromEngine(): void {
+	const m = attachedSimulator?.micropolis;
+	if (!m) return;
+	powerCapacity = m.powerCapacity;
+	powerDemand = m.powerDemand;
+	aiCoverage = m.aiCoverage;
+	powerReserve = m.powerReserve;
+	unpoweredZoneCount = m.unpoweredZoneCount;
+	aiTaxFund = m.aiTaxFund;
+	powerPriority = m.getParam('powerPriority');
+}
+
+function syncFoodFromEngine(): void {
+	const m = attachedSimulator?.micropolis;
+	if (!m) return;
+	foodCoverage = m.foodCoverage;
+	foodImportCost = m.foodImportCost;
+	foodImportEnabled = m.getParam('foodImportEnabled') === 1;
+}
 
 function syncFromEngine(): void {
 	const m = attachedSimulator?.micropolis;
@@ -87,8 +119,11 @@ function syncFromEngine(): void {
 	simPaused = m.simPaused;
 	cityTax = m.cityTax;
 	cityPop = m.cityPop;
+	aiPop = m.aiPop;
 	cityScore = m.cityScore;
 	cityTime = m.cityTime;
+	syncPowerFromEngine();
+	syncFoodFromEngine();
 }
 
 /**
@@ -240,6 +275,8 @@ class MicropolisReactiveCallback {
 	updateDate(_micropolis: Micropolis | null, _callbackVal: unknown, year: number, month: number): void {
 		cityYear = year;
 		cityMonth = month;
+		syncPowerFromEngine();
+		syncFoodFromEngine();
 	}
 
 	updateDemand(_micropolis: Micropolis | null, _callbackVal: unknown, r: number, c: number, i: number): void {
@@ -254,6 +291,7 @@ class MicropolisReactiveCallback {
 
 	updateFunds(_micropolis: Micropolis | null, _callbackVal: unknown, funds: number): void {
 		totalFunds = funds;
+		syncFoodFromEngine();
 	}
 
 	updateGameLevel(_micropolis: Micropolis | null, _callbackVal: unknown, level: number): void {
@@ -265,6 +303,8 @@ class MicropolisReactiveCallback {
 	}
 
 	updateMap(_micropolis: Micropolis | null, _callbackVal: unknown): void {
+		aiPop = attachedSimulator?.micropolis?.aiPop ?? aiPop;
+		syncPowerFromEngine();
 		mapRevision++;
 	}
 
@@ -300,6 +340,7 @@ export interface MicropolisEnginePeekScalars {
 	cityMonth: number;
 	cityTime: number;
 	cityPop: number;
+	aiPop: number;
 	cityScore: number;
 	cityYes: number;
 	cityClass: number;
@@ -314,6 +355,7 @@ export interface MicropolisEnginePeekScalars {
 	crimeAverage: number;
 	landValueAverage: number;
 	generatedCitySeed: number;
+	solarPowerPop: number;
 	resPop: number;
 	comPop: number;
 	indPop: number;
@@ -348,6 +390,10 @@ export interface MicropolisReactiveSnapshot {
 	budgetModalRequested: boolean;
 	zoneStatus: MicropolisZoneStatus;
 	cityPop: number;
+	aiPop: number;
+	foodCoverage: number;
+	foodImportCost: number;
+	foodImportEnabled: boolean;
 	cityScore: number;
 	cityTime: number;
 	worldWidth: number;
@@ -363,6 +409,7 @@ function peekEngineScalars(): MicropolisEnginePeekScalars | null {
 		cityMonth: m.cityMonth,
 		cityTime: m.cityTime,
 		cityPop: m.cityPop,
+		aiPop: m.aiPop,
 		cityScore: m.cityScore,
 		cityYes: m.cityYes,
 		cityClass: (m.cityClass as unknown as { value: number })?.value ?? Number(m.cityClass as unknown),
@@ -377,6 +424,7 @@ function peekEngineScalars(): MicropolisEnginePeekScalars | null {
 		crimeAverage: m.crimeAverage,
 		landValueAverage: m.landValueAverage,
 		generatedCitySeed: m.generatedCitySeed,
+		solarPowerPop: m.solarPowerPop,
 		resPop: m.resPop,
 		comPop: m.comPop,
 		indPop: m.indPop,
@@ -414,6 +462,13 @@ export const micropolisReactive = {
 	},
 
 	syncFromEngine,
+	syncPowerFromEngine,
+	syncPopulationFromEngine(): void {
+		const micropolis = attachedSimulator?.micropolis;
+		if (!micropolis) return;
+		cityPop = micropolis.cityPop;
+		aiPop = micropolis.aiPop;
+	},
 
 	/**
 	 * Embind module (`WORLD_W`, `MapTileBits`, `EditingTool`, `Tiles`, …).
@@ -507,6 +562,17 @@ export const micropolisReactive = {
 			const r = requireMicropolis().doTool(tool, x, y);
 			mapRevision++;
 			return r;
+		},
+		buildOwnedResidential(x: number, y: number, owner: number): ToolResult {
+			const result = requireMicropolis().buildOwnedResidential(x, y, owner);
+			mapRevision++;
+			aiPop = attachedSimulator?.micropolis?.aiPop ?? aiPop;
+			return result;
+		},
+		buildFarm(x: number, y: number): ToolResult {
+			const result = requireMicropolis().buildFarm(x, y);
+			mapRevision++;
+			return result;
 		},
 		loadCity(path: string): boolean {
 			const ok = requireMicropolis().loadCity(path);
@@ -653,6 +719,41 @@ export const micropolisReactive = {
 	get cityPop() {
 		return cityPop;
 	},
+	get aiPop() {
+		return aiPop;
+	},
+	get powerCapacity() {
+		return powerCapacity;
+	},
+	get powerDemand() {
+		return powerDemand;
+	},
+	get aiCoverage() {
+		return aiCoverage;
+	},
+	get powerReserve() {
+		return powerReserve;
+	},
+	get unpoweredZoneCount() {
+		return unpoweredZoneCount;
+	},
+	get aiTaxFund() {
+		return aiTaxFund;
+	},
+	get powerPriority() {
+		return powerPriority;
+	},
+	get foodCoverage() {
+		return foodCoverage;
+	},
+	get foodImportCost() {
+		return foodImportCost;
+	},
+	get foodImportEnabled() {
+		return foodImportEnabled;
+	},
+	syncFoodFromEngine,
+
 	get cityScore() {
 		return cityScore;
 	},
@@ -694,6 +795,10 @@ export const micropolisReactive = {
 			budgetModalRequested,
 			zoneStatus,
 			cityPop,
+			aiPop,
+			foodCoverage,
+			foodImportCost,
+			foodImportEnabled,
 			cityScore,
 			cityTime,
 			worldWidth: attachedSimulator?.micropolisengine?.WORLD_W ?? 0,

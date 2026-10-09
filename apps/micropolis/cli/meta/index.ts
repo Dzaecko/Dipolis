@@ -30,7 +30,7 @@ const aboutPayload = {
 			name: 'sim',
 			path: 'cli/wasm',
 			api: ['extendSimCommands'],
-			commands: ['sim info', 'sim smoke']
+			commands: ['sim info', 'sim smoke', 'sim run']
 		},
 		{
 			name: 'bus',
@@ -55,6 +55,7 @@ const aboutPayload = {
 		'pnpm run micropolis -- city info ../../../content/micropolis/cities/haight.cty --format yaml',
 		'pnpm run micropolis -- city export ../../../content/micropolis/cities/haight.cty --include-map --format csv',
 		'pnpm run micropolis -- sim smoke --ticks 10 --format yaml',
+		'pnpm run micropolis sim run --seed 42 --ticks 30000 --speed 3 --no-disasters',
 		'pnpm run micropolis -- bus list --format yaml'
 	]
 };

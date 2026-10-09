@@ -4,8 +4,16 @@ import type { MainModule } from '../types/micropolisengine.d.js';
 import type { Micropolis, Callback, JSCallback } from '../types/micropolisengine.d.js';
 import { loadMicropolisBrowserModule } from '$lib/wasm/browser';
 import { createMapMopViews } from '$lib/wasm/views';
+import coexistenceParams from './params/koexistenz.json';
 
 export let micropolisengine: MainModule | null = null;
+
+/** Default and AI palette indices in the ten-set Micropolis atlas. */
+export const HUMAN_TILESET = 0;
+export const AI_TILESET = 8;
+export const FARM_TILESET = 9;
+export const MICROPOLIS_TILESET_COUNT = 10;
+
 let sharedSimulator: MicropolisSimulator | null = null;
 let viewCount = 0;
 const GLOBAL_KEY = '__MICROPOLIS_SINGLETON__';
@@ -48,6 +56,7 @@ export class MicropolisSimulator {
     mapData: Uint16Array | null = null;
     mopData: Uint16Array | null = null;
     cityFileName = '/cities/haight.cty';
+    humanTileSet = HUMAN_TILESET;
     cityFileNames = [
       "/cities/about.cty",
       "/cities/badnews.cty",
@@ -135,6 +144,11 @@ export class MicropolisSimulator {
         }
 
         this.micropolis.init();
+        for (const [name, value] of Object.entries(coexistenceParams)) {
+            if (!this.micropolis.setParam(name, value)) {
+                throw new Error(`Invalid coexistence parameter ${name}`);
+            }
+        }
         this.isInitialized = true;
     }
 
@@ -153,6 +167,72 @@ export class MicropolisSimulator {
 
         for (let i = 0; i < this.mopData.length; i++) {
             this.mopData[i] = value;
+        }
+    }
+
+    setHumanTileSet(value: number): void {
+        if (!Number.isFinite(value)) return;
+        let next = ((Math.trunc(value) % MICROPOLIS_TILESET_COUNT) + MICROPOLIS_TILESET_COUNT) % MICROPOLIS_TILESET_COUNT;
+        while (next === AI_TILESET || next === FARM_TILESET) {
+            const direction = value < this.humanTileSet ? -1 : 1;
+            next = (next + direction + MICROPOLIS_TILESET_COUNT) % MICROPOLIS_TILESET_COUNT;
+        }
+        this.humanTileSet = next;
+    }
+
+    /** Rebuild atlas-set selection from ownership after every map/owner mutation. */
+    syncOwnerToMop(): void {
+        const engine = this.micropolisengine;
+        const micropolis = this.micropolis;
+        if (!engine || !micropolis || !this.mapData || !this.mopData) return;
+
+        const width = engine.WORLD_W;
+        const height = engine.WORLD_H;
+        const cellCount = width * height;
+        const mapData = this.mapData;
+        const mopData = this.mopData;
+        const owners = new Uint8Array(
+            engine.wasmMemory.buffer,
+            micropolis.getOwnerMapAddress(),
+            micropolis.getOwnerMapSize(),
+        );
+        if (mapData.length < cellCount || mopData.length < cellCount || owners.length < cellCount) return;
+
+        const tileBits = engine.MapTileBits;
+        const zoneBit = tileBits.ZONEBIT.value;
+        const tileMask = tileBits.LOMASK.value;
+        const lastResidentialCenter = engine.Tiles.HOSPITAL.value;
+        const emptyIndustryCenter = engine.Tiles.INDCLR.value;
+        const firstIndustryCenter = engine.Tiles.IZB.value;
+        const lastIndustryCenter = firstIndustryCenter + 7 * 9;
+        const human = this.humanTileSet & 0xff;
+
+        for (let i = 0; i < cellCount; i += 1) {
+            mopData[i] = (mopData[i]! & 0xff00) | human;
+        }
+
+        for (let x = 0; x < width; x += 1) {
+            for (let y = 0; y < height; y += 1) {
+                const center = x * height + y;
+                const mapTile = mapData[center] ?? 0;
+                const tile = mapTile & tileMask;
+                const owner = owners[center];
+                const aiResidential = owner === 2 && (mapTile & zoneBit) !== 0 && tile < lastResidentialCenter;
+                const farm = owner === 3 && (mapTile & zoneBit) !== 0 &&
+                    (tile === emptyIndustryCenter ||
+                        (tile >= firstIndustryCenter && tile <= lastIndustryCenter && (tile - firstIndustryCenter) % 9 === 0));
+                if (!aiResidential && !farm) continue;
+
+                for (let dx = -1; dx <= 1; dx += 1) {
+                    for (let dy = -1; dy <= 1; dy += 1) {
+                        const tileX = x + dx;
+                        const tileY = y + dy;
+                        if (tileX < 0 || tileX >= width || tileY < 0 || tileY >= height) continue;
+                        const index = tileX * height + tileY;
+                        mopData[index] = (mopData[index]! & 0xff00) | (farm ? FARM_TILESET : AI_TILESET);
+                    }
+                }
+            }
         }
     }
 

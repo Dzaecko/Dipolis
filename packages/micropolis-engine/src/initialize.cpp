@@ -84,7 +84,13 @@
 /** Reset many game state variables */
 void Micropolis::initWillStuff()
 {
-    randomlySeedRandom();
+    if (fixedSeed >= 0) {
+        seedRandom(fixedSeed);
+    } else {
+        randomlySeedRandom();
+    }
+    ownerMap.clear();
+    aiHouseMap.clear();
     initGraphMax();
     destroyAllSprites();
 
@@ -120,6 +126,13 @@ void Micropolis::initWillStuff()
 
     doNewGame();
     doUpdateHeads();
+}
+
+
+/** Set the seed used by subsequent city initialization. */
+void Micropolis::setFixedSeed(int seed)
+{
+    fixedSeed = seed;
 }
 
 
