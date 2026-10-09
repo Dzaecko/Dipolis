@@ -21,7 +21,8 @@ function numericReport(m: Micropolis) {
 		cashFlow: m.cashFlow,
 		resPop: m.resPop,
 		aiPop: m.aiPop,
-		peakResPop: m.peakResPop,
+		baselineResPop: m.baselineResPop,
+		gainedResPop: m.gainedResPop,
 		lostToPower: m.lostToPower,
 		lostToHunger: m.lostToHunger,
 		lostToDemand: m.lostToDemand,
@@ -66,12 +67,13 @@ describe('simulation command bus reporting and advancement', () => {
 			direct.setParam('foodImportEnabled', 1);
 			direct.setParam('welfareLevel', 0.5);
 			direct.setCityTax(7);
-		const targetCityTime = direct.cityTime + 12;
+			const targetCityTime = direct.cityTime + 12 * 4;
 			direct.setSpeed(3);
 			direct.setPasses(1);
-			let guard = 12 * 32 + 32;
+			let guard = 12 * 4 * 32 + 32;
 			while (direct.cityTime < targetCityTime && guard-- > 0) direct.simTick();
 			expect(direct.cityTime).toBe(targetCityTime);
+			direct.markBaseline();
 			const expected = numericReport(direct);
 			direct.delete();
 
@@ -93,8 +95,13 @@ describe('simulation command bus reporting and advancement', () => {
 					args: { months: 12 },
 				});
 				expect(advance.handled).not.toBe(false);
+				expect(throughBus.cityTime).toBe(targetCityTime);
+				const baseline = await commandBus.dispatch('report.mark-baseline', { source: 'script', simulator });
+				expect(baseline.handled).not.toBe(false);
 				const report = await commandBus.dispatch('report.get', { source: 'script', simulator });
 				expect(report.data).toEqual(expected);
+				expect((report.data as { baselineResPop: number }).baselineResPop).toBe(throughBus.resPop);
+				expect((report.data as { gainedResPop: number }).gainedResPop).toBe(0);
 			} finally {
 				throughBus.delete();
 			}

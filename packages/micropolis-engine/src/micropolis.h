@@ -1018,8 +1018,10 @@ public:
      * Depends on level of zone development.
      */
     short resPop;
-    /** Highest resident population observed since engine initialization. */
-    short peakResPop = 0;
+    /** Resident population at the most recent explicit reporting baseline. */
+    short baselineResPop = 0;
+    /** Cumulative positive human-residential population changes since baseline. */
+    Quad gainedResPop = 0;
     /** Cumulative human resident population points lost, by cause. */
     Quad lostToPower = 0;
     Quad lostToHunger = 0;
@@ -1373,6 +1375,10 @@ public:
 
     /** House tiles grown by AI-owned FREEZ zones; prevents counting human houses as AI residents. */
     MapByte1 aiHouseMap;
+    /** Last human population observed per residential zone, for diagnostic deltas. */
+    MapByte1 previousHumanResPopMap;
+    /** Cause latched when a human zone is downgraded; consumed on next census delta. */
+    MapByte1 humanLossCauseMap;
 
     /**
      * Rate of growth map.
@@ -2540,6 +2546,7 @@ public:
     bool setParam(const std::string &name, double value);
     double getParam(const std::string &name) const;
     void setOriginalPowerScanForTests(bool enabled);
+    void markBaseline();
     ToolResult buildOwnedResidential(short x, short y, int owner);
     ToolResult buildFarm(short x, short y);
     int checkOwnerInvariant();

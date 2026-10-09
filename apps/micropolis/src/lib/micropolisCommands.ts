@@ -167,7 +167,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             cashFlow: m.cashFlow,
             resPop: m.resPop,
             aiPop: m.aiPop,
-            peakResPop: m.peakResPop,
+            baselineResPop: m.baselineResPop,
+            gainedResPop: m.gainedResPop,
             lostToPower: m.lostToPower,
             lostToHunger: m.lostToHunger,
             lostToDemand: m.lostToDemand,
@@ -189,6 +190,19 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       },
     },
     {
+      id: 'report.mark-baseline',
+      label: 'Mark population baseline',
+      icon: 'report',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      run: ({ simulator }) => {
+        const m = simulator?.micropolis;
+        if (!m) return { handled: false, message: 'simulator is unavailable' };
+        m.markBaseline();
+      },
+    },
+    {
       id: 'sim.advance',
       label: 'Advance simulation by months',
       icon: 'forward',
@@ -202,14 +216,14 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         if (!m || typeof months !== 'number' || !Number.isInteger(months) || months < 0 || months > 1200) {
           return { handled: false, message: 'months must be an integer from 0 to 1200' };
         }
-        const targetTime = m.cityTime + months;
+        const targetTime = m.cityTime + months * 4;
         const previousSpeed = m.simSpeed;
         const previousPasses = m.simPasses;
         const previousFramesPerSecond = simulator?.framesPerSecond;
         if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(0);
         m.setSpeed(3);
         m.setPasses(1);
-        let guard = months * 32 + 32;
+        let guard = months * 4 * 32 + 32;
         try {
           while (m.cityTime < targetTime && guard-- > 0) m.simTick();
         } finally {

@@ -197,8 +197,6 @@ void Micropolis::simulate()
             break;
 
         case 9:
-            // All eight map-scan slices for the current census are complete.
-            peakResPop = max(peakResPop, resPop);
             if (cityTime % CENSUS_FREQUENCY_10 == 0) {
                 take10Census();
             }
@@ -708,7 +706,8 @@ void Micropolis::setValves()
     foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
     foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
     foodImported = 0;
-    foodImportCost = 0;
+    // Coverage is refreshed between tax bookings; the reported cost remains
+    // the amount actually booked by collectTax, not a new purchase estimate.
     if (params.foodImportEnabled && foodDemand > foodProduction) {
         const Quad deficit = foodDemand - foodProduction;
         if (params.foodImportPrice <= 0.0f) {
@@ -717,7 +716,6 @@ void Micropolis::setValves()
             const long double requiredCost = ceill((long double)deficit * params.foodImportPrice);
             if ((long double)totalFunds >= requiredCost) {
                 foodImported = deficit;
-                foodImportCost = (Quad)requiredCost;
             }
         }
     }
@@ -1088,6 +1086,15 @@ void Micropolis::mapScan(int x1, int x2)
 
             const Byte owner = ownerMap.worldGet(x, y);
             const bool residentialCenter = (mapVal & ZONEBIT) && tile < HOSPITAL;
+            // Removed/replaced centers and human-to-AI conversions never reach
+            // doResidential as a human zone again. Retire their actual snapshot,
+            // rather than forcing the city-wide population identity to balance.
+            if (!residentialCenter || owner == 2) {
+                const Byte previousPop = previousHumanResPopMap.worldGet(x, y);
+                lostToDemand += previousPop;
+                previousHumanResPopMap.worldSet(x, y, 0);
+                humanLossCauseMap.worldSet(x, y, 0);
+            }
             const bool farmCenter = (mapVal & ZONEBIT) &&
                 (tile == INDCLR || (tile >= IZB && tile <= IZB + 7 * 9 && ((tile - IZB) % 9) == 0));
             if ((owner == 1 || owner == 2) && !residentialCenter) ownerMap.worldSet(x, y, 0);

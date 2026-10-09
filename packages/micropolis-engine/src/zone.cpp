@@ -97,7 +97,6 @@ void Micropolis::doZone(const Position &pos)
         const long double affordableCost = ceill((long double)deficit * params.foodImportPrice);
         if ((long double)totalFunds >= affordableCost) {
             foodImported = deficit;
-            foodImportCost = (Quad)affordableCost;
             foodCoverage = 1.0f;
         }
     }
@@ -612,6 +611,20 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
     if (aiOwned) {
         aiPop += tpop;
     } else {
+        const int previousPop = previousHumanResPopMap.worldGet(pos.posX, pos.posY);
+        const int populationDelta = (int)tpop - previousPop;
+        if (populationDelta > 0) {
+            gainedResPop += populationDelta;
+            humanLossCauseMap.worldSet(pos.posX, pos.posY, 0);
+        } else if (populationDelta < 0) {
+            const Byte cause = humanLossCauseMap.worldGet(pos.posX, pos.posY);
+            const Quad lost = (Quad)(-populationDelta);
+            if (cause == 1) lostToPower += lost;
+            else if (cause == 2) lostToHunger += lost;
+            else lostToDemand += lost;
+            humanLossCauseMap.worldSet(pos.posX, pos.posY, 0);
+        }
+        previousHumanResPopMap.worldSet(pos.posX, pos.posY, (Byte)tpop);
         resPop += tpop;
     }
 
@@ -626,11 +639,7 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
 
     if (TrfGood == -1) {
         value = aiOwned ? 3 : getLandPollutionValue(pos);
-        if (!aiOwned) {
-            if (currentHumanPowerFailure) lostToPower += tpop;
-            else if (currentHumanHungerFailure) lostToHunger += tpop;
-            else lostToDemand += tpop;
-        }
+        if (!aiOwned) humanLossCauseMap.worldSet(pos.posX, pos.posY, currentHumanPowerFailure ? 1 : currentHumanHungerFailure ? 2 : 3);
         doResOut(pos, tpop, value);
         return;
     }
@@ -660,11 +669,7 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
         if (zscore < 350 &&
             (((short)(zscore + 26380)) < ((short)random16Signed()))) {
             value = aiOwned ? 3 : getLandPollutionValue(pos);
-            if (!aiOwned) {
-                if (currentHumanPowerFailure) lostToPower += tpop;
-                else if (currentHumanHungerFailure) lostToHunger += tpop;
-                else lostToDemand += tpop;
-            }
+            if (!aiOwned) humanLossCauseMap.worldSet(pos.posX, pos.posY, currentHumanPowerFailure ? 1 : currentHumanHungerFailure ? 2 : 3);
             doResOut(pos, tpop, value);
         }
     }

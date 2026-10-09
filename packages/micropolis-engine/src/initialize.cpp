@@ -91,6 +91,8 @@ void Micropolis::initWillStuff()
     }
     ownerMap.clear();
     aiHouseMap.clear();
+    previousHumanResPopMap.clear();
+    humanLossCauseMap.clear();
     initGraphMax();
     destroyAllSprites();
 

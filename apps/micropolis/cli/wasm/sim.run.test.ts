@@ -28,7 +28,8 @@ interface SimRunResult {
 	automationShare: number;
 	unemploymentRate: number;
 	welfareCost: number;
-	peakResPop: number;
+	baselineResPop: number;
+	gainedResPop: number;
 	lostToPower: number;
 	lostToHunger: number;
 	lostToDemand: number;

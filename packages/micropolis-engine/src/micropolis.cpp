@@ -102,6 +102,8 @@ Micropolis::Micropolis() :
         powerReachableMap(0),
         ownerMap(0),
         aiHouseMap(0),
+        previousHumanResPopMap(0),
+        humanLossCauseMap(0),
         rateOfGrowthMap(0),
         fireStationMap(0),
         fireStationEffectMap(0),
@@ -150,10 +152,13 @@ void Micropolis::init()
 
     // short resPop;
     resPop = 0;
-    peakResPop = 0;
+    baselineResPop = 0;
+    gainedResPop = 0;
     lostToPower = 0;
     lostToHunger = 0;
     lostToDemand = 0;
+    previousHumanResPopMap.clear();
+    humanLossCauseMap.clear();
     humanTaxFund = 0;
     welfareCost = 0;
 
@@ -299,6 +304,8 @@ void Micropolis::init()
     powerReachableMap.clear();
     ownerMap.clear();
     aiHouseMap.clear();
+    previousHumanResPopMap.clear();
+    humanLossCauseMap.clear();
     terrainDensityMap.clear();
     rateOfGrowthMap.clear();
     fireStationMap.clear();
@@ -1278,6 +1285,17 @@ bool Micropolis::setParam(const std::string &name, double value)
     else if (name == "welfareCostPerPop") params.welfareCostPerPop = (float)value;
     else return false;
     return true;
+}
+
+
+void Micropolis::markBaseline()
+{
+    baselineResPop = resPop;
+    gainedResPop = 0;
+    lostToPower = 0;
+    lostToHunger = 0;
+    lostToDemand = 0;
+    humanLossCauseMap.clear();
 }
 
 

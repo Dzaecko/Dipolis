@@ -364,7 +364,8 @@ export interface Micropolis extends ClassHandle {
   roadTotal: number;
   railTotal: number;
   resPop: number;
-  peakResPop: number;
+  baselineResPop: number;
+  gainedResPop: number;
   lostToPower: number;
   lostToHunger: number;
   lostToDemand: number;
@@ -432,6 +433,7 @@ export interface Micropolis extends ClassHandle {
   setParam(_0: EmbindString, _1: number): boolean;
   getParam(_0: EmbindString): number;
   setOriginalPowerScanForTests(_0: boolean): void;
+  markBaseline(): void;
   buildOwnedResidential(_0: number, _1: number, _2: number): ToolResult;
   buildFarm(_0: number, _1: number): ToolResult;
   checkOwnerInvariant(): number;
