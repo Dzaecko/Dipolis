@@ -28,6 +28,21 @@ interface SimRunResult {
 	automationShare: number;
 	unemploymentRate: number;
 	welfareCost: number;
+	peakResPop: number;
+	lostToPower: number;
+	lostToHunger: number;
+	lostToDemand: number;
+	yearlyFinance: Array<{
+		year: number;
+		taxFund: number;
+		aiTaxFund: number;
+		roadFund: number;
+		policeFund: number;
+		fireFund: number;
+		foodImportCost: number;
+		welfareCost: number;
+		cashFlow: number;
+	}>;
 	powerDemand: number;
 	cityScore: number;
 	cityTime: number;
@@ -85,6 +100,12 @@ describe('headless deterministic simulation CLI', () => {
 		expect(result.foodDemand).toBeGreaterThan(0);
 		expect(result.foodCoverage).toBeGreaterThan(0.9);
 		expect(result.foodImportCost).toBeGreaterThan(0);
+		expect(result.yearlyFinance.length).toBeGreaterThan(0);
+		for (const year of result.yearlyFinance) {
+			expect(Object.keys(year).sort()).toEqual([
+				'aiTaxFund', 'cashFlow', 'fireFund', 'foodImportCost', 'policeFund', 'roadFund', 'taxFund', 'welfareCost', 'year',
+			].sort());
+		}
 	}, 120_000);
 
 	it(
@@ -101,7 +122,10 @@ describe('headless deterministic simulation CLI', () => {
 		'matches committed deterministic baselines for three packaged cities',
 		async () => {
 			for (const [city, expected] of Object.entries(baselines.cities)) {
-				await expect(runSim(city)).resolves.toEqual(expected);
+				const actual = await runSim(city);
+				for (const key of Object.keys(expected) as Array<keyof SimRunResult>) {
+					expect(actual[key], `${city}.${key}`).toEqual(expected[key]);
+				}
 			}
 		},
 		120_000

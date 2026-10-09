@@ -66,6 +66,11 @@ function summarize(
 			welfareCost: micropolis.welfareCost,
 			cityTax: micropolis.cityTax,
 			cityPop: micropolis.cityPop,
+			peakResPop: micropolis.peakResPop,
+			lostToPower: micropolis.lostToPower,
+			lostToHunger: micropolis.lostToHunger,
+			lostToDemand: micropolis.lostToDemand,
+			yearlyFinance: [],
 			cityScore: micropolis.cityScore,
 			trafficAverage: micropolis.trafficAverage,
 			pollutionAverage: micropolis.pollutionAverage,
@@ -133,7 +138,25 @@ async function runDeterministic(flags: Flags) {
 		micropolis.setSpeed(speed);
 		micropolis.setPasses(1);
 		micropolis.setEnableDisasters(disasters);
-		for (let tick = 0; tick < ticks; tick += 1) micropolis.simTick();
+		const yearlyFinance: Array<Record<string, number>> = [];
+		let lastFinanceRevision = micropolis.financeRevision;
+		for (let tick = 0; tick < ticks; tick += 1) {
+			micropolis.simTick();
+			if (micropolis.financeRevision !== lastFinanceRevision) {
+				yearlyFinance.push({
+					year: micropolis.cityYear,
+					taxFund: micropolis.humanTaxFund,
+					aiTaxFund: micropolis.aiTaxFund,
+					roadFund: micropolis.roadFund,
+					policeFund: micropolis.policeFund,
+					fireFund: micropolis.fireFund,
+					foodImportCost: micropolis.foodImportCost,
+					welfareCost: micropolis.welfareCost,
+					cashFlow: micropolis.cashFlow,
+				});
+				lastFinanceRevision = micropolis.financeRevision;
+			}
+		}
 
 		const mapAddress = micropolis.getMapAddress();
 		const mapSize = micropolis.getMapSize();
@@ -144,6 +167,11 @@ async function runDeterministic(flags: Flags) {
 			totalFunds: micropolis.totalFunds,
 			cityPop: micropolis.cityPop,
 			resPop: micropolis.resPop,
+			peakResPop: micropolis.peakResPop,
+			lostToPower: micropolis.lostToPower,
+			lostToHunger: micropolis.lostToHunger,
+			lostToDemand: micropolis.lostToDemand,
+			yearlyFinance,
 			comPop: micropolis.comPop,
 			indPop: micropolis.indPop,
 			aiTaxFund: micropolis.aiTaxFund,
@@ -156,6 +184,7 @@ async function runDeterministic(flags: Flags) {
 			automationShare: micropolis.automationShare,
 			unemploymentRate: micropolis.unemploymentRate,
 			welfareCost: micropolis.welfareCost,
+			yearlyFinance,
 			powerDemand: micropolis.powerDemand,
 			cityScore: micropolis.cityScore,
 			cityTime: micropolis.cityTime,

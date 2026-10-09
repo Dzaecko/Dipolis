@@ -126,6 +126,104 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       },
     },
     {
+      id: 'city.set-tax',
+      label: 'Set city tax rate',
+      icon: 'tax',
+      context: ['simulator', 'button', 'chat', 'llm'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      preview: ({ args }) => ({ label: `Set city tax rate to ${String(args?.rate ?? '')}` }),
+      run: ({ simulator, args, syncPowerState }) => {
+        const micropolis = simulator?.micropolis;
+        const rate = args?.rate;
+        if (!micropolis || typeof rate !== 'number' || !Number.isInteger(rate) || rate < 0 || rate > 20) {
+          return { handled: false, message: 'rate must be an integer from 0 to 20' };
+        }
+        micropolis.setCityTax(rate);
+        syncPowerState?.();
+      },
+    },
+    {
+      id: 'report.get',
+      label: 'Get simulation report',
+      icon: 'report',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      run: ({ simulator }) => {
+        const m = simulator?.micropolis;
+        if (!m) return { handled: false, message: 'simulator is unavailable' };
+        return {
+          data: {
+            year: m.cityYear,
+            treasury: m.totalFunds,
+            taxFund: m.humanTaxFund,
+            aiTaxFund: m.aiTaxFund,
+            roadFund: m.roadFund,
+            policeFund: m.policeFund,
+            fireFund: m.fireFund,
+            foodImportCost: m.foodImportCost,
+            welfareCost: m.welfareCost,
+            cashFlow: m.cashFlow,
+            resPop: m.resPop,
+            aiPop: m.aiPop,
+            peakResPop: m.peakResPop,
+            lostToPower: m.lostToPower,
+            lostToHunger: m.lostToHunger,
+            lostToDemand: m.lostToDemand,
+            unemploymentRate: m.unemploymentRate,
+            automationShare: m.automationShare,
+            foodCoverage: m.foodCoverage,
+            hungryZoneCount: m.hungryZoneCount,
+            powerCapacity: m.powerCapacity,
+            powerDemand: m.powerDemand,
+            powerReserve: m.powerReserve,
+            unpoweredZoneCount: m.unpoweredZoneCount,
+            aiUnpoweredZoneCount: m.aiUnpoweredZoneCount,
+            cityTax: m.cityTax,
+            powerPriority: m.getParam('powerPriority'),
+            foodImportEnabled: m.getParam('foodImportEnabled'),
+            welfareLevel: m.getParam('welfareLevel'),
+          },
+        };
+      },
+    },
+    {
+      id: 'sim.advance',
+      label: 'Advance simulation by months',
+      icon: 'forward',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      preview: ({ args }) => ({ label: `Advance ${String(args?.months ?? '')} months` }),
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const months = args?.months;
+        if (!m || typeof months !== 'number' || !Number.isInteger(months) || months < 0 || months > 1200) {
+          return { handled: false, message: 'months must be an integer from 0 to 1200' };
+        }
+        const targetTime = m.cityTime + months;
+        const previousSpeed = m.simSpeed;
+        const previousPasses = m.simPasses;
+        const previousFramesPerSecond = simulator?.framesPerSecond;
+        if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(0);
+        m.setSpeed(3);
+        m.setPasses(1);
+        let guard = months * 32 + 32;
+        try {
+          while (m.cityTime < targetTime && guard-- > 0) m.simTick();
+        } finally {
+          m.setSpeed(previousSpeed);
+          m.setPasses(previousPasses);
+          if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(previousFramesPerSecond);
+        }
+        if (m.cityTime < targetTime) {
+          return { handled: false, message: 'simulation did not advance to the requested month' };
+        }
+        return { data: { monthsAdvanced: months, cityTime: m.cityTime, year: m.cityYear } };
+      },
+    },
+    {
       id: 'city.generate-random',
       label: 'Generate Random City',
       icon: 'random',

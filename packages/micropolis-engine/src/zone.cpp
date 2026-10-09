@@ -91,6 +91,16 @@
 void Micropolis::doZone(const Position &pos)
 {
     //printf("doZone %d %d\n", pos.posX, pos.posY);
+
+    if (params.foodImportEnabled && foodDemand > foodProduction && params.foodImportPrice > 0.0f) {
+        const Quad deficit = foodDemand - foodProduction;
+        const long double affordableCost = ceill((long double)deficit * params.foodImportPrice);
+        if ((long double)totalFunds >= affordableCost) {
+            foodImported = deficit;
+            foodImportCost = (Quad)affordableCost;
+            foodCoverage = 1.0f;
+        }
+    }
     
     // Set Power Bit in Map from powerGridMap
     bool zonePowerFlag = setZonePower(pos);
@@ -124,6 +134,8 @@ void Micropolis::doZone(const Position &pos)
         unpoweredZoneCount++;
         if (aiResidential) aiUnpoweredZoneCount++;
     }
+    currentHumanPowerFailure = !aiResidential && !zoneHasPower;
+    currentHumanHungerFailure = !aiResidential && zoneHasPower && !foodSatisfied;
 
     // Do special zones.
     if ((tile > PORTBASE) &&
@@ -614,6 +626,11 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
 
     if (TrfGood == -1) {
         value = aiOwned ? 3 : getLandPollutionValue(pos);
+        if (!aiOwned) {
+            if (currentHumanPowerFailure) lostToPower += tpop;
+            else if (currentHumanHungerFailure) lostToHunger += tpop;
+            else lostToDemand += tpop;
+        }
         doResOut(pos, tpop, value);
         return;
     }
@@ -643,6 +660,11 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
         if (zscore < 350 &&
             (((short)(zscore + 26380)) < ((short)random16Signed()))) {
             value = aiOwned ? 3 : getLandPollutionValue(pos);
+            if (!aiOwned) {
+                if (currentHumanPowerFailure) lostToPower += tpop;
+                else if (currentHumanHungerFailure) lostToHunger += tpop;
+                else lostToDemand += tpop;
+            }
             doResOut(pos, tpop, value);
         }
     }

@@ -319,9 +319,13 @@ export interface Micropolis extends ClassHandle {
   aiValve: number;
   aiValveOverride: boolean;
   aiTaxFund: number;
+  humanTaxFund: number;
   welfareCost: number;
+  financeRevision: number;
   taxFund: number;
   roadFund: number;
+  policeFund: number;
+  fireFund: number;
   aiCoverage: number;
   automationShare: number;
   unemploymentRate: number;
@@ -360,6 +364,10 @@ export interface Micropolis extends ClassHandle {
   roadTotal: number;
   railTotal: number;
   resPop: number;
+  peakResPop: number;
+  lostToPower: number;
+  lostToHunger: number;
+  lostToDemand: number;
   comPop: number;
   indPop: number;
   policeStationPop: number;

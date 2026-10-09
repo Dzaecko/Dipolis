@@ -1018,6 +1018,12 @@ public:
      * Depends on level of zone development.
      */
     short resPop;
+    /** Highest resident population observed since engine initialization. */
+    short peakResPop = 0;
+    /** Cumulative human resident population points lost, by cause. */
+    Quad lostToPower = 0;
+    Quad lostToHunger = 0;
+    Quad lostToDemand = 0;
 
     /** Population assigned to AI-owned residential zones. */
     short aiPop;
@@ -1113,6 +1119,8 @@ public:
     float unemploymentRate = 0.0f;
     /** Test-only switch to execute the first-fork power scan implementation. */
     bool useOriginalPowerScanForTests = false;
+    bool currentHumanPowerFailure = false;
+    bool currentHumanHungerFailure = false;
 
     /**
      * Seaport population.
@@ -1288,10 +1296,12 @@ public:
      * game level.
      */
     Quad taxFund;
+    Quad humanTaxFund = 0;
 
     /** Tax income contributed by AI-owned residential population. */
     Quad aiTaxFund = 0;
     Quad welfareCost = 0;
+    Quad financeRevision = 0;
 
     /**
      * City tax rate.

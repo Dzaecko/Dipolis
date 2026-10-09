@@ -197,6 +197,8 @@ void Micropolis::simulate()
             break;
 
         case 9:
+            // All eight map-scan slices for the current census are complete.
+            peakResPop = max(peakResPop, resPop);
             if (cityTime % CENSUS_FREQUENCY_10 == 0) {
                 take10Census();
             }
@@ -561,6 +563,7 @@ void Micropolis::setCommonInits()
     fireEffect = MAX_FIRE_STATION_EFFECT;
     taxFlag = false;
     taxFund = 0;
+    humanTaxFund = 0;
     aiTaxFund = 0;
 }
 
@@ -704,6 +707,20 @@ void Micropolis::setValves()
 
     foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
     foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+    foodImported = 0;
+    foodImportCost = 0;
+    if (params.foodImportEnabled && foodDemand > foodProduction) {
+        const Quad deficit = foodDemand - foodProduction;
+        if (params.foodImportPrice <= 0.0f) {
+            foodImported = deficit;
+        } else {
+            const long double requiredCost = ceill((long double)deficit * params.foodImportPrice);
+            if ((long double)totalFunds >= requiredCost) {
+                foodImported = deficit;
+                foodImportCost = (Quad)requiredCost;
+            }
+        }
+    }
     const long long availableFood = (long long)foodProduction + (long long)foodImported;
     foodCoverage = foodDemand > 0
         ? min(1.0f, (float)availableFood / (float)foodDemand)
@@ -779,7 +796,7 @@ void Micropolis::take10Census()
     int resPopDenom = 8;
 
     short x;
-
+        static const float FLevels[3] = { 1.4, 1.2, 0.8 };
     /* put census#s in Historical Graphs and scroll data  */
     resHist10Max = 0;
     comHist10Max = 0;
@@ -921,6 +938,7 @@ void Micropolis::collectTax()
      */
 
     if (!taxFlag) { // If the Tax Port is clear
+        ++financeRevision;
 
         /// @todo Do something with z? Check old Mac code to see if it's used.
         z = cityTaxAverage / 48;  // post release
@@ -930,7 +948,7 @@ void Micropolis::collectTax()
         policeFund = (long)policeStationPop * 100;
         fireFund = (long)fireStationPop * 100;
         roadFund = (long)((roadTotal + (railTotal * 2)) * RLevels[gameLevel]);
-        taxFund = (long)((((Quad)totalPop * landValueAverage) / 120) * cityTax * FLevels[gameLevel]);
+        humanTaxFund = (long)((((Quad)totalPop * landValueAverage) / 120) * cityTax * FLevels[gameLevel]);
         const long double aiTaxAmount = (long double)aiPop * params.aiYieldPerPop * cityTax;
         if (aiTaxAmount > (long double)std::numeric_limits<Quad>::max()) {
             aiTaxFund = std::numeric_limits<Quad>::max();
@@ -939,7 +957,8 @@ void Micropolis::collectTax()
         } else {
             aiTaxFund = (Quad)aiTaxAmount;
         }
-        const long long combinedTaxFund = (long long)taxFund + (long long)aiTaxFund;
+        taxFund = humanTaxFund;
+        const long long combinedTaxFund = (long long)humanTaxFund + (long long)aiTaxFund;
         if (combinedTaxFund > (long long)std::numeric_limits<Quad>::max()) {
             taxFund = std::numeric_limits<Quad>::max();
         } else if (combinedTaxFund < (long long)std::numeric_limits<Quad>::min()) {

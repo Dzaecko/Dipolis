@@ -150,6 +150,12 @@ void Micropolis::init()
 
     // short resPop;
     resPop = 0;
+    peakResPop = 0;
+    lostToPower = 0;
+    lostToHunger = 0;
+    lostToDemand = 0;
+    humanTaxFund = 0;
+    welfareCost = 0;
 
     // short comPop;
     comPop = 0;
