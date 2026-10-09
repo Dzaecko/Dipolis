@@ -12,6 +12,7 @@ export interface MicropolisCommandContext extends CommandContext {
   heatFlowRangeHigh?: number;
   syncPowerState?: () => void;
   syncFoodState?: () => void;
+  syncWelfareState?: () => void;
 }
 
 const keyFramesPerSecondValues = [1, 5, 10, 30, 60, 120, 120, 120, 120];
@@ -102,6 +103,26 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
           return { handled: false, message: 'could not update food import setting' };
         }
         syncFoodState?.();
+      },
+    },
+    {
+      id: 'welfare.set-level',
+      label: 'Set welfare level',
+      icon: 'welfare',
+      context: ['simulator', 'button', 'chat', 'llm'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      preview: ({ args }) => ({ label: `Set welfare level to ${String(args?.level ?? '')}` }),
+      run: ({ simulator, args, syncWelfareState }) => {
+        const micropolis = simulator?.micropolis;
+        const level = args?.level;
+        if (!micropolis || typeof level !== 'number' || !Number.isFinite(level) || level < 0 || level > 1) {
+          return { handled: false, message: 'level must be a number from 0 to 1' };
+        }
+        if (!micropolis.setParam('welfareLevel', level)) {
+          return { handled: false, message: 'level must be a number from 0 to 1' };
+        }
+        syncWelfareState?.();
       },
     },
     {

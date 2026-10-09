@@ -19,6 +19,7 @@
 	const aiPopulationLabel = $derived(`AI ${micropolisReactive.aiPop.toLocaleString()}`);
 	const reservePercent = $derived(micropolisReactive.powerReserve * 100);
 	const foodCoveragePercent = $derived(micropolisReactive.foodCoverage * 100);
+	const welfarePercent = $derived(micropolisReactive.welfareLevel * 100);
 	const priorityOptions = [
 		{ value: 1, label: 'Menschen' },
 		{ value: 0, label: 'Gleich' },
@@ -40,6 +41,15 @@
 			simulator: micropolisReactive.attachedSimulator,
 			syncFoodState: micropolisReactive.syncFoodFromEngine,
 			args: { enabled },
+		});
+	}
+
+	function setWelfareLevel(level: number): void {
+		void commandBus.dispatch('welfare.set-level', {
+			source: 'button',
+			simulator: micropolisReactive.attachedSimulator,
+			syncWelfareState: micropolisReactive.syncWelfareFromEngine,
+			args: { level },
 		});
 	}
 </script>
@@ -78,6 +88,23 @@
 		<span>Unversorgt {micropolisReactive.unpoweredZoneCount}</span>
 		<span>KI-Ertrag ${micropolisReactive.aiTaxFund.toLocaleString()}</span>
 	</div>
+	<div class="automation-stats" aria-label="Labor statistics">
+		<span>Automatisiert {(micropolisReactive.automationShare * 100).toFixed(1)}%</span>
+		<span>Arbeitslos {(micropolisReactive.unemploymentRate * 100).toFixed(1)}%</span>
+		<span>Grundversorgung ${micropolisReactive.welfareCost.toLocaleString()}</span>
+	</div>
+	<label class="welfare-control">
+		<span>Grundversorgung {welfarePercent.toFixed(0)}%</span>
+		<input
+			type="range"
+			min="0"
+			max="1"
+			step="0.05"
+			value={micropolisReactive.welfareLevel}
+			aria-label="Welfare level"
+			oninput={(event) => setWelfareLevel(Number(event.currentTarget.value))}
+		/>
+	</label>
 	<div class="food-stats" aria-label="Food balance">
 		<span>Nahrung {(foodCoveragePercent).toFixed(1)}%</span>
 		<span>Importkosten ${micropolisReactive.foodImportCost.toLocaleString()}</span>
@@ -249,6 +276,35 @@
 		background: #315331;
 		border-color: #a6e09e;
 		color: #fff;
+	}
+
+	.automation-stats {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.1rem 0.45rem;
+		margin-top: 0.2rem;
+		font-size: 0.68rem;
+		font-variant-numeric: tabular-nums;
+		color: #c7d5eb;
+	}
+
+	.automation-stats span:last-child {
+		grid-column: 1 / -1;
+	}
+
+	.welfare-control {
+		display: grid;
+		grid-template-columns: 1fr 7rem;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.2rem;
+		font-size: 0.68rem;
+		pointer-events: auto;
+	}
+
+	.welfare-control input {
+		width: 100%;
+		accent-color: #9cf59c;
 	}
 
 	.hud-funds {

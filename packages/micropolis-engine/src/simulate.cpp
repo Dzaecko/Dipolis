@@ -235,7 +235,8 @@ void Micropolis::simulate()
         case 11:
 
             if ((simCycle % speedPowerScan[speedIndex]) == 0) {
-                doPowerScan();
+                if (useOriginalPowerScanForTests) doPowerScanOriginal();
+                else doPowerScan();
                 newMapFlags[MAP_TYPE_POWER] = 1;
                 newPower = true; /* post-release change */
             }
@@ -305,7 +306,8 @@ void Micropolis::doSimInit()
     setValves();
     clearCensus();
     mapScan(0, WORLD_W);
-    doPowerScan();
+    if (useOriginalPowerScanForTests) doPowerScanOriginal();
+    else doPowerScan();
     newPower = true;         /* post rel */
     pollutionTerrainLandValueScan();
     crimeScan();
@@ -615,20 +617,30 @@ void Micropolis::setValves()
     totalPopLast = totalPop;
     totalPop = (short)(normalizedResPop + comPop + indPop);
 
-    if (resPop > 0) {
-        employment = (comHist[1] + indHist[1]) / normalizedResPop;
+    const float jobs = max(0.0f, (float)comHist[1] + (float)indHist[1]);
+    const float aiJobSupply = (float)aiPop * params.jobsPerAiPop;
+    const float automationJobs = jobs > 0.0f
+        ? min(aiJobSupply, params.maxAutomation * jobs)
+        : 0.0f;
+    automationShare = jobs > 0.0f ? automationJobs / jobs : 0.0f;
+    const float humanJobs = max(0.0f, jobs - automationJobs);
+    if (normalizedResPop > 0.0f) {
+        employment = humanJobs / normalizedResPop;
+        unemploymentRate = clamp(1.0f - employment, 0.0f, 1.0f);
     } else {
-        employment = 1;
+        employment = 1.0f;
+        unemploymentRate = 0.0f;
     }
 
-    migration = normalizedResPop * (employment - 1);
+    const float welfareAdjustedEmployment = employment + (1.0f - employment) * params.welfareLevel;
+    migration = normalizedResPop * (welfareAdjustedEmployment - 1.0f);
     births = normalizedResPop * birthRate;
     projectedResPop = normalizedResPop + migration + births;   // Projected res pop.
 
-    // Compute laborBase
-    float temp = comHist[1] + indHist[1];
-    if (temp > 0.0) {
-        laborBase = (resHist[1] / temp);
+    // New commercial and industrial growth uses both human and AI labor.
+    const float combinedLabor = max(0.0f, (float)resHist[1] + aiJobSupply);
+    if (jobs > 0.0f) {
+        laborBase = combinedLabor / jobs;
     } else {
         laborBase = 1;
     }
@@ -672,12 +684,12 @@ void Micropolis::setValves()
 
     // Ratios are velocity changes to valves.
     if (!aiValveOverride) {
-        const float humanWeight = params.powerPriority == 1 ? 1.0f : params.powerPriority == 2 ? 0.0f : 0.5f;
         const Quad aiDemand = (Quad)aiPop * params.aiPowerPerPop;
-        const Quad aiNetworkTiles = powerAiResidentialNetworkTiles;
-        const Quad otherNetworkTiles = max((Quad)0, powerNetworkReachableTiles - aiNetworkTiles);
+        const bool classicPowerRules = aiPop == 0 && params.foodPerHumanPop == 0.0f && !params.foodImportEnabled;
+        const Quad networkDemand = classicPowerRules ? powerNetworkSteps : powerNetworkReachableTiles;
+        const Quad totalDemand = networkDemand + aiDemand;
         const float reserve = powerCapacity > 0
-            ? ((float)powerCapacity - (float)aiDemand - (float)aiNetworkTiles - humanWeight * (float)otherNetworkTiles) / (float)powerCapacity
+            ? ((float)powerCapacity - (float)totalDemand) / (float)powerCapacity
             : 0.0f;
         powerReserve = reserve;
         if (reserve >= params.aiReserveHigh) {
@@ -938,16 +950,26 @@ void Micropolis::collectTax()
 
         foodImportCost = 0;
         foodImported = 0;
+        welfareCost = 0;
         // collectTax runs after the current map-scan census. Refresh the
         // balance here so imports cover demand first observed in this census.
         foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
         foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+
+        const long double requestedWelfareCost = (long double)resPop * unemploymentRate *
+            params.welfareCostPerPop * params.welfareLevel;
+        if (requestedWelfareCost >= (long double)std::numeric_limits<Quad>::max()) {
+            welfareCost = std::numeric_limits<Quad>::max();
+        } else if (requestedWelfareCost > 0.0L) {
+            welfareCost = (Quad)requestedWelfareCost;
+        }
+
         if (params.foodImportEnabled && foodDemand > foodProduction) {
             const Quad foodDeficit = foodDemand - foodProduction;
             if (params.foodImportPrice <= 0.0f) {
                 foodImported = foodDeficit;
-            } else if ((long long)totalFunds + (long long)taxFund > 0) {
-                const long long availableFunds = max((long long)0, (long long)totalFunds + (long long)taxFund);
+            } else if ((long long)totalFunds + (long long)taxFund - (long long)welfareCost > 0) {
+                const long long availableFunds = max((long long)0, (long long)totalFunds + (long long)taxFund - (long long)welfareCost);
                 const long double affordableFood = (long double)availableFunds / params.foodImportPrice;
                 foodImported = (Quad)min((long double)foodDeficit, affordableFood);
                 long double cost = ceill((long double)foodImported * params.foodImportPrice);
@@ -958,6 +980,7 @@ void Micropolis::collectTax()
                 foodImportCost = (Quad)cost;
             }
         }
+
         foodCoverage = foodDemand > 0
             ? min(1.0f, (float)((long long)foodProduction + (long long)foodImported) / (float)foodDemand)
             : 1.0f;
@@ -965,7 +988,7 @@ void Micropolis::collectTax()
         if (totalPop > 0 || aiPop > 0) {
             /* Human or AI residents make the city inhabited for budgeting. */
             const long long netCashFlow = (long long)taxFund -
-                ((long long)policeFund + (long long)fireFund + (long long)roadFund + (long long)foodImportCost);
+                ((long long)policeFund + (long long)fireFund + (long long)roadFund + (long long)foodImportCost + (long long)welfareCost);
             if (netCashFlow > std::numeric_limits<short>::max()) {
                 cashFlow = std::numeric_limits<short>::max();
             } else if (netCashFlow < std::numeric_limits<short>::min()) {
@@ -973,8 +996,8 @@ void Micropolis::collectTax()
             } else {
                 cashFlow = (short)netCashFlow;
             }
-            if (foodImportCost > 0) {
-                totalFunds -= foodImportCost;
+            if (foodImportCost > 0 || welfareCost > 0) {
+                totalFunds -= foodImportCost + welfareCost;
                 updateFunds();
             }
             doBudget();

@@ -7,5 +7,9 @@
   "foodPerHumanPop": 5,
   "foodPerFarmPop": 300,
   "foodImportEnabled": 1,
-  "foodImportPrice": 0.13
+  "foodImportPrice": 0.13,
+  "maxAutomation": 0.9,
+  "jobsPerAiPop": 0.08,
+  "welfareLevel": 0,
+  "welfareCostPerPop": 1.25
 }

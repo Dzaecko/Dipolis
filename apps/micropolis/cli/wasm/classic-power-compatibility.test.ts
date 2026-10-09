@@ -29,11 +29,12 @@ function powerPlantCenters(engine: MainModule, sim: Micropolis): Center[] {
 	return centers;
 }
 
-async function runClassicWithTwoPlantsRemoved(): Promise<{ mapSha1: string; resPop: number; unpoweredZoneCount: number }> {
+async function runClassicWithTwoPlantsRemoved(useOriginal: boolean): Promise<{ mapSha1: string; resPop: number; unpoweredZoneCount: number }> {
 	const engine = await loadMicropolisMainModule();
 	const sim = new engine.Micropolis();
 	const callback = createNoopJsCallback(engine);
 	sim.setFixedSeed(42);
+	sim.setOriginalPowerScanForTests(useOriginal);
 	sim.setCallback(callback, {});
 	sim.init();
 	try {
@@ -61,9 +62,11 @@ async function runClassicWithTwoPlantsRemoved(): Promise<{ mapSha1: string; resP
 }
 
 describe('Classic power compatibility against pre-change traversal', () => {
-	it('matches the Haight two-plant outage reference after 20000 ticks', async () => {
-		const result = await runClassicWithTwoPlantsRemoved();
-		expect(result).toEqual({
+	it('matches the first-fork doPowerScanOriginal() on the Haight two-plant outage', async () => {
+		const current = await runClassicWithTwoPlantsRemoved(false);
+		const original = await runClassicWithTwoPlantsRemoved(true);
+		expect(current).toEqual(original);
+		expect(current).toEqual({
 			mapSha1: '031358d21ca69ea3a23bfb9010264c0fd9de3642',
 			resPop: 3717,
 			unpoweredZoneCount: 66,

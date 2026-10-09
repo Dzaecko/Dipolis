@@ -1254,6 +1254,13 @@ bool Micropolis::setParam(const std::string &name, double value)
         return true;
     }
 
+    if (name == "welfareLevel" || name == "maxAutomation") {
+        if (value < 0.0 || value > 1.0) return false;
+        if (name == "welfareLevel") params.welfareLevel = (float)value;
+        else params.maxAutomation = (float)value;
+        return true;
+    }
+
     if (value < 0.0) return false;
     if (name == "aiReserveLow") params.aiReserveLow = (float)value;
     else if (name == "aiReserveHigh") params.aiReserveHigh = (float)value;
@@ -1261,6 +1268,8 @@ bool Micropolis::setParam(const std::string &name, double value)
     else if (name == "foodPerHumanPop") params.foodPerHumanPop = (float)value;
     else if (name == "foodPerFarmPop") params.foodPerFarmPop = (float)value;
     else if (name == "foodImportPrice") params.foodImportPrice = (float)value;
+    else if (name == "jobsPerAiPop") params.jobsPerAiPop = (float)value;
+    else if (name == "welfareCostPerPop") params.welfareCostPerPop = (float)value;
     else return false;
     return true;
 }
@@ -1277,10 +1286,12 @@ double Micropolis::getParam(const std::string &name) const
     if (name == "foodPerFarmPop") return params.foodPerFarmPop;
     if (name == "foodImportEnabled") return params.foodImportEnabled ? 1.0 : 0.0;
     if (name == "foodImportPrice") return params.foodImportPrice;
+    if (name == "maxAutomation") return params.maxAutomation;
+    if (name == "jobsPerAiPop") return params.jobsPerAiPop;
+    if (name == "welfareLevel") return params.welfareLevel;
+    if (name == "welfareCostPerPop") return params.welfareCostPerPop;
     return std::numeric_limits<double>::quiet_NaN();
 }
-
-
 ToolResult Micropolis::buildOwnedResidential(short x, short y, int owner)
 {
     if (owner != 1 && owner != 2) {

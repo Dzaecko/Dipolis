@@ -25,6 +25,9 @@ interface SimRunResult {
 	foodCoverage: number;
 	foodImportCost: number;
 	hungryZoneCount: number;
+	automationShare: number;
+	unemploymentRate: number;
+	welfareCost: number;
 	powerDemand: number;
 	cityScore: number;
 	cityTime: number;

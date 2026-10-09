@@ -31,6 +31,9 @@ type CitySample = {
 	powerDemand: number;
 	aiCoverage: number;
 	aiValve: number;
+	automationShare: number;
+	unemploymentRate: number;
+	welfareCost: number;
 };
 
 const coalPlantX = 8;
@@ -217,6 +220,9 @@ async function runFoundingScript(script: CityScript, profile: Record<string, num
 					powerDemand: sim.powerDemand,
 					aiCoverage: sim.aiCoverage,
 					aiValve: sim.aiValve,
+					automationShare: sim.automationShare,
+					unemploymentRate: sim.unemploymentRate,
+					welfareCost: sim.welfareCost,
 				});
 			}
 		}
@@ -234,8 +240,8 @@ describe('deterministic city founding on empty land', () => {
 			expect(first).toHaveLength(5);
 			expect(second).toEqual(first);
 			console.log(script.name);
-			console.table(first.map(({ tick, resPop, aiPop, totalFunds, foodCoverage, foodImportCost, hungryZoneCount, aiTaxFund, cashFlow, reservePercent, unpoweredZoneCount }) => ({
-				tick, resPop, aiPop, totalFunds, foodCoverage, foodImportCost, hungryZoneCount, aiTaxFund, cashFlow,
+			console.table(first.map(({ tick, resPop, aiPop, unemploymentRate, automationShare, welfareCost, totalFunds, foodCoverage, foodImportCost, hungryZoneCount, aiTaxFund, cashFlow, reservePercent, unpoweredZoneCount }) => ({
+				tick, resPop, aiPop, unemploymentRate, automationShare, welfareCost, totalFunds, foodCoverage, foodImportCost, hungryZoneCount, aiTaxFund, cashFlow,
 				reservePercent: Number(reservePercent.toFixed(1)), unpoweredZoneCount,
 			})));
 			if (script.name === 'nur KIs') {
@@ -259,4 +265,22 @@ describe('deterministic city founding on empty land', () => {
 			})));
 		}
 	}, 180_000);
+
+	it('measures welfare spending as a share of AI tax in the mixed founding city', async () => {
+		const fullWelfareProfile = { ...coexistence, welfareLevel: 1 };
+		const timeline = await runFoundingScript(scripts[2]!, fullWelfareProfile);
+		const meanWelfareShare = timeline.reduce((sum, sample) =>
+			sum + (sample.aiTaxFund > 0 ? sample.welfareCost / sample.aiTaxFund : 0), 0) / timeline.length;
+		expect(meanWelfareShare).toBeCloseTo(0.6, 1);
+		console.log('mixed founding, full welfare cost calibration');
+		console.table(timeline.map(({ tick, resPop, aiPop, unemploymentRate, welfareCost, aiTaxFund }) => ({
+			tick,
+			resPop,
+			aiPop,
+			unemploymentRate: Number(unemploymentRate.toFixed(3)),
+			welfareCost,
+			aiTaxFund,
+			welfareShareOfAiTax: aiTaxFund > 0 ? Number((welfareCost / aiTaxFund).toFixed(3)) : 0,
+		})));
+	}, 120_000);
 });

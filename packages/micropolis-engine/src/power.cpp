@@ -207,38 +207,40 @@ void Micropolis::doPowerScan()
 
     const Quad networkSteps = countNetworkStepsAndReachableMap();
     powerNetworkSteps = networkSteps;
-    // Preserve the existing power-allocation traversal and reported demand;
-    // the reserve estimate below separately classifies unique reachable tiles.
-    const Quad totalDemand = networkSteps + aiDemand;
     const Quad availableCapacity = max((Quad)0, maxPower);
-    const Quad uniquePhysicalDemand = powerNetworkReachableTiles + aiDemand;
-    Quad tileBudget = networkSteps;
     short priority = params.powerPriority;
     if (priority < 0 || priority > 2) priority = 0;
 
-    // Revisited branch points are historical work units, not additional
-    // physical consumers. If the unique network plus AI load fits, do not
-    // create a shortage solely because the compatibility counter revisited tiles.
-    const bool classicPowerRules = aiPop == 0 && params.powerPriority == 0 &&
-        params.foodPerHumanPop == 0.0f && !params.foodImportEnabled;
-    if (totalDemand <= availableCapacity ||
-        (!classicPowerRules && uniquePhysicalDemand <= availableCapacity)) {
+    const bool classicPowerRules = aiPop == 0 && params.foodPerHumanPop == 0.0f && !params.foodImportEnabled;
+    // Classic retains its historical flood-fill work-unit demand. In
+    // Koexistenz, all power metrics use the unique physical tiles plus AI load.
+    const Quad networkDemand = classicPowerRules ? networkSteps : powerNetworkReachableTiles;
+    const Quad totalDemand = networkDemand + aiDemand;
+    Quad tileBudget = networkSteps;
+
+    if (totalDemand <= availableCapacity) {
         aiCoverage = 1.0f;
         tileBudget = -1; // No shortage: preserve the full legacy grid traversal.
     } else {
         sendMessage(MESSAGE_NOT_ENOUGH_POWER);
         if (priority == 1) {
-            tileBudget = min(networkSteps, availableCapacity);
+            const Quad allocatedHumanDemand = min(networkDemand, availableCapacity);
+            tileBudget = networkDemand > 0
+                ? (Quad)((double)networkSteps * (double)allocatedHumanDemand / (double)networkDemand)
+                : 0;
             aiCoverage = aiDemand > 0
-                ? clamp((float)(availableCapacity - tileBudget) / (float)aiDemand, 0.0f, 1.0f)
+                ? clamp((float)(availableCapacity - allocatedHumanDemand) / (float)aiDemand, 0.0f, 1.0f)
                 : 1.0f;
         } else if (priority == 2) {
             const Quad allocatedAi = min(aiDemand, max((Quad)0, maxPower));
-            tileBudget = max((Quad)0, availableCapacity - allocatedAi);
+            const Quad allocatedHumanDemand = min(networkDemand, max((Quad)0, availableCapacity - allocatedAi));
+            tileBudget = networkDemand > 0
+                ? (Quad)((double)networkSteps * (double)allocatedHumanDemand / (double)networkDemand)
+                : 0;
             aiCoverage = aiDemand > 0 ? (float)allocatedAi / (float)aiDemand : 1.0f;
         } else {
             const float factor = totalDemand > 0
-                ? (float)maxPower / (float)totalDemand
+                ? (float)availableCapacity / (float)totalDemand
                 : 1.0f;
             tileBudget = (Quad)(networkSteps * factor);
             aiCoverage = factor;
@@ -272,6 +274,60 @@ void Micropolis::doPowerScan()
     powerStackPointer = 0;
     powerCapacity = maxPower;
     powerDemand = totalDemand;
+}
+
+
+/**
+ * Original power scan from fork commit 8a803c6 (src/MicropolisEngine/src/power.cpp).
+ * Keep this body unchanged: the compatibility test runs it beside doPowerScan().
+ */
+void Micropolis::doPowerScanOriginal()
+{
+    Direction2 anyDir,dir;
+    int conNum;
+
+    // Clear power map.
+    powerGridMap.clear();
+
+    // Power that the combined coal and nuclear power plants can deliver.
+    Quad maxPower = coalPowerPop * COAL_POWER_STRENGTH +
+                    nuclearPowerPop * NUCLEAR_POWER_STRENGTH;
+
+    Quad numPower = 0; // Amount of power used.
+
+    while (powerStackPointer > 0) {
+        Position pos = pullPowerStack();
+        anyDir = DIR2_INVALID;
+        do {
+            numPower++;
+            if (numPower > maxPower) {
+                sendMessage(MESSAGE_NOT_ENOUGH_POWER);
+                return;
+            }
+            if (anyDir != DIR2_INVALID) {
+                pos.move(anyDir);
+            }
+            powerGridMap.worldSet(pos.posX, pos.posY, 1);
+            conNum = 0;
+            dir = DIR2_BEGIN;
+            while (dir < DIR2_END && conNum < 2) {
+                if (testForConductive(pos, dir)) {
+                    conNum++;
+                    anyDir = dir;
+                }
+                dir = increment90(dir);
+            }
+            if (conNum > 1) {
+                pushPowerStack(pos);
+            }
+        } while (conNum);
+    }
+}
+
+
+void Micropolis::setOriginalPowerScanForTests(bool enabled)
+{
+    useOriginalPowerScanForTests = enabled;
 }
 
 

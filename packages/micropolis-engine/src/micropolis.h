@@ -952,6 +952,10 @@ struct MicropolisParams {
     float foodPerFarmPop = 0.0f;
     bool foodImportEnabled = false;
     float foodImportPrice = 0.0f;
+    float maxAutomation = 0.9f;
+    float jobsPerAiPop = 0.0f;
+    float welfareLevel = 0.0f;
+    float welfareCostPerPop = 0.0f;
 };
 
 class Micropolis {
@@ -1105,6 +1109,10 @@ public:
     float powerReserve = 0.0f;
     /** Fraction of AI residential demand covered by the latest power scan. */
     float aiCoverage = 1.0f;
+    float automationShare = 0.0f;
+    float unemploymentRate = 0.0f;
+    /** Test-only switch to execute the first-fork power scan implementation. */
+    bool useOriginalPowerScanForTests = false;
 
     /**
      * Seaport population.
@@ -1283,6 +1291,7 @@ public:
 
     /** Tax income contributed by AI-owned residential population. */
     Quad aiTaxFund = 0;
+    Quad welfareCost = 0;
 
     /**
      * City tax rate.
@@ -2085,6 +2094,7 @@ private:
 
 
     void doPowerScan();
+    void doPowerScanOriginal();
 
     bool testForConductive(const Position &pos, Direction2 testDir);
 
@@ -2519,6 +2529,7 @@ public:
     bool setZoneOwner(int x, int y, int owner);
     bool setParam(const std::string &name, double value);
     double getParam(const std::string &name) const;
+    void setOriginalPowerScanForTests(bool enabled);
     ToolResult buildOwnedResidential(short x, short y, int owner);
     ToolResult buildFarm(short x, short y);
     int checkOwnerInvariant();

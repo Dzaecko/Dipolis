@@ -319,9 +319,12 @@ export interface Micropolis extends ClassHandle {
   aiValve: number;
   aiValveOverride: boolean;
   aiTaxFund: number;
+  welfareCost: number;
   taxFund: number;
   roadFund: number;
   aiCoverage: number;
+  automationShare: number;
+  unemploymentRate: number;
   powerReserve: number;
   powerCapacity: number;
   powerDemand: number;
@@ -420,6 +423,7 @@ export interface Micropolis extends ClassHandle {
   setZoneOwner(_0: number, _1: number, _2: number): boolean;
   setParam(_0: EmbindString, _1: number): boolean;
   getParam(_0: EmbindString): number;
+  setOriginalPowerScanForTests(_0: boolean): void;
   buildOwnedResidential(_0: number, _1: number, _2: number): ToolResult;
   buildFarm(_0: number, _1: number): ToolResult;
   checkOwnerInvariant(): number;

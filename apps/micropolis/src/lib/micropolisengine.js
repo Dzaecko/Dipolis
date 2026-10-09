@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpm3q8pys5.js
+// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpi5y840x2.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -231,21 +231,21 @@ Module['FS_createPath']("/", "cities", true, true);
 
   })();
 
-// end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpm3q8pys5.js
-// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpj8velcd3.js
+// end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpi5y840x2.js
+// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpcflv2suz.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if ((typeof ENVIRONMENT_IS_WASM_WORKER != 'undefined' && ENVIRONMENT_IS_WASM_WORKER) || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD) || (typeof ENVIRONMENT_IS_AUDIO_WORKLET != 'undefined' && ENVIRONMENT_IS_AUDIO_WORKLET)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpj8velcd3.js
-// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpzoiv2di1.js
+  // end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpcflv2suz.js
+// include: C:\Users\Dzaecko\AppData\Local\Temp\tmpao719ox2.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpzoiv2di1.js
+  // end include: C:\Users\Dzaecko\AppData\Local\Temp\tmpao719ox2.js
 
 
 var arguments_ = [];

@@ -76,3 +76,39 @@ describe('food import command', () => {
 		expect(result.handled).toBe(false);
 	});
 });
+
+describe('welfare level command', () => {
+	beforeEach(() => registerMicropolisCommands());
+
+	it('sets a valid welfare level and synchronizes reactive state', async () => {
+		const params = new Map<string, number>([['welfareLevel', 0]]);
+		const engine = {
+			setParam: (name: string, value: number) => { params.set(name, value); return true; },
+			getParam: (name: string) => params.get(name) ?? Number.NaN,
+		};
+		const simulator = { micropolis: engine } as unknown as MicropolisSimulator;
+		let synced = false;
+		const result = await commandBus.dispatch('welfare.set-level', {
+			source: 'button',
+			simulator,
+			syncWelfareState: () => { synced = true; },
+			args: { level: 0.5 },
+		});
+
+		expect(result.handled).not.toBe(false);
+		expect(engine.getParam('welfareLevel')).toBe(0.5);
+		expect(synced).toBe(true);
+	});
+
+	it('rejects levels outside zero to one', async () => {
+		const engine = { setParam: () => false, getParam: (_name: string) => 0 };
+		const simulator = { micropolis: engine } as unknown as MicropolisSimulator;
+		const result = await commandBus.dispatch('welfare.set-level', {
+			source: 'button',
+			simulator,
+			args: { level: 1.1 },
+		});
+
+		expect(result.handled).toBe(false);
+	});
+});

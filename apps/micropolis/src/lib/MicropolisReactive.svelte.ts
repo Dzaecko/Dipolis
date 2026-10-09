@@ -84,6 +84,10 @@ let powerPriority = $state(0);
 let foodCoverage = $state(1);
 let foodImportCost = $state(0);
 let foodImportEnabled = $state(false);
+let automationShare = $state(0);
+let unemploymentRate = $state(0);
+let welfareCost = $state(0);
+let welfareLevel = $state(0);
 
 function syncPowerFromEngine(): void {
 	const m = attachedSimulator?.micropolis;
@@ -95,6 +99,10 @@ function syncPowerFromEngine(): void {
 	unpoweredZoneCount = m.unpoweredZoneCount;
 	aiTaxFund = m.aiTaxFund;
 	powerPriority = m.getParam('powerPriority');
+	automationShare = m.automationShare;
+	unemploymentRate = m.unemploymentRate;
+	welfareCost = m.welfareCost;
+	welfareLevel = m.getParam('welfareLevel');
 }
 
 function syncFoodFromEngine(): void {
@@ -752,6 +760,19 @@ export const micropolisReactive = {
 	get foodImportEnabled() {
 		return foodImportEnabled;
 	},
+	get automationShare() {
+		return automationShare;
+	},
+	get unemploymentRate() {
+		return unemploymentRate;
+	},
+	get welfareCost() {
+		return welfareCost;
+	},
+	get welfareLevel() {
+		return welfareLevel;
+	},
+	syncWelfareFromEngine: syncPowerFromEngine,
 	syncFoodFromEngine,
 
 	get cityScore() {
