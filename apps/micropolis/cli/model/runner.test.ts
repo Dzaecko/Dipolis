@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { ChatAdapter } from './adapter';
 import { decideYear, summarizeYear, type YearContext } from './runner';
+import { protocolFilename } from './protocol-path';
 
 const context: YearContext = { year: 1, report: { resPop: 3585, cashFlow: -100 }, history: [] };
 describe('city model runner authorization and annual loop', () => {
@@ -85,15 +86,29 @@ describe('city model runner authorization and annual loop', () => {
 });
 
 describe('headless Node S266 acceptance', () => {
+ it('explains existing run files without loading credentials or changing the log', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'micropolis-existing-'));
+  const app = fileURLToPath(new URL('../../', import.meta.url));
+  const file = path.join(directory, protocolFilename('fake', 'N', 'fake-s266', 'off', 2));
+  writeFileSync(file, '{"status":"failed"}\n');
+  try {
+  expect(() => execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
+    '--run', '2', '--output', directory], { cwd: app, encoding: 'utf8', stdio: 'pipe',
+     env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_KEY: '', CITY_MODEL_NAME: '' } }))
+    .toThrow(/existiert bereits/);
+   expect(readFileSync(file, 'utf8')).toBe('{"status":"failed"}\n');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+ });
  it('runs the real CLI without network and exactly matches all stored S266 metrics', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'micropolis-model-'));
   const app = fileURLToPath(new URL('../../', import.meta.url));
+  const protocol = path.join(directory, protocolFilename('fake', 'N', 'fake-s266', 'off', 1));
   try {
    const output = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
     '--assignment', 'N', '--run', '1', '--output', directory], { cwd: app, encoding: 'utf8',
      env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
    expect(JSON.parse(output).exactS266Match).toBe(true);
-  const events = readFileSync(path.join(directory, 'fake-N-1.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  const events = readFileSync(protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
   const rows = events.filter(r => r.event === 'year-completed');
   expect(events.some(r => r.event === 'decision' && r.toolCalls.length)).toBe(true);
    expect(rows).toHaveLength(30);
@@ -101,7 +116,7 @@ describe('headless Node S266 acceptance', () => {
    expect(rows.every(r => r.decisions.flatMap((d: { toolCalls: unknown[] }) => d.toolCalls).length <= 12)).toBe(true);
    expect(readFileSync(path.join(directory, 'runs.csv'), 'utf8').trim().split('\n')).toHaveLength(2);
    // Reproduce a crash immediately after year 10 with the exact persisted log.
-   writeFileSync(path.join(directory, 'fake-N-1.jsonl'), events.filter(e => e.year <= 10)
+  writeFileSync(protocol, events.filter(e => e.year <= 10)
     .map(e => JSON.stringify(e)).join('\n') + '\n' + JSON.stringify({ status: 'failed', assignment: 'N', run: 1 }) + '\n');
    rmSync(path.join(directory, 'runs.csv'));
    const resumed = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
@@ -109,15 +124,22 @@ describe('headless Node S266 acceptance', () => {
      env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
    expect(JSON.parse(resumed).metrics).toEqual(JSON.parse(output).metrics);
    expect(JSON.parse(resumed).exactS266Match).toBe(true);
-   const after = readFileSync(path.join(directory, 'fake-N-1.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  const after = readFileSync(protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
    expect(after.filter(e => e.event === 'year-completed')).toHaveLength(30);
   const firstYear11Action = events.find(e => e.event === 'decision' && e.year === 11);
-  writeFileSync(path.join(directory, 'fake-N-1.jsonl'), [...events.filter(e => e.year <= 10), firstYear11Action]
+  writeFileSync(protocol, [...events.filter(e => e.year <= 10), firstYear11Action]
    .map(e => JSON.stringify(e)).join('\n') + '\n');
   rmSync(path.join(directory, 'runs.csv'));
   const partialResume = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
    '--assignment', 'N', '--run', '1', '--output', directory, '--resume'], { cwd: app, encoding: 'utf8' });
   expect(JSON.parse(partialResume).metrics).toEqual(JSON.parse(output).metrics);
+  const withHandbook = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
+   '--assignment', 'N', '--run', '1', '--output', directory, '--handbook', 'on'], { cwd: app, encoding: 'utf8' });
+  expect(JSON.parse(withHandbook).metrics).toEqual(JSON.parse(output).metrics);
+  expect(JSON.parse(withHandbook).handbook).toBe('on');
+  expect(JSON.parse(withHandbook).protocol).not.toBe(JSON.parse(output).protocol);
+  const handbookEvents = readFileSync(JSON.parse(withHandbook).protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  expect(handbookEvents.every(e => e.handbook === 'on')).toBe(true);
   } finally { rmSync(directory, { recursive: true, force: true }); }
  }, 60000);
 });

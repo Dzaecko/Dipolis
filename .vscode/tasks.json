@@ -4,7 +4,13 @@
     {
       "label": "Stadtmodell: Auftrag N fortsetzen",
       "type": "shell",
-      "command": "& '${workspaceFolder}/scripts/start-city-model.ps1' -Resume",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
+        "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-Assignment", "N", "-Resume"
+      ],
       "options": {
         "cwd": "${workspaceFolder}",
         "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] }
@@ -15,7 +21,13 @@
     {
       "label": "Stadtmodell: Auftrag N live starten",
       "type": "shell",
-      "command": "& '${workspaceFolder}/scripts/start-city-model.ps1'",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
+        "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-Assignment", "N"
+      ],
       "options": {
         "cwd": "${workspaceFolder}",
         "shell": {
@@ -31,6 +43,55 @@
         "close": false
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Stadtmodell: Auftrag R live starten",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
+        "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-Assignment", "R"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] }
+      },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true, "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "Stadtmodell: Auftrag R fortsetzen",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
+        "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-Assignment", "R", "-Resume"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] }
+      },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true, "close": false },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cityModelRun",
+      "type": "promptString",
+      "description": "Laufnummer (positive ganze Zahl; zum Fortsetzen die vorhandene Nummer)",
+      "default": "1"
+    },
+    {
+      "id": "cityModelHandbook",
+      "type": "pickString",
+      "description": "Handbuch fuer diesen Lauf verwenden?",
+      "options": ["on", "off"],
+      "default": "off"
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { ChatAdapter, ChatMessage, ToolCall } from './adapter';
-import { SYSTEM_PROMPTS } from './prompts';
+import { systemPrompt, type HandbookMode } from './prompts';
 import { TOOLS, validateToolCall, mapToolArguments } from './tools';
 import { aggregateYears, YEARS, type AnnualReport, type Metrics } from '../wasm/strategy-space';
 
@@ -27,7 +27,7 @@ export interface RunnerEvent {
  attempts?: number; kind?: string; status?: number; responseText?: string; message?: string;
 }
 export interface ResumeState { completed: YearRecord[]; partial?: { year: number; decisions: Decision[] }; }
-export interface RunOptions { resume?: ResumeState; event?: (event: RunnerEvent) => void; }
+export interface RunOptions { resume?: ResumeState; event?: (event: RunnerEvent) => void; handbook?: HandbookMode; }
 
 /** Accept old protocol budget fields for replay, never as new model arguments. */
 function replayArguments(call: ToolCall) {
@@ -53,9 +53,9 @@ async function replayDecisions(decisions: Decision[], dispatch: Dispatch) {
 /** Per-year conversation; only the nine explicit tools reach the trusted bus. */
 export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
  context: YearContext, assignment: 'N' | 'R', journal?: (decision: Decision) => void,
- event?: (event: RunnerEvent) => void, prior: Decision[] = []) {
+ event?: (event: RunnerEvent) => void, prior: Decision[] = [], handbook: HandbookMode = 'off') {
  const messages: ChatMessage[] = [
-  { role: 'system', content: SYSTEM_PROMPTS[assignment] },
+  { role: 'system', content: systemPrompt(assignment, handbook) },
   { role: 'user', content: JSON.stringify(context) },
  ];
  const decisions: Decision[] = [...prior];
@@ -154,7 +154,7 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
    const partial = options.resume?.partial?.year === year ? options.resume.partial.decisions : [];
    await replayDecisions(partial, dispatch);
    ({ decisions, termination } = await decideYear(adapter, dispatch, { year, report, history }, assignment,
-    decision => journal?.(year, report, decision), options.event, partial));
+    decision => journal?.(year, report, decision), options.event, partial, options.handbook));
   }
   for (const d of decisions) for (const { call, result } of d.toolCalls) {
    const data = result.data as { built?: number } | undefined;

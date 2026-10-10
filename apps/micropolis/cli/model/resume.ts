@@ -1,10 +1,11 @@
 import type { Decision, ResumeState, YearRecord } from './runner';
 
-export function readResume(text: string, assignment: string, model: string, run: number): ResumeState {
+export function readResume(text: string, assignment: string, model: string, run: number, handbook: 'on' | 'off' = 'off'): ResumeState {
  const events = text.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
  for (const e of events) {
   if ((e.assignment !== undefined && e.assignment !== assignment) ||
-   (e.model !== undefined && e.model !== model) || (e.run !== undefined && e.run !== run))
+  (e.model !== undefined && e.model !== model) || (e.run !== undefined && e.run !== run) ||
+  (e.handbook ?? 'off') !== handbook)
    throw new Error('Resume identity mismatch');
  }
  const completed = events.filter(e => e.event === 'year-completed') as YearRecord[];

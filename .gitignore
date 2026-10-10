@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+/.env.city-model
 
 # Compiled Object files
 *.slo

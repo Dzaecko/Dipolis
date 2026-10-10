@@ -1,5 +1,38 @@
 # Headless city model runner
 
+## Handbook wording and engine verification
+
+`--handbook off` (default) preserves the original N/R prompts. `on` inserts
+the user-supplied background text verbatim between the shared paragraph and
+the R ownership paragraph. It is not corrected or supplemented in the prompt.
+
+The background is a simplified description with these qualifications:
+
+- Human taxation/demand: higher rates lower the residential demand contribution,
+  not a guaranteed monotonic long-run population. Human-labelled revenue also
+  includes commercial/industrial activity.
+- Food shortage can drive human departure; food draws and actual residential
+  changes are probabilistic rather than immediate per-person removals.
+- Farms are industrial zones: only powered developed farm population produces
+  food. Their population also contributes to industry and its historical jobs.
+- AI revenue scales with the tax setting, and AI consume no food. Positive
+  reserve alone does not guarantee AI arrival: growth demand is interpolated
+  between reserve 5% and 15%, plus connectivity, coverage and random decisions.
+- Automation reduces available human jobs; welfare changes migration and incurs
+  per-unemployed-resident-point cost. It does not guarantee retention or jobs.
+- Power priority handles insufficient capacity; physical connection is still
+  required and priority is not a guarantee for every zone.
+- The statement linking underfunded roads/police/fire jointly to road decay and
+  crime is not literally correct: road funding controls probabilistic decay of
+  eligible nonconductive roads; police funding affects crime coverage; fire
+  funding affects fire control, not the crime formula directly. Some small
+  road cuts do not cross the decay threshold; conductive road tiles are exempt.
+- Empty treasury prevents new paid construction. Imports can still use funds
+  available from the annual tax booking; empty cash does not imply zero imports.
+
+Engine balance/profile values are unchanged. These qualifications are documented
+here, not injected as extra model guidance.
+
 Token sums carry `tokenUsageComplete=false` when older resumed records or a provider
 omitted usage. Missing historical token counts cannot be reconstructed; reported
 sums in that case cover only observed usage, not the whole cost of the run.
@@ -39,8 +72,8 @@ Set these environment variables **locally**, not in a tracked configuration file
 Then select the real adapter explicitly:
 
 ```powershell
-corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 1
-corepack pnpm --filter micropolis run city-model --adapter openai --assignment R --run 1
+corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 1 --handbook off
+corepack pnpm --filter micropolis run city-model --adapter openai --assignment R --run 1 --handbook on
 ```
 
 These commands incur provider charges. They are examples, not an automatic batch.
@@ -48,8 +81,11 @@ There are no endpoint/model/key defaults. The endpoint is not inferred or amende
 providers must support the OpenAI-compatible chat/tool protocol. Another provider
 can implement the small `ChatAdapter` interface and be selected by the CLI.
 
-`N` has exactly the shared system paragraph. `R` adds only the ownership/revenue
-paragraph. No extra strategy advice or optimizing objective is inserted. The nine
+With `--handbook off` (the default), `N` has exactly the shared system paragraph.
+`R` adds only the ownership/revenue paragraph. `--handbook on` additionally supplies
+the handbook text, including engine caveats; these explain engine behavior, not
+guaranteed outcomes or an optimizing objective. The runner reports the selected
+handbook mode. The nine
 tool definitions use factual descriptions and costs. Provider-compatible function
 names are reversibly mapped from exact BusIDs; returned calls are validated against
 the nine-command allowlist before dispatch. The model cannot load cities, set cash,
@@ -70,15 +106,39 @@ Retries resend the same request, not city commands.
 credential-like fragments are redacted; response text is bounded to 4,000
 characters. Raw provider errors, headers and authentication details are not logged.
 
-### Starting or resuming assignment N in VS Code
+### Starting or resuming N or R in VS Code
 
-Select **Stadtmodell: Auftrag N live starten** for a new run, or
-**Stadtmodell: Auftrag N fortsetzen** for an interrupted run. Both use
-[the local launcher](../scripts/start-city-model.ps1); the latter passes `--resume`.
-The launcher prompts locally for connection details, model and run number, reads
-the key with concealed input, and restores the prior environment afterward.
-For resume, enter the same model and run number as the interrupted assignment N.
-Neither task is started automatically; both explicitly select the paid adapter.
+[The task configuration](../.vscode/tasks.json) provides four choices:
+
+- **Stadtmodell: Auftrag N live starten**
+- **Stadtmodell: Auftrag N fortsetzen**
+- **Stadtmodell: Auftrag R live starten**
+- **Stadtmodell: Auftrag R fortsetzen**
+
+Every task asks for a positive run number (default `1`) and handbook mode
+(`on`/`off`, default `off`) through VS Code inputs. It passes explicit `-Assignment
+N` or `-Assignment R`, `-Run` and `-Handbook` arguments to
+[the local launcher](../scripts/start-city-model.ps1). Resume tasks additionally
+pass `-Resume`, which becomes `--resume` in the runner. No task starts automatically;
+all four explicitly select the paid adapter and `--live`.
+
+Credentials, endpoint and model are read from the local, ignored configuration
+file named .env.city-model, not requested through VS Code inputs. Keep the key
+there; do not paste it into chat or task arguments. The launcher restores the prior
+process environment afterward. It expands an endpoint ending in `/openai/v1` to
+`/openai/v1/chat/completions`; direct CLI invocation does not amend endpoints.
+
+For manual launcher invocation only, an omitted `-Assignment` falls back to local
+`CITY_MODEL_ASSIGNMENT`, then `N`; an omitted `-Run` falls back to local
+`CITY_MODEL_RUN`, then `1`. Explicit arguments override these settings. `-Handbook`
+defaults to `off`. There is no filename scan or automatic numbering, including on
+resume. VS Code always passes its selected run explicitly, so `CITY_MODEL_RUN`
+does not change a task's run number. Choose a new number yourself for another run.
+`-ValidateOnly` validates configuration without starting a model request.
+
+For resume, select the same assignment, configured model, handbook mode and run
+number as the interrupted run. The runner, not the launcher, resolves filenames
+and checks compatibility.
 
 ## Annual loop and history
 
@@ -130,12 +190,20 @@ spending and deterioration are not cost-free. See the
 
 Default output directory: [results/model-runs](results/model-runs/README.md).
 Use `--output` to select a different directory. Each run writes a separate JSONL
-named by adapter, assignment and run number. Without `--resume`, an existing
+whose filename includes adapter, assignment, model tag, handbook mode and run
+number. The shared `protocolFilename(adapter, assignment, model, handbook, run)`
+helper is the sole filename authority: the model tag combines a safe model token
+with the first 12 hexadecimal SHA-256 characters to distinguish model names that
+sanitize to the same token. The launcher does not duplicate that algorithm or
+match protocol filenames. Without `--resume`, an existing
 filename is refused; use a new `--run` number for another run. Do not launch
 concurrent writers to the same output directory.
 
 `--resume` reads and appends to the existing interrupted protocol. Assignment,
-model and run must match the logged identity; completed years must be consecutive
+model, handbook mode and run must match the logged identity. Legacy logs named
+only by adapter, assignment and run may be used as a resume fallback **only with
+handbook off**; they must still pass the runner's identity and replay checks.
+Completed years must be consecutive
 from year 1. A log with all 30 years completed cannot be resumed. The city is
 initialized again with the same setup, then recorded successful commands and annual
 advances are replayed locally. Tool outcome data and all recorded post-year report
