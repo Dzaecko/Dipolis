@@ -1300,7 +1300,7 @@ int Micropolis::autoBuild(int kind, int count)
         : kind == 2 ? &industrialZoneBuilding
         : kind == 3 ? &coalPowerBuilding : &nuclearPowerBuilding;
     const int size = building->sizeX;
-    const int limit = 12;
+    const int limit = kind >= 3 ? WORLD_W + WORLD_H : 12;
     const int cells = WORLD_W * WORLD_H;
     // Coordinate order also defines all BFS and placement ties.
     const int dx[] = {-1, 0, 0, 1};
@@ -1308,7 +1308,10 @@ int Micropolis::autoBuild(int kind, int count)
     const auto freeTerrain = [](MapValue value) {
         const MapTile tile = value & LOMASK;
         return !(value & (ZONEBIT | CONDBIT)) &&
-            (tile == DIRT || (tile >= TREEBASE && tile <= LASTTREE));
+            // LASTTREE ends the shoreline variants, not the forest range:
+            // settled maps also use WOODS and WOODS2 through WOODS5.
+            (tile == DIRT || (tile >= TREEBASE && tile <= WOODS5) ||
+             (tile >= RUBBLE && tile <= LASTRUBBLE));
     };
     const auto roadTile = [](MapValue value) {
         const MapTile tile = value & LOMASK;
@@ -1333,6 +1336,7 @@ int Micropolis::autoBuild(int kind, int count)
     struct Candidate {
         int x, y, road, power, distance, neighbors, clearing;
         bool vacantZone;
+        std::vector<int> roadPath, powerPath;
     };
     int built = 0;
     while (built < count) {
@@ -1441,9 +1445,11 @@ int Micropolis::autoBuild(int kind, int count)
                     best = id;
                 };
                 int road = -1, power = -1, neighbors = 0;
+                std::vector<int> edges;
                 const auto perimeter = [&](int px, int py) {
                     if (!testBounds(px, py)) return;
                     const int id = px * WORLD_H + py;
+                    edges.push_back(id);
                     if (map[px][py] & CONDBIT) ++neighbors;
                     bestEndpoint(id, road, roadDistance, roadParent);
                     bestEndpoint(id, power, powerDistance, powerParent);
@@ -1455,9 +1461,63 @@ int Micropolis::autoBuild(int kind, int count)
                     perimeter(x + offset, y - 1);
                     perimeter(x + offset, y + size);
                 }
-                if (road < 0 || power < 0) continue;
+                const auto findPath = [&](int &endpoint, bool power,
+                                          const std::vector<int> &parent) {
+                    std::vector<int> path;
+                    if (endpoint >= 0) {
+                        for (int step = endpoint; step >= 0; step = parent[step])
+                            path.push_back(step);
+                        return path;
+                    }
+                    const std::vector<int> &globalDistance = power ? powerDistance : roadDistance;
+                    if (std::none_of(edges.begin(), edges.end(), [&](int id) {
+                        return globalDistance[id] >= 0;
+                    })) return path;
+                    // Global shortest-path parents can all cross this lot.
+                    // Only then search from its edges with the footprint blocked.
+                    std::vector<int> distance(cells, -1), previous(cells, -1);
+                    std::vector<int> search;
+                    std::sort(edges.begin(), edges.end());
+                    for (int id : edges) {
+                        const MapValue value = map[id / WORLD_H][id % WORLD_H];
+                        if (distance[id] >= 0 || !(power ? wireTerrain(value)
+                            : freeTerrain(value) || roadTile(value))) continue;
+                        distance[id] = 0;
+                        search.push_back(id);
+                    }
+                    for (size_t head = 0; head < search.size(); ++head) {
+                        const int id = search[head];
+                        const int px = id / WORLD_H, py = id % WORLD_H;
+                        if (power ? connected[id] != 0 : roadTile(map[px][py])) {
+                            for (int step = id; step >= 0; step = previous[step])
+                                path.push_back(step);
+                            std::reverse(path.begin(), path.end());
+                            endpoint = path.front();
+                            return path;
+                        }
+                        if (distance[id] >= limit) continue;
+                        for (int direction = 0; direction < 4; ++direction) {
+                            const int nx = px + dx[direction], ny = py + dy[direction];
+                            if (!testBounds(nx, ny)) continue;
+                            const int next = nx * WORLD_H + ny;
+                            if (!outside(next) || distance[next] >= 0) continue;
+                            const MapValue value = map[nx][ny];
+                            if (!(power ? wireTerrain(value)
+                                : freeTerrain(value) || roadTile(value))) continue;
+                            distance[next] = distance[id] + 1;
+                            previous[next] = id;
+                            search.push_back(next);
+                        }
+                    }
+                    return path;
+                };
+                std::vector<int> roadPath = findPath(road, false, roadParent);
+                if (roadPath.empty()) continue;
+                std::vector<int> powerPath = findPath(power, true, powerParent);
+                if (powerPath.empty()) continue;
                 candidates.push_back({x, y, road, power,
-                    roadDistance[road] + powerDistance[power], neighbors, clearing, vacantZone});
+                    static_cast<int>(roadPath.size() + powerPath.size()) - 2,
+                    neighbors, clearing, vacantZone, roadPath, powerPath});
             }
         }
         std::sort(candidates.begin(), candidates.end(),
@@ -1472,11 +1532,7 @@ int Micropolis::autoBuild(int kind, int count)
         bool placed = false;
         for (const Candidate &candidate : candidates) {
             ToolEffects effects(this);
-            const auto stagePath = [&](int endpoint, const std::vector<int> &parent,
-                                       bool power) {
-                std::vector<int> path;
-                for (int step = endpoint; step >= 0; step = parent[step])
-                    path.push_back(step);
+            const auto stagePath = [&](const std::vector<int> &path, bool power) {
                 // Work outward from existing infrastructure so tools see
                 // previous staged neighbors, not just the unmodified map.
                 for (auto step = path.rbegin(); step != path.rend(); ++step) {
@@ -1485,7 +1541,8 @@ int Micropolis::autoBuild(int kind, int count)
                     if (power ? (value & CONDBIT) != 0 : roadTile(value)) continue;
                     if (!(power ? wireTerrain(value) : freeTerrain(value))) return false;
                     const MapTile tile = value & LOMASK;
-                    if (tile >= TREEBASE && tile <= LASTTREE) {
+                    if ((tile >= TREEBASE && tile <= WOODS5) ||
+                        (tile >= RUBBLE && tile <= LASTRUBBLE)) {
                         effects.setMapValue(px, py, DIRT);
                         effects.addCost(gCostOf[TOOL_BULLDOZER]);
                     }
@@ -1495,8 +1552,8 @@ int Micropolis::autoBuild(int kind, int count)
                 }
                 return true;
             };
-            if (!stagePath(candidate.road, roadParent, false) ||
-                !stagePath(candidate.power, powerParent, true)) continue;
+            if (!stagePath(candidate.roadPath, false) ||
+                !stagePath(candidate.powerPath, true)) continue;
             const int centerX = candidate.x + 1, centerY = candidate.y + 1;
             if (candidate.vacantZone) {
                 // Reuse an entirely uninhabited zoned lot, never evict houses.

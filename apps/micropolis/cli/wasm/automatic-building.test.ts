@@ -61,6 +61,24 @@ function setupEmptyLand(engine: MainModule, sim: Micropolis): void {
 	for (let x = 11; x <= 40; x++) tool('TOOL_ROAD', x, 54);
 }
 
+function setupRemotePlantLot(city: City): void {
+	const g = geometry(city.engine);
+	// Keep the existing plant, roads, powered wires, and protected human house.
+	// Water blocks every other empty lot: the only 4x4 site is 40 tiles away.
+	for (let x = 0; x < g.width; x++) for (let y = 0; y < g.height; y++) {
+		if (g.free(city.sim.getTile(x, y))) city.sim.setTile(x, y, g.tiles.RIVER.value);
+	}
+	// Include the interior forest variants used by real Haight, not only TREEBASE.
+	const woods = [g.tiles.TREEBASE, g.tiles.WOODS, g.tiles.WOODS2, g.tiles.WOODS3, g.tiles.WOODS4, g.tiles.WOODS5];
+	const terrain = (x: number, y: number) => {
+		const tile = (x + y) % 2 ? woods[Math.floor((x + y) / 2) % woods.length]!.value : g.tiles.RUBBLE.value;
+		city.sim.setTile(x, y, tile | g.bits.BULLBIT.value);
+	};
+	for (let x = 80; x < 84; x++) for (let y = 50; y < 54; y++) terrain(x, y);
+	for (let x = 41; x < 80; x++) terrain(x, 50); // 39 paid wire tiles.
+	for (let x = 41; x <= 80; x++) terrain(x, 54); // 40 paid road tiles.
+}
+
 function snapshot({ engine, sim }: City): Snapshot {
 	// Copy views: construction can grow WASM memory and must not mutate the before image.
 	return {
@@ -89,7 +107,8 @@ function geometry(engine: MainModule) {
 	const road = (value: number) => tile(value) >= tiles.ROADBASE.value && tile(value) < tiles.POWERBASE.value;
 	const conductor = (value: number) => (value & bits.CONDBIT.value) !== 0;
 	const free = (value: number) => !(value & (bits.ZONEBIT.value | bits.CONDBIT.value)) &&
-		(tile(value) === tiles.DIRT.value || (tile(value) >= tiles.TREEBASE.value && tile(value) <= tiles.LASTTREE.value));
+		(tile(value) === tiles.DIRT.value || (tile(value) >= tiles.TREEBASE.value && tile(value) <= tiles.WOODS5.value) ||
+			(tile(value) >= tiles.RUBBLE.value && tile(value) <= tiles.LASTRUBBLE.value));
 	const perimeter = (center: number, size: number) => {
 		const x = Math.floor(center / height) - 1, y = center % height - 1;
 		const edge: number[] = [];
@@ -130,6 +149,7 @@ function isVacant(engine: MainModule, before: Snapshot, center: number): boolean
 // It does not call placement tools or autoBuild, and cannot make a failed build pass by assumption.
 function hasAvailableLot(engine: MainModule, before: Snapshot, size: number): boolean {
 	const g = geometry(engine);
+	const limit = size >= 4 ? g.width + g.height : 12;
 	const powered = connectedTo(engine, before.tiles, [...before.tiles.keys()].filter((id) =>
 		g.conductor(before.tiles[id]!) && (before.tiles[id]! & g.bits.PWRBIT.value)), g.conductor);
 	for (let x = 0; x + size <= g.width; x++) for (let y = 0; y + size <= g.height; y++) {
@@ -146,7 +166,7 @@ function hasAvailableLot(engine: MainModule, before: Snapshot, size: number): bo
 				const value = before.tiles[id]!;
 				if (power ? powered.has(id) : g.road(value)) return true;
 				const straightRoad = g.road(value) && [g.tiles.ROADS.value, g.tiles.ROADS2.value].includes((g.tile(value) & 15) + g.tiles.ROADBASE.value);
-				if (distance >= 12 || !(power ? g.free(value) || g.conductor(value) || straightRoad : g.free(value) || g.road(value))) continue;
+				if (distance >= limit || !(power ? g.free(value) || g.conductor(value) || straightRoad : g.free(value) || g.road(value))) continue;
 				for (const next of g.neighbors(id)) if (!footprint.has(next) && !seen.has(next)) {
 					seen.add(next); queue.push({ id: next, distance: distance + 1 });
 				}
@@ -192,18 +212,36 @@ function assertConstruction(city: City, before: Snapshot, result: BuildResult, s
 	const roads = connectedTo(city.engine, after.tiles, [...before.tiles.keys()].filter((id) => g.road(before.tiles[id]!)), g.road);
 	const power = connectedTo(city.engine, after.tiles, [...before.tiles.keys()].filter((id) =>
 		g.conductor(before.tiles[id]!) && (before.tiles[id]! & g.bits.PWRBIT.value)), g.conductor);
+	const footprints = new Set<number>();
+	let clearingCost = 0;
 	for (const center of centers) {
 		if (owner !== undefined) expect(after.owners[center]).toBe(owner);
 		if (centerTile !== undefined) expect(g.tile(after.tiles[center]!)).toBe(centerTile);
 		const vacant = size === 3 && isVacant(city.engine, before, center);
+		if (vacant) clearingCost++;
 		const x = Math.floor(center / g.height) - 1, y = center % g.height - 1;
 		for (let dx = 0; dx < size; dx++) for (let dy = 0; dy < size; dy++) {
-			expect(vacant || g.free(before.tiles[g.index(x + dx, y + dy)]!), `safe footprint for ${center}`).toBe(true);
+			const id = g.index(x + dx, y + dy);
+			footprints.add(id);
+			expect(vacant || g.free(before.tiles[id]!), `safe footprint for ${center}`).toBe(true);
+			if (!vacant && g.tile(before.tiles[id]!) !== g.tiles.DIRT.value) clearingCost++;
 		}
 		const edges = g.perimeter(center, size);
 		expect(edges.some((id) => roads.has(id)), `road route for ${center}`).toBe(true);
 		expect(edges.some((id) => power.has(id)), `conductive route for ${center}`).toBe(true);
 	}
+	let networkCost = 0;
+	for (let id = 0; id < before.tiles.length; id++) {
+		if (footprints.has(id)) continue;
+		const addedRoad = !g.road(before.tiles[id]!) && g.road(after.tiles[id]!);
+		const addedWire = !g.conductor(before.tiles[id]!) && g.conductor(after.tiles[id]!);
+		if (addedRoad) networkCost += 10;
+		if (addedWire) networkCost += 5;
+		if ((addedRoad || addedWire) && g.free(before.tiles[id]!) && g.tile(before.tiles[id]!) !== g.tiles.DIRT.value) clearingCost++;
+	}
+	const buildingCost = owner !== undefined ? 100 : centerTile === g.tiles.POWERPLANT.value ? 3000 :
+		centerTile === g.tiles.NUCLEAR.value ? 5000 : undefined;
+	if (buildingCost !== undefined) expect(result.cost).toBe(result.built * buildingCost + clearingCost + networkCost);
 	if (result.built === 0) {
 		expect(result.cost).toBe(0);
 		expect(checksum(after.tiles)).toBe(checksum(before.tiles));
@@ -263,19 +301,42 @@ describe('automatic building through the real WASM command bus', () => {
 	});
 
 	it.each([['coal', 3000, 'POWERPLANT'], ['nuclear', 5000, 'NUCLEAR']] as const)(
-		'builds a %s plant on an independently loaded city when a connected 4x4 lot exists', async (type, minimumCost, tile) => {
+		'builds a %s plant on settled Haight without changing the census until simulation advances', async (type, minimumCost, tile) => {
 			await withCity(async (city) => {
 				const before = snapshot(city);
-				const available = hasAvailableLot(city.engine, before, 4);
+				const capacity = city.sim.powerCapacity;
+				expect(hasAvailableLot(city.engine, before, 4)).toBe(true);
 				const result = await city.dispatch('build.power-plant', { type }) as BuildResult;
 				expect(result.requested).toBe(1);
-				expect(result.built).toBe(available ? 1 : 0);
-				if (result.built) expect(result.cost).toBeGreaterThanOrEqual(minimumCost);
-				else console.info(`Haight: no connected 4x4 terrain for ${type}; verified no-op`);
+				expect(result.built).toBe(1);
+				expect(result.cost).toBeGreaterThanOrEqual(minimumCost);
 				assertConstruction(city, before, result, 4, undefined, city.engine.Tiles[tile].value);
+				expect(city.sim.powerCapacity).toBe(capacity);
+				await city.dispatch('sim.advance-ticks', { ticks: 256 });
+				const report = await city.dispatch('report.get') as { powerCapacity: number };
+				expect(report.powerCapacity).toBe(capacity + (type === 'coal' ? 700 : 2000));
 			});
 		},
 	);
+
+	it('builds three consecutive coal plants on settled Haight and increases scanned capacity each time', async () => {
+		await withCity(async (city) => {
+			let capacity = city.sim.powerCapacity;
+			for (let plant = 0; plant < 3; plant++) {
+				const before = snapshot(city);
+				expect(hasAvailableLot(city.engine, before, 4), `available coal lot ${plant + 1}`).toBe(true);
+				const result = await city.dispatch('build.power-plant', { type: 'coal' }) as BuildResult;
+				expect(result.requested).toBe(1);
+				expect(result.built, `coal plant ${plant + 1}`).toBe(1);
+				assertConstruction(city, before, result, 4, undefined, city.engine.Tiles.POWERPLANT.value);
+				expect(city.sim.powerCapacity).toBe(capacity);
+				await city.dispatch('sim.advance-ticks', { ticks: 256 });
+				const report = await city.dispatch('report.get') as { powerCapacity: number };
+				expect(report.powerCapacity, `scanned coal plant ${plant + 1}`).toBe(capacity + 700);
+				capacity = report.powerCapacity;
+			}
+		});
+	});
 
 	it.each([['coal', 3000, 'POWERPLANT'], ['nuclear', 5000, 'NUCLEAR']] as const)(
 		'builds a real %s plant on engineered empty land with road and powered wire access', async (type, minimumCost, tile) => {
@@ -291,6 +352,37 @@ describe('automatic building through the real WASM command bus', () => {
 				expect(result.cost).toBeGreaterThanOrEqual(minimumCost);
 				assertConstruction(city, before, result, 4, undefined, city.engine.Tiles[tile].value);
 			}, true);
+		},
+	);
+
+	it.each([['coal', 3000, 'POWERPLANT'], ['nuclear', 5000, 'NUCLEAR']] as const)(
+		'clears forest and rubble for a remote %s plant and charges exactly for both long routes', async (type, baseCost, tile) => {
+			// 16 footprint clearings, 39 wires at 5+1, 40 roads at 10+1.
+			const exactCost = baseCost + 16 + 39 * 6 + 40 * 11;
+			let expectedMap: string | undefined;
+			for (const funds of [60_000, exactCost - 1, exactCost]) {
+				await withCity(async (city) => {
+					setupRemotePlantLot(city);
+					await city.dispatch('treasury.set', { amount: funds });
+					const before = snapshot(city);
+					const capacity = city.sim.powerCapacity;
+					expect(hasAvailableLot(city.engine, before, 4)).toBe(true);
+					const result = await city.dispatch('build.power-plant', { type }) as BuildResult;
+					const canAfford = funds >= exactCost;
+					expect(result).toEqual({ requested: 1, built: canAfford ? 1 : 0,
+						cost: canAfford ? exactCost : 0, totalFunds: canAfford ? funds - exactCost : funds });
+					const after = assertConstruction(city, before, result, 4, undefined, city.engine.Tiles[tile].value);
+					expect(city.sim.powerCapacity).toBe(capacity);
+					if (canAfford) {
+						const g = geometry(city.engine);
+						expect(g.tile(after.tiles[g.index(81, 51)]!)).toBe(city.engine.Tiles[tile].value);
+						for (let x = 41; x < 80; x++) expect(g.conductor(after.tiles[g.index(x, 50)]!)).toBe(true);
+						for (let x = 41; x <= 80; x++) expect(g.road(after.tiles[g.index(x, 54)]!)).toBe(true);
+						if (expectedMap === undefined) expectedMap = checksum(after.tiles);
+						else expect(checksum(after.tiles)).toBe(expectedMap);
+					}
+				}, true);
+			}
 		},
 	);
 
