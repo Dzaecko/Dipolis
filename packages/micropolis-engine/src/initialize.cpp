@@ -90,6 +90,7 @@ void Micropolis::initWillStuff()
         randomlySeedRandom();
     }
     ownerMap.clear();
+    zoneStatusMap.clear();
     aiHouseMap.clear();
     previousHumanResPopMap.clear();
     humanLossCauseMap.clear();

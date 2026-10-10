@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseProtocolRecords } from '../../src/lib/city-run/protocol';
 
 /** Pure Node reporting: importing this module never loads the engine or a model. */
 export interface CityReportOptions {
@@ -84,15 +85,8 @@ function uniqueTools(tools: ReportTool[]): ReportTool[] {
 }
 const uniqueReasons = (values: unknown[]) => [...new Set(values.filter((v): v is string => typeof v === 'string' && !!v.trim()))];
 function parseProtocol(protocolPath: string): ReportSummary {
- const warnings: string[] = [], records: JsonObject[] = [];
- readFileSync(protocolPath, 'utf8').split(/\r?\n/).forEach((line, i) => {
-  if (!line.trim()) return;
-  try {
-   const parsed: unknown = JSON.parse(line);
-   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
-   records.push(parsed as JsonObject);
-  } catch { warnings.push(`JSONL-Zeile ${i + 1}: ungültiger Datensatz übersprungen.`); }
- });
+ const { records: parsedRecords, warnings } = parseProtocolRecords(readFileSync(protocolPath, 'utf8'));
+ const records = parsedRecords as JsonObject[];
  if (!records.length) throw new Error('Keine lesbaren JSONL-Datensätze.');
  const identity = (key: string) => text(records.find(r => text(r[key]))?.[key]);
  const id = path.basename(protocolPath, path.extname(protocolPath));

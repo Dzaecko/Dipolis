@@ -1,21 +1,11 @@
-import type { ChatAdapter, ChatMessage, ToolCall } from './adapter';
+import type { ChatAdapter, ChatMessage } from './adapter';
 import { systemPrompt, type HandbookMode } from './prompts';
 import { TOOLS, validateToolCall, mapToolArguments } from './tools';
 import { aggregateYears, YEARS, type AnnualReport, type Metrics } from '../wasm/strategy-space';
+import type { Decision, Report, YearRecord } from '../../src/lib/city-run/protocol';
+import { advanceYear, readReport, replayArguments, replayDecisions, setupScenario, type Dispatch } from '../../src/lib/city-run/replay';
 
-export type Report = Record<string, number>;
-export type Dispatch = (id: string, args?: Record<string, unknown>) => Promise<{
- handled?: boolean; message?: string; data?: unknown;
-}>;
-export interface Decision {
- reason: string;
- toolCalls: Array<{ call: ToolCall; result: { handled?: boolean; message?: string; data?: unknown } }>;
-}
-export interface YearRecord {
- year: number; report: Report; decisions: Decision[];
- termination: 'done' | 'call-limit'; afterReport: Report;
- reason?: string;
-}
+export type { Decision, Report, YearRecord, Dispatch };
 export interface YearContext {
  year: number; report: Report;
  history: string[];
@@ -28,27 +18,6 @@ export interface RunnerEvent {
 }
 export interface ResumeState { completed: YearRecord[]; partial?: { year: number; decisions: Decision[] }; }
 export interface RunOptions { resume?: ResumeState; event?: (event: RunnerEvent) => void; handbook?: HandbookMode; }
-
-/** Accept old protocol budget fields for replay, never as new model arguments. */
-function replayArguments(call: ToolCall) {
- if (call.name === 'budget.set-funding' && call.arguments && typeof call.arguments === 'object' &&
-  'road' in call.arguments) {
-  const old = call.arguments as Record<string, unknown>;
-  return { roadFundingPercent: old.road, policeFundingPercent: old.police, fireFundingPercent: old.fire };
- }
- return call.arguments;
-}
-
-async function replayDecisions(decisions: Decision[], dispatch: Dispatch) {
- for (const d of decisions) for (const { call, result } of d.toolCalls) {
-  if (result.handled === false) continue;
-  const args = validateToolCall(call.name, replayArguments(call));
-  if (!args.ok) throw new Error('Invalid replay tool: ' + call.name);
-  const actual = await dispatch(call.name, mapToolArguments(call.name, args.args));
-  if (actual.handled === false || JSON.stringify(actual.data) !== JSON.stringify(result.data))
-   throw new Error('Replay outcome mismatch: ' + call.name);
- }
-}
 
 /** Per-year conversation; only the nine explicit tools reach the trusted bus. */
 export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
@@ -129,23 +98,12 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  log: (record: YearRecord) => void,
  journal?: (year: number, report: Report, decision: Decision) => void,
  options: RunOptions = {}): Promise<Metrics> {
- const command = async (id: string, args?: Record<string, unknown>) => {
-  const result = await dispatch(id, args);
-  if (result.handled === false) throw new Error(`City command failed: ${id}`);
-  return result.data as Report;
- };
- await command('scenario.start', { city: 'haight', profile: 'koexistenz', seed: 42, disasters: false, speed: 3 });
- await command('tax.set', { rate: 7 });
- await command('food.set-import', { enabled: true });
- await command('power.set-priority', { priority: 0 });
- await command('sim.advance-ticks', { ticks: 12000 });
- await command('treasury.set', { amount: 60000 });
- await command('report.mark-baseline');
+ await setupScenario(dispatch);
  const history: YearContext['history'] = [];
  const annual: AnnualReport[] = [];
  let builtPlants = 0, builtFarms = 0;
  for (let year = 1; year <= YEARS; ++year) {
-  const report = await command('report.get');
+  const report = await readReport(dispatch);
   const saved = options.resume?.completed.find(r => r.year === year);
   let decisions: Decision[], termination: 'done' | 'call-limit';
   if (saved) {
@@ -164,8 +122,8 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
     if (call.name === 'build.farms') builtFarms += data.built;
    }
   }
-  await command('sim.advance', { months: 12 });
-  const afterReport = await command('report.get');
+  await advanceYear(dispatch);
+  const afterReport = await readReport(dispatch);
   if (saved && Object.entries(saved.afterReport).some(([key, value]) => afterReport[key] !== value))
    throw new Error('Replay report mismatch at year ' + year);
   const record: YearRecord = { year, report, decisions, termination, afterReport,

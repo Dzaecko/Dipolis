@@ -1379,6 +1379,8 @@ public:
     MapByte1 previousHumanResPopMap;
     /** Cause latched when a human zone is downgraded; consumed on next census delta. */
     MapByte1 humanLossCauseMap;
+    /** Last scan result per zone center: bit 0 unpowered, bit 1 hungry. Display only. */
+    MapByte1 zoneStatusMap;
 
     /**
      * Rate of growth map.
@@ -2011,6 +2013,8 @@ public:
     long getOwnerMapAddress();
 
     long getOwnerMapSize();
+    long getZoneStatusMapAddress();
+    long getZoneStatusMapSize();
 
 public:
 

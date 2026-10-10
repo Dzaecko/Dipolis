@@ -3,6 +3,7 @@ import type { MicropolisSimulator } from './MicropolisSimulator';
 import type { TileRenderer } from '@micropolis/tile-renderer';
 import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync';
 import coexistence from './params/koexistenz.json';
+import { advanceMonths } from './city-run/advance';
 
 export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
@@ -342,27 +343,15 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
           return { handled: false, message: 'months must be an integer from 0 to 1200' };
         }
         const targetTime = m.cityTime + months * 4;
-        const previousSpeed = m.simSpeed;
-        const previousPasses = m.simPasses;
         const previousFramesPerSecond = simulator?.framesPerSecond;
         if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(0);
-        m.setSpeed(3);
-        m.setPasses(1);
-        let guard = months * 4 * 32 + 32;
+        let advanced: boolean;
         try {
-          while (m.cityTime < targetTime && guard-- > 0) m.simTick();
-          // phaseCycle names the NEXT phase: reaching 10 means phase 9 is complete.
-          // Do not wrap through phase 0 or change a zero-month request.
-          while (months > 0 && m.cityTime === targetTime &&
-            Number.isInteger(m.phaseCycle) && m.phaseCycle >= 1 && m.phaseCycle <= 9 && guard-- > 0) {
-            m.simTick();
-          }
+          advanced = advanceMonths(m, months);
         } finally {
-          m.setSpeed(previousSpeed);
-          m.setPasses(previousPasses);
           if (typeof previousFramesPerSecond === 'number') simulator?.setFramesPerSecond(previousFramesPerSecond);
         }
-        if (m.cityTime < targetTime || (months > 0 && m.phaseCycle >= 1 && m.phaseCycle <= 9)) {
+        if (!advanced || m.cityTime < targetTime) {
           return { handled: false, message: 'simulation did not advance to the requested month' };
         }
         return { data: { monthsAdvanced: months, cityTime: m.cityTime, year: m.cityYear } };

@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import topLevelAwait from "vite-plugin-top-level-await";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import { fileURLToPath } from 'node:url';
+import { cityRunsPlugin } from './vite-plugins/city-runs';
+
+const modelRunsDirectory = fileURLToPath(new URL('../../docs/results/model-runs', import.meta.url));
 
 export default defineConfig({
   ssr: {
@@ -13,6 +17,7 @@ export default defineConfig({
     exclude: ['@micropolis/render-core', '@micropolis/tile-renderer'],
   },
   plugins: [
+    cityRunsPlugin({ directory: modelRunsDirectory }),
     sveltekit(),
     topLevelAwait(),
     viteStaticCopy({

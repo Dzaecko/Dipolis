@@ -482,6 +482,13 @@
     return tileRenderer?.viewport ?? null;
   }
 
+  /** Center the view on a world tile position. */
+  export function panTo(x: number, y: number): void {
+    if (!tileRenderer) return;
+    tileRenderer.panTo(x, y);
+    render();
+  }
+
   // Function to resize the canvas to match the screen size.
   function resizeCanvas() {
     if (!canvasGL || !tileRenderer) {

@@ -133,6 +133,7 @@ void Micropolis::doZone(const Position &pos)
         unpoweredZoneCount++;
         if (aiResidential) aiUnpoweredZoneCount++;
     }
+    zoneStatusMap.worldSet(pos.posX, pos.posY, (zoneHasPower ? 0 : 1) | (foodSatisfied ? 0 : 2));
     currentHumanPowerFailure = !aiResidential && !zoneHasPower;
     currentHumanHungerFailure = !aiResidential && zoneHasPower && !foodSatisfied;
 

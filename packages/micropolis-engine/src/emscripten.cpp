@@ -1089,6 +1089,8 @@ function createTypedArrayFromMap(mapInstance) {
     .function("getMopSize", &Micropolis::getMopSize)
     .function("getOwnerMapAddress", &Micropolis::getOwnerMapAddress)
     .function("getOwnerMapSize", &Micropolis::getOwnerMapSize)
+    .function("getZoneStatusMapAddress", &Micropolis::getZoneStatusMapAddress)
+    .function("getZoneStatusMapSize", &Micropolis::getZoneStatusMapSize)
     .function("animateTiles", &Micropolis::animateTiles)
     .function("setSpeed", &Micropolis::setSpeed)
     .function("setGameLevel", &Micropolis::setGameLevel)

@@ -101,6 +101,7 @@ Micropolis::Micropolis() :
         powerGridMap(0),
         powerReachableMap(0),
         ownerMap(0),
+        zoneStatusMap(0),
         aiHouseMap(0),
         previousHumanResPopMap(0),
         humanLossCauseMap(0),
@@ -303,6 +304,7 @@ void Micropolis::init()
     powerGridMap.clear();
     powerReachableMap.clear();
     ownerMap.clear();
+    zoneStatusMap.clear();
     aiHouseMap.clear();
     previousHumanResPopMap.clear();
     humanLossCauseMap.clear();
@@ -1805,6 +1807,18 @@ long Micropolis::getOwnerMapAddress()
 long Micropolis::getOwnerMapSize()
 {
     return (long)ownerMap.getTotalByteSize();
+}
+
+
+long Micropolis::getZoneStatusMapAddress()
+{
+    return (long)zoneStatusMap.getBase();
+}
+
+
+long Micropolis::getZoneStatusMapSize()
+{
+    return (long)zoneStatusMap.getTotalByteSize();
 }
 
 

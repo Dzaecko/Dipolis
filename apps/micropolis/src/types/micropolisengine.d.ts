@@ -412,6 +412,8 @@ export interface Micropolis extends ClassHandle {
   getMopSize(): number;
   getOwnerMapAddress(): number;
   getOwnerMapSize(): number;
+  getZoneStatusMapAddress(): number;
+  getZoneStatusMapSize(): number;
   animateTiles(): void;
   setSpeed(_0: number): void;
   setGameLevel(_0: GameLevel): void;
