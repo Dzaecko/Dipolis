@@ -1,10 +1,12 @@
 import { Buffer } from 'node:buffer';
-import { AdapterError, type ChatAdapter, type ChatRequest, type ChatResponse, type ToolCall } from './adapter';
+import { AdapterError, type ChatAdapter, type ChatRequest, type ChatResponse, type JSONObject, type ToolCall } from './adapter';
 export { AdapterError } from './adapter';
 
 export interface OpenAIAdapterOptions {
-	/** Full chat-completions URL; HTTPS, or HTTP on a literal loopback host. */
+	/** Full endpoint URL; HTTPS, or HTTP on a literal loopback host. */
 	endpoint: string;
+	/** Wire protocol; defaults to the existing Chat Completions API. */
+	api?: 'chat' | 'responses';
 	model: string;
 	key: string;
 	/** Integer milliseconds, 1–300000; defaults to 60000. */
@@ -15,6 +17,8 @@ export interface OpenAIAdapterOptions {
 	maxRetries?: number;
 	/** Initial exponential backoff in milliseconds, 0–60000; defaults to 1000. */
 	retryDelayMs?: number;
+	/** Optional provider-supported reasoning setting; omitted by default. */
+	reasoningEffort?: string;
 }
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -81,7 +85,7 @@ function serializeArguments(args: unknown): string {
 	}
 }
 
-function encodeRequest(request: ChatRequest, model: string, maxTokens?: number) {
+function encodeRequest(request: ChatRequest, model: string, maxTokens?: number, reasoningEffort?: string) {
 	const originals = new Map<string, string>();
 	const tools = request.tools.map((tool) => {
 		const name = functionName(tool.name);
@@ -111,9 +115,49 @@ function encodeRequest(request: ChatRequest, model: string, maxTokens?: number) 
 	});
 	let body: string;
 	try {
-		body = JSON.stringify({ model, messages, tools, ...(maxTokens === undefined ? {} : { max_tokens: maxTokens }) });
+		body = JSON.stringify({ model, messages, tools, ...(maxTokens === undefined ? {} : { max_tokens: maxTokens }),
+			...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }) });
 	} catch {
 		throw new Error('Invalid chat request JSON');
+	}
+	return { body, originals, requestBytes: Buffer.byteLength(body, 'utf8') };
+}
+
+function encodeResponses(request: ChatRequest, model: string, maxTokens?: number, reasoningEffort?: string) {
+	const originals = new Map<string, string>();
+	const tools = request.tools.map((tool) => {
+		const name = functionName(tool.name);
+		if (originals.has(name)) throw new Error('Tool function name collision');
+		originals.set(name, tool.name);
+		return { type: 'function', name, description: tool.description, parameters: tool.parameters, strict: false };
+	});
+	const input: RecordValue[] = [];
+	for (const message of request.messages) {
+		if (message.role === 'tool') {
+			input.push({ type: 'function_call_output', call_id: message.toolCallId, output: message.content });
+		} else if (message.role === 'assistant') {
+			if (message.providerItems !== undefined) {
+				// Replay the complete opaque output instead of duplicating text or calls.
+				input.push(...message.providerItems);
+				continue;
+			}
+			if (message.content || !message.toolCalls?.length) input.push({ role: 'assistant', content: message.content });
+			for (const call of message.toolCalls ?? []) {
+				input.push({ type: 'function_call', call_id: call.id,
+					name: request.tools.some(tool => tool.name === call.name) ? functionName(call.name) : call.name,
+					arguments: serializeArguments(call.arguments) });
+			}
+		} else {
+			input.push({ role: message.role, content: message.content });
+		}
+	}
+	let body: string;
+	try {
+		body = JSON.stringify({ model, input, tools, store: false, include: ['reasoning.encrypted_content'],
+			...(maxTokens === undefined ? {} : { max_output_tokens: maxTokens }),
+			...(reasoningEffort === undefined ? {} : { reasoning: { effort: reasoningEffort } }) });
+	} catch {
+		throw new Error('Invalid responses request JSON');
 	}
 	return { body, originals, requestBytes: Buffer.byteLength(body, 'utf8') };
 }
@@ -161,6 +205,42 @@ function decodeResponse(value: unknown, originals: Map<string, string>): ChatRes
 		usageReported: validTokens(usage.prompt_tokens) || validTokens(usage.completion_tokens) };
 }
 
+function decodeResponses(value: unknown, originals: Map<string, string>): ChatResponse {
+	if (!isRecord(value) || value.status !== 'completed' || !Array.isArray(value.output)) invalidResponse();
+	const text: string[] = [];
+	const toolCalls: ToolCall[] = [];
+	const ids = new Set<string>();
+	const callIds = new Set<string>();
+	for (const item of value.output) {
+		if (!isRecord(item) || typeof item.type !== 'string' || !item.type) invalidResponse();
+		if (item.type === 'function_call') {
+			if (typeof item.id !== 'string' || !item.id || ids.has(item.id) ||
+				typeof item.call_id !== 'string' || !item.call_id || callIds.has(item.call_id) ||
+				typeof item.name !== 'string' || !item.name || typeof item.arguments !== 'string') invalidResponse();
+			ids.add(item.id);
+			callIds.add(item.call_id);
+			let args: unknown = item.arguments;
+			try { args = JSON.parse(item.arguments); } catch { /* Runner validates malformed JSON. */ }
+			toolCalls.push({ id: item.call_id, name: originals.get(item.name) ?? item.name, arguments: args });
+		} else if (item.type === 'message') {
+			if (item.role !== 'assistant' || !Array.isArray(item.content)) invalidResponse();
+			for (const part of item.content) {
+				if (!isRecord(part)) invalidResponse();
+				if (part.type === 'output_text' && typeof part.text === 'string') text.push(part.text);
+				else if (part.type === 'refusal' && typeof part.refusal === 'string') text.push(part.refusal);
+				else invalidResponse();
+			}
+		}
+	}
+	const usage = isRecord(value.usage) ? value.usage : {};
+	const validTokens = (tokens: unknown): tokens is number =>
+		typeof tokens === 'number' && Number.isSafeInteger(tokens) && tokens >= 0;
+	return { content: text.join('\n'), toolCalls, providerItems: value.output as JSONObject[],
+		usage: { inputTokens: validTokens(usage.input_tokens) ? usage.input_tokens : 0,
+			outputTokens: validTokens(usage.output_tokens) ? usage.output_tokens : 0 },
+		usageReported: validTokens(usage.input_tokens) || validTokens(usage.output_tokens) };
+}
+
 /** No SDK, engine imports, logging, or provider-specific URL/model defaults. */
 export class OpenAIAdapter implements ChatAdapter {
 	readonly model: string;
@@ -171,11 +251,21 @@ export class OpenAIAdapter implements ChatAdapter {
 	#maxRetries: number;
 	#retryDelayMs: number;
 	#requestBytes: number | undefined;
+	#reasoningEffort: string | undefined;
+	#api: 'chat' | 'responses';
 
 	get requestBytes(): number | undefined { return this.#requestBytes; }
 
 	constructor(options: OpenAIAdapterOptions) {
+		this.#api = options.api ?? 'chat';
+		if (this.#api !== 'chat' && this.#api !== 'responses') throw new Error('CITY_MODEL_API must be chat or responses');
 		this.#endpoint = validateEndpoint(required(options.endpoint, 'CITY_MODEL_ENDPOINT'));
+		if (this.#api === 'responses') {
+			const url = new URL(this.#endpoint);
+			url.pathname = url.pathname.replace(/\/chat\/completions\/?$/, '/responses')
+				.replace(/\/openai\/v1\/?$/, '/openai/v1/responses');
+			this.#endpoint = url.href;
+		}
 		this.model = required(options.model, 'CITY_MODEL_NAME');
 		this.#key = required(options.key, 'CITY_MODEL_KEY');
 		if (/[\r\n]/.test(this.#key)) throw new Error('Invalid CITY_MODEL_KEY');
@@ -184,6 +274,10 @@ export class OpenAIAdapter implements ChatAdapter {
 			boundedInteger(options.maxTokens, 1_000_000, 'CITY_MODEL_MAX_TOKENS');
 		this.#maxRetries = options.maxRetries ?? 5;
 		this.#retryDelayMs = options.retryDelayMs ?? 1000;
+		if (options.reasoningEffort !== undefined && !['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(options.reasoningEffort)) {
+			throw new Error('CITY_MODEL_REASONING_EFFORT must be none, minimal, low, medium, high or xhigh');
+		}
+		this.#reasoningEffort = options.reasoningEffort;
 		for (const [value, maximum, name] of [
 			[this.#maxRetries, 5, 'CITY_MODEL_MAX_RETRIES'],
 			[this.#retryDelayMs, 60_000, 'retryDelayMs']
@@ -197,7 +291,8 @@ export class OpenAIAdapter implements ChatAdapter {
 	async chat(request: ChatRequest): Promise<ChatResponse> {
 		if (request.signal?.aborted) throw this.#abortError(0);
 		let encoded: ReturnType<typeof encodeRequest>;
-		try { encoded = encodeRequest(request, this.model, this.#maxTokens); }
+		try { encoded = (this.#api === 'responses' ? encodeResponses : encodeRequest)(
+			request, this.model, this.#maxTokens, this.#reasoningEffort); }
 		catch (error) {
 			throw new AdapterError('request', this.#redact(error instanceof Error ? error.message : 'Invalid chat request'), { attempts: 0 });
 		}
@@ -313,7 +408,7 @@ export class OpenAIAdapter implements ChatAdapter {
 		let value: unknown;
 		try { value = await response.json(); }
 		catch { throw new AdapterError('protocol', 'Invalid model response', { status: response.status }); }
-		try { return decodeResponse(value, originals); }
+		try { return (this.#api === 'responses' ? decodeResponses : decodeResponse)(value, originals); }
 		catch (error) {
 			if (error instanceof AdapterError) error.status = response.status;
 			throw error;
@@ -329,10 +424,12 @@ export function createEnvironmentAdapter(env: Environment = process.env): ChatAd
 	}
 	return new OpenAIAdapter({
 		endpoint: required(env.CITY_MODEL_ENDPOINT, 'CITY_MODEL_ENDPOINT'),
+		api: env.CITY_MODEL_API as OpenAIAdapterOptions['api'],
 		model: required(env.CITY_MODEL_NAME, 'CITY_MODEL_NAME'),
 		key: required(env.CITY_MODEL_KEY, 'CITY_MODEL_KEY'),
 		timeoutMs: optionalInteger(env, 'CITY_MODEL_TIMEOUT_MS', 300_000),
 		maxTokens: optionalInteger(env, 'CITY_MODEL_MAX_TOKENS', 1_000_000),
-		maxRetries: retries === undefined ? 5 : Number(retries)
+		maxRetries: retries === undefined ? 5 : Number(retries),
+		reasoningEffort: env.CITY_MODEL_REASONING_EFFORT?.trim() || undefined
 	});
 }

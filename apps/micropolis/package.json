@@ -12,6 +12,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"micropolis": "tsx cli/entry.ts",
 		"city-model": "tsx cli/model/run.ts",
+		"city-report": "tsx cli/model/report-cli.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

@@ -19,7 +19,7 @@ export interface ToolCall {
 
 export type ChatMessage =
 	| { role: 'system' | 'user'; content: string }
-	| { role: 'assistant'; content: string; toolCalls?: ToolCall[] }
+	| { role: 'assistant'; content: string; toolCalls?: ToolCall[]; providerItems?: JSONObject[] }
 	| { role: 'tool'; toolCallId: string; name: string; content: string };
 
 export interface ChatRequest {
@@ -34,6 +34,8 @@ export interface ChatRequest {
 export interface ChatResponse {
 	content: string;
 	toolCalls: ToolCall[];
+	/** Opaque provider continuation items; memory only, never journal or log them. */
+	providerItems?: JSONObject[];
 	usage?: { inputTokens: number; outputTokens: number };
 	usageReported?: boolean;
 	/** UTF-8 bytes of the exact serialized request body, not headers. */

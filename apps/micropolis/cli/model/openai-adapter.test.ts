@@ -68,6 +68,21 @@ describe('OpenAI-compatible chat adapter', () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
+	it('sets reasoning_effort none only when configured and keeps tools enabled', async () => {
+		respond();
+		await createEnvironmentAdapter({ ...env, CITY_MODEL_REASONING_EFFORT: 'none' }).chat(request);
+		expect(sent().body.reasoning_effort).toBe('none');
+		expect(sent().body.tools).toHaveLength(2);
+		fetchMock.mockClear();
+		await createEnvironmentAdapter(env).chat(request);
+		expect(sent().body).not.toHaveProperty('reasoning_effort');
+	});
+
+	it('rejects unsupported reasoning configuration without an HTTP call', () => {
+		expect(() => createEnvironmentAdapter({ ...env, CITY_MODEL_REASONING_EFFORT: 'unknown' })).toThrow('CITY_MODEL_REASONING_EFFORT');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it('supports the default process environment factory without contacting a provider', () => {
 		for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
 		try { expect(createEnvironmentAdapter().model).toBe('test-model'); }

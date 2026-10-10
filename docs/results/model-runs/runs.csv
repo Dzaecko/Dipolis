@@ -1,2 +1,4 @@
-assignment,model,run,meanResPop,minResPop,finalResPop,meanAiPop,finalFunds,insolventYears,lostToHunger,lostToPower,finalAiZones,builtPlants,builtFarms,firstInsolvencyYear
-N,fake-s266,1,3695.766666666667,3519,3667,4174.2,30448,0,0,0,210,14,10,
+assignment,model,run,meanResPop,minResPop,finalResPop,meanAiPop,finalFunds,insolventYears,lostToHunger,lostToPower,finalAiZones,builtPlants,builtFarms,firstInsolvencyYear,inputTokens,outputTokens,tokenUsageComplete,handbook
+N,fake-s266,1,3695.766666666667,3519,3667,4174.2,30448,0,0,0,210,14,10,,,,false,off
+N,gpt-5.4-mini,3,1076.8333333333333,0,1,0,0,17,2546,0,0,0,0,13,378141,12312,true,off
+N,gpt-5.4-mini,4,780.3,74,83,0,233,6,1404,0,0,0,10,9,346828,12597,true,off

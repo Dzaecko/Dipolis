@@ -11,6 +11,7 @@ import { runCity } from './runner';
 import type { Metrics } from '../wasm/strategy-space';
 import { readResume } from './resume';
 import { protocolFilename } from './protocol-path';
+import { generateCityReport, generateReportIndex } from './city-report';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -68,30 +69,35 @@ async function main() {
   (!resume?.completed.length && !resume?.partial) || previousEvents.some(e => e.event === 'model-response'));
  if (args.adapter !== 'fake' && previousEvents.some(e => e.event === 'model-response' && !e.usageReported)) tokenUsageComplete = false;
  const fd = openSync(filename, args.resume ? 'a' : 'wx');
+ const logFile = filename.replace(/\.jsonl$/, '.log');
+ const logFd = openSync(logFile, 'a');
+ // Mirror terminal output; the log is written even without --live.
+ const say = (text: string, stream: 'out' | 'err' = 'err', show = true) => {
+  writeFileSync(logFd, text + '\n');
+  if (show) (stream === 'out' ? console.log : console.error)(text);
+ };
+ if (args.resume) say(`----- Fortsetzung ab Jahr ${(resume?.completed.length ?? 0) + 1} -----`);
+ let failure: unknown;
  let session: Awaited<ReturnType<typeof createCitySession>> | undefined;
  try {
   session = await createCitySession();
   const metrics = await runCity(adapter, args.assignment, session.dispatch, record => {
   writeFileSync(fd, JSON.stringify({ event: 'year-completed', assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
    ...record, decisions: record.decisions.map(d => ({ toolCalls: d.toolCalls })) }) + '\n');
-  if (args.live) {
-   console.error(`Jahr ${record.year}: ${record.reason}`);
-   console.error(`Menschen=${record.afterReport.resPop}, KI=${record.afterReport.aiPop}, Kasse=${record.afterReport.treasury}, Saldo=${record.afterReport.cashFlow}`);
-  }
+  say(`Jahr ${record.year}: ${record.reason}`, 'err', args.live);
+  say(`Menschen=${record.afterReport.resPop}, KI=${record.afterReport.aiPop}, Kasse=${record.afterReport.treasury}, Saldo=${record.afterReport.cashFlow}`, 'err', args.live);
   }, (year, report, decision) => {
   if (!decision.toolCalls.length) return;
   writeFileSync(fd, JSON.stringify({ event: 'decision', year, report, toolCalls: decision.toolCalls,
     assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
-    if (args.live) {
-     for (const { call, result } of decision.toolCalls) console.error(`${call.name} ${JSON.stringify(call.arguments)} → ${JSON.stringify(result)}`);
-    }
+    for (const { call, result } of decision.toolCalls) say(`${call.name} ${JSON.stringify(call.arguments)} → ${JSON.stringify(result)}`, 'err', args.live);
   }, { resume, handbook: args.handbook, event: event => {
    writeFileSync(fd, JSON.stringify({ ...event, assignment: args.assignment, handbook: args.handbook, run: args.run }) + '\n');
   if (event.event === 'model-response') {
    inputTokens += event.inputTokens ?? 0; outputTokens += event.outputTokens ?? 0;
    if (args.adapter !== 'fake' && !event.usageReported) tokenUsageComplete = false;
   }
-   if (event.event === 'adapter-error') console.error(JSON.stringify(event));
+   if (event.event === 'adapter-error') say(JSON.stringify(event));
   } });
   if (args.adapter === 'fake') verifyS266(metrics);
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
@@ -114,13 +120,24 @@ async function main() {
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
    handbook: args.handbook, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
-  console.log(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
-  protocol: filename, handbook: args.handbook, metrics, inputTokens, outputTokens, ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) }, null, 2));
- } catch {
+  say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
+  protocol: filename, handbook: args.handbook, metrics, inputTokens, outputTokens, ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) }, null, 2), 'out');
+ } catch (error) {
+  failure = error;
   // Avoid forwarding provider failures, URLs, headers or secrets into the log.
   writeFileSync(fd, JSON.stringify({ status: 'failed', assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
-  throw new Error('City run failed; no complete metrics row was saved. Inspect the local protocol.');
+  say('City run failed; no complete metrics row was saved. Inspect the local protocol.');
  } finally { session?.close(); closeSync(fd); }
+ // Reports are produced for complete and interrupted runs; report errors never hide the run result.
+ try {
+  const report = generateCityReport(filename, { root });
+  generateReportIndex(directory, { root });
+  say(`Bericht: ${path.relative(root, report.htmlPath).replaceAll('\\', '/')}`, 'err');
+ } catch {
+  say('Bericht konnte nicht erzeugt werden; mit "city-report" erneut versuchen.');
+ }
+ closeSync(logFd);
+ if (failure) throw new Error('City run failed; no complete metrics row was saved. Inspect the local protocol.');
 }
 
 // Exporting verification for tests must not launch a run.

@@ -10,7 +10,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $configPath = Join-Path $root '.env.city-model'
 if (!(Test-Path $configPath)) { throw 'Bitte .env.city-model.example nach .env.city-model kopieren und ausfuellen.' }
 $allowed = @('CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', 'CITY_MODEL_KEY', 'CITY_MODEL_ASSIGNMENT',
-    'CITY_MODEL_RUN', 'CITY_MODEL_TIMEOUT_MS', 'CITY_MODEL_MAX_RETRIES', 'CITY_MODEL_MAX_TOKENS')
+    'CITY_MODEL_RUN', 'CITY_MODEL_TIMEOUT_MS', 'CITY_MODEL_MAX_RETRIES', 'CITY_MODEL_MAX_TOKENS', 'CITY_MODEL_REASONING_EFFORT', 'CITY_MODEL_API')
 $config = @{}
 foreach ($line in [IO.File]::ReadAllLines($configPath)) {
     $text = $line.Trim()

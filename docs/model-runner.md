@@ -1,5 +1,36 @@
 # Headless city model runner
 
+## Reports
+
+Every run writes a `.log` file beside its JSONL protocol containing the terminal
+output (reasoning, tool calls with results, annual summary lines, errors/retries
+and the final block). Resumed runs append to it after a
+`----- Fortsetzung ab Jahr X -----` separator.
+
+At the end of every run, completed or interrupted, the runner writes a standalone
+HTML report beside the protocol and refreshes `index.html` in the results folder.
+Reports work offline: no CDN, scripts or fonts are loaded from the internet.
+Regenerate all reports with the VS Code task **Stadtmodell: Berichte neu erzeugen**,
+or `corepack pnpm --filter micropolis run city-report --all`; single files with
+`city-report path/to/run.jsonl`. Older runs without a `.log` show output
+reconstructed from the protocol, marked as such. Local user paths are shortened
+to repository-relative paths.
+
+For models that reject function tools with reasoning on Chat Completions, use
+`CITY_MODEL_API=responses` and a provider-supported reasoning value such as
+`CITY_MODEL_REASONING_EFFORT=low`. The adapter converts `/chat/completions` or
+an Azure `/openai/v1` base path to `/responses`, preserves tool-call results and
+opaque reasoning continuation items in memory, and records the usual token usage.
+No opaque reasoning items are written to the city protocol. `chat` remains the
+default. Changing transport does not alter city rules, prompts or the tool allowlist.
+
+If a provider rejects chat function tools because of reasoning, set
+`CITY_MODEL_REASONING_EFFORT=none` in the local env file. This adds
+`reasoning_effort: "none"` to requests; blank/absent retains provider defaults.
+Supported configuration values are none/minimal/low/medium/high/xhigh, but actual
+support depends on the model. Reasoning effort alone does not switch APIs; use
+the separate `CITY_MODEL_API` setting when necessary.
+
 ## Handbook wording and engine verification
 
 `--handbook off` (default) preserves the original N/R prompts. `on` inserts

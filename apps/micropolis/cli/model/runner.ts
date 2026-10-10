@@ -84,7 +84,8 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
    inputTokens: answer.usage?.inputTokens ?? 0, outputTokens: answer.usage?.outputTokens ?? 0,
    usageReported: answer.usageReported ?? !!answer.usage, requestBytes: answer.requestBytes });
   if (typeof answer.content !== 'string' || !Array.isArray(answer.toolCalls)) throw new Error('Invalid adapter response');
-  messages.push({ role: 'assistant', content: answer.content, toolCalls: answer.toolCalls });
+  messages.push({ role: 'assistant', content: answer.content, toolCalls: answer.toolCalls,
+   ...(answer.providerItems === undefined ? {} : { providerItems: answer.providerItems }) });
   const decision: Decision = { reason: answer.content, toolCalls: [] };
   decisions.push(decision);
   if (!answer.toolCalls.length) { journal?.(decision); break; }

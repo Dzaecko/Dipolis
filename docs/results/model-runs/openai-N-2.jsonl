@@ -1,0 +1,4 @@
+{"event":"model-request","year":1,"model":"gpt-5.4-mini","requestBytes":10292,"attempts":1,"assignment":"N","run":2}
+{"event":"adapter-error","year":1,"model":"gpt-5.4-mini","kind":"http","status":404,"responseText":"{\"error\":{\"code\":\"404\",\"message\": \"Resource not found\"}}","attempts":1,"requestBytes":10292,"message":"Model request failed (HTTP 404): {\"error\":{\"code\":\"404\",\"message\": \"Resource not found\"}}","assignment":"N","run":2}
+{"event":"adapter-error","year":1,"model":"gpt-5.4-mini","kind":"http","status":404,"responseText":"{\"error\":{\"code\":\"404\",\"message\": \"Resource not found\"}}","attempts":1,"requestBytes":10292,"message":"Model request failed (HTTP 404): {\"error\":{\"code\":\"404\",\"message\": \"Resource not found\"}}","assignment":"N","run":2}
+{"status":"failed","assignment":"N","run":2}

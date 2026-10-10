@@ -2,6 +2,15 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Stadtmodell: Berichte neu erzeugen",
+      "type": "shell",
+      "command": "corepack",
+      "args": ["pnpm", "--filter", "micropolis", "run", "city-report", "--all"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Stadtmodell: Auftrag N fortsetzen",
       "type": "shell",
       "command": "powershell.exe",
