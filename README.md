@@ -1,4 +1,295 @@
-# Micropolis
+# Dipolis
+
+**A Micropolis-based city-management project exploring coexistence between human and AI residents, public services, food supply, and language-model decision-making.**
+
+Dipolis is a modified fork of [MicropolisCore](https://github.com/SimHacker/MicropolisCore), not the original game and not an Electronic Arts product. It combines a C++ engine compiled to WebAssembly, a SvelteKit browser interface, deterministic headless city runs, and an optional tool-calling language-model mayor.
+
+Repository: [Dzaecko/Dipolis](https://github.com/Dzaecko/Dipolis).
+
+> **Credentials and model costs:** No model account is needed for the browser or deterministic runs. The default model-runner adapter is a local S266 replay with no API calls. Real runs require an explicit adapter choice and can incur provider charges. Never commit credentials or publish private model conversations without reviewing them.
+
+## Contents
+
+- [What is implemented](#what-is-implemented)
+- [Quick start](#quick-start)
+- [Engine builds](#engine-builds)
+- [Headless city commands](#headless-city-commands)
+- [Human and AI coexistence](#human-and-ai-coexistence)
+- [Language-model city management](#language-model-city-management)
+- [Reproducible strategy comparisons](#reproducible-strategy-comparisons)
+- [Testing and development](#testing-and-development)
+- [Project structure](#project-structure)
+- [Limitations and troubleshooting](#limitations-and-troubleshooting)
+- [Licensing and attribution](#licensing-and-attribution)
+- [Preserved upstream documentation](#preserved-upstream-documentation)
+
+## What is implemented
+
+| Area | Capabilities |
+| --- | --- |
+| Browser application | SvelteKit city interface backed by the WebAssembly engine and shared tile renderer |
+| Coexistence | Human/AI-owned residential zones, AI electricity demand and revenue, automation, unemployment and welfare |
+| Food | Industrial farm zones, food production/coverage, paid imports, and separate hunger diagnostics |
+| Electricity | Capacity/reserve reporting, distinct classic/coexistence accounting, and configurable shortage priority |
+| Construction | Engine-selected sites, paid clearing and road/wire access, affordable partial batches, and atomic individual builds |
+| Reports | Baseline population change, human/AI populations, last annual financial booking, funding levels, service effects, crime and roads |
+| Automation interface | A shared Command Bus for scripts and controlled model tool execution |
+| Model runner | Provider-neutral chat adapter, nine allowed actions, annual history, optional handbook, request diagnostics, retries and deterministic replay/resume |
+| Evidence | A stored 304-strategy comparison, full CSV metrics, input fingerprints, rankings, and a cost-free S266 acceptance run |
+
+This repository also preserves the broader upstream monorepo, historical documentation, and related rendering/animation packages. Those directories are not all required for the Dipolis city workflows described here.
+
+## Quick start
+
+### Requirements
+
+- **Node.js 20 or newer**; use an active LTS release.
+- **pnpm 10**, using the exact package-manager version pinned by the root manifest through Corepack.
+- A modern browser for the graphical application.
+- **Python 3, GNU Make and Emscripten** only if rebuilding the C++/WASM engine.
+
+From a terminal:
+
+```sh
+git clone https://github.com/Dzaecko/Dipolis.git
+cd Dipolis
+corepack enable
+corepack pnpm install
+corepack pnpm --filter micropolis run dev:vite
+```
+
+Open the URL printed by Vite, normally `http://localhost:5173`. `dev:vite` uses the checked-in WASM artifacts and does not invoke an engine rebuild. If a port is already occupied, follow the actual URL printed by the server.
+
+The regular `dev` command additionally watches and rebuilds C++ sources, so it needs the native build toolchain:
+
+```sh
+corepack pnpm --filter micropolis run dev
+```
+
+For frontend-only compilation using the existing engine artifacts:
+
+```sh
+corepack pnpm --filter micropolis exec svelte-kit sync
+corepack pnpm --filter micropolis exec vite build
+```
+
+The package's regular `build` script has an engine-build prerequisite; do not confuse it with a frontend-only build.
+
+## Engine builds
+
+Activate your Emscripten SDK environment so that `em++`, Python and Make are available, then run:
+
+```sh
+corepack pnpm run build:engine
+```
+
+The engine Makefile compiles C++17 sources, emits Embind declarations and installs the generated JavaScript, WASM and bundled city data into the application. Its paths are relative to the workspace; run it through the package script rather than moving generated files manually.
+
+On Windows, run in a terminal with an activated Emscripten environment and GNU Make available. Emscripten's Node configuration must point to a working Node executable. Machine-specific Conda/SDK paths are intentionally not prerequisites of this public README. See [DEVELOPMENT.md](DEVELOPMENT.md) for additional upstream build guidance.
+
+## Headless city commands
+
+The CLI is a Node/TypeScript entry point using `tsx`. All examples below run from the repository root:
+
+```sh
+corepack pnpm --filter micropolis run micropolis --help
+corepack pnpm --filter micropolis run micropolis sim smoke --ticks 10
+corepack pnpm --filter micropolis run micropolis sim run --seed 42 --ticks 30000 --speed 3 --no-disasters
+```
+
+City-file inspection is also available:
+
+```sh
+corepack pnpm --filter micropolis run micropolis city info ../../content/micropolis/cities/haight.cty
+```
+
+City file arguments are resolved relative to the application package's working directory. The engine's virtual filesystem uses paths such as `/cities/haight.cty`; those are not host filesystem paths.
+
+Run the relevant subcommand with `--help` for supported parameters and output formats. Profile files are in [apps/micropolis/src/lib/params](apps/micropolis/src/lib/params).
+
+## Human and AI coexistence
+
+Two profiles separate the historical engine behavior from the extended rules:
+
+- **classic:** compatibility-focused rules, checked against stored population/map checksums and the original power traversal.
+- **koexistenz:** food/import, additional AI power demand, automation and welfare rules.
+
+Human residents require food and electricity. Farms are industrial zones: production depends on powered developed farm population, not merely the number of zoned lots. Imports can cover deficits when funds are available.
+
+AI residents live in separately owned residential zones, consume electricity rather than food, and contribute revenue tied to the tax setting. Their growth is related to reserve thresholds and still depends on connectivity and stochastic decisions. Automation changes the labor balance; welfare changes employment-driven migration and incurs annual expenditure.
+
+Electricity priority `0` is proportional allocation, `1` favors network demand, and `2` favors additional AI demand. The human/AI shorthand in the interface is not a guarantee that every zone of one group receives electricity.
+
+Funding percentages are **independent fractions of each service's own need**, not shares of a common 100% budget. `100/100/100` fully requests roads, police and fire funding. Actual spending may be reduced if resources are insufficient.
+
+The engine supports population baselines and reports cumulative hunger/power losses separately. `netResPopChange` compares human population with the marked baseline. Annual financial report fields describe the last tax booking, not a new projected budget.
+
+## Language-model city management
+
+### Scenario and annual loop
+
+The headless runner starts Haight with the coexistence profile, seed **42**, disasters disabled, speed **3**, tax **7**, imports on, and proportional electricity priority. It advances **12,000 ticks**, sets treasury to **60,000**, and marks a population baseline.
+
+For each of **30 years**, it reads the report, asks the adapter for decisions, executes validated tool calls through the Command Bus, returns their results, and advances **12 months**. There are at most **12 attempted tool calls per year**, including rejected calls. The model receives one compact history entry per prior year, containing metrics and executed commands, without accumulated reasoning prose.
+
+The runner itself manages scenario initialization and time advancement. Models cannot change seed, grant treasury, load a different city, or advance time through their exposed tools.
+
+### Exactly nine model tools
+
+| Tool | Parameters exposed to the model | Behavior |
+| --- | --- | --- |
+| `build.ai-zones` | `count` | Automatically place AI-owned residential lots |
+| `build.residential` | `count` | Automatically place human residential lots |
+| `build.farms` | `count` | Automatically place farm zones |
+| `build.power-plant` | `type: coal \| nuclear` | Place one power plant with paid access/clearing |
+| `tax.set` | `rate` | Set the city tax rate |
+| `budget.set-funding` | `roadFundingPercent`, `policeFundingPercent`, `fireFundingPercent` | Set independent service financing levels from 0 to 100 |
+| `welfare.set-level` | `level` | Set welfare level from 0 to 1 |
+| `power.set-priority` | `priority` | Set allocation mode 0, 1 or 2 |
+| `food.set-import` | `enabled` | Enable/disable paid food imports |
+
+Tool descriptions are factual and include costs rather than strategy recommendations. A new zone's base construction cost is **100**, coal **3000**, and nuclear **5000**; clearing and access add costs. Each individual construction is atomically funded, and a batch can build fewer than requested.
+
+### Cost-free S266 verification
+
+```sh
+corepack pnpm --filter micropolis run city-model --adapter fake --assignment N --handbook off --run 1
+```
+
+The fake adapter requests S266's decisions through the same tool loop. It performs **no model requests** and verifies every aggregate exactly against the stored strategy-space CSV. Existing output files are never silently overwritten: select another run number for a new run.
+
+### Real provider configuration
+
+The included real adapter uses an **OpenAI-compatible chat-completions API**. Other providers can implement the small [ChatAdapter interface](apps/micropolis/cli/model/adapter.ts).
+
+Copy [.env.city-model.example](.env.city-model.example) to a local `.env.city-model` file and fill in:
+
+| Variable | Purpose |
+| --- | --- |
+| `CITY_MODEL_ENDPOINT` | Full chat-completions URL |
+| `CITY_MODEL_NAME` | Model/deployment name |
+| `CITY_MODEL_KEY` | Authentication key |
+| `CITY_MODEL_TIMEOUT_MS` | Optional timeout per request; default 60000 |
+| `CITY_MODEL_MAX_RETRIES` | Optional number of retries, 0–5; default 5 |
+| `CITY_MODEL_MAX_TOKENS` | Optional completion-token limit |
+
+The local file is ignored by Git. **The VS Code task script loads it; direct Node CLI execution reads process environment variables, not the file automatically.** No real endpoint, key or deployment is supplied in the tracked template.
+
+For Azure OpenAI, the full v1 URL ends in `/openai/v1/chat/completions`. The task script also accepts a base URL ending in `/openai/v1` and appends the missing path.
+
+With the environment configured, an explicit real run is:
+
+```sh
+corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --handbook on --run 1 --live
+```
+
+This command may incur provider charges. Merely setting environment variables does not enable network access when the fake adapter is selected.
+
+### Assignments, handbook and VS Code tasks
+
+- **N:** the neutral Haight city-administration instruction.
+- **R:** the same instruction plus the operator-company objective of maximizing treasury after 30 years.
+- **`--handbook off`:** default, no background paragraph.
+- **`--handbook on`:** inserts the fixed background text before the R objective, if any. The supplied wording is preserved, including its documented simplifications.
+
+VS Code's **Tasks: Run Task** offers N/R start and resume tasks. Each asks for a run number and handbook on/off, then reads local provider settings. Terminal output can show executed tools and annual reasoning/metrics; the headless run is **not an animated browser session**.
+
+### Logs, tokens, failures and resume
+
+Default output is [docs/results/model-runs](docs/results/model-runs/README.md): one JSONL protocol per run and one CSV metrics row per completed run. Filenames include model name/hash, assignment, handbook mode and run number. Model names that sanitize identically still have different hashes.
+
+Logs include immediately persisted tool outcomes, one reasoning field per completed year, annual reports, input/output token counts, request sizes and sanitized adapter errors. CSV token totals indicate whether historical/provider usage is complete.
+
+HTTP **429**, **5xx** and timeouts are retried with increasing delay up to five times. Non-retryable errors remain visible. Response text is capped and credentials are redacted; do not place secrets in model messages.
+
+```sh
+corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --handbook on --run 1 --resume --live
+```
+
+Resume reconstructs the city, replays logged commands and checks outcomes before asking for new decisions. Keep the same model, assignment, run number and handbook mode. Do not change engine rules between a run and its replay. Old filename layouts are supported for handbook-off runs. See [docs/model-runner.md](docs/model-runner.md) for protocol details.
+
+## Reproducible strategy comparisons
+
+The stored budget-crisis comparison contains **300 distinct sampled combinations plus A–D**, each running for 30 years. Sampling uses **Mulberry32 seed 20261009**; every city uses seed **42**.
+
+The dimensions cover AI zoning rate, first-year farms, welfare, electricity priority, import policy, tax and police/fire financing. All strategies condition AI construction on a negative annual balance and attempt coal construction below 10% reserve. B retains its historical 60% service value outside the sampled grid.
+
+Published evidence:
+
+- [All 304 runs as CSV](docs/results/strategy-space.csv)
+- [Rankings and marginal means](docs/results/strategy-space-report.md)
+- [Metadata and input fingerprints](docs/results/strategy-space.metadata.json)
+- [Machine-readable summary](docs/results/strategy-space.summary.json)
+- [Reproduction instructions](docs/results/README.md)
+
+In this fixed sample, **195/304 strategies** had no empty year-end treasury. **S266** had `meanResPop = 3695.766666666667`, `finalResPop = 3667`, `meanAiPop = 4174.2`, `finalFunds = 30448`, and zero insolvent years. These are measured scenario results, not universal optima or guarantees for a language model.
+
+The full experiment is opt-in, can take tens of minutes, and checkpoints completed runs. Ordinary tests do not launch it or make paid model calls. Never modify the input files while a fingerprinted experiment is running.
+
+## Testing and development
+
+```sh
+# Model contracts, mocked HTTP retries, handbook and real-WASM S266/replay acceptance
+corepack pnpm --filter micropolis exec vitest run cli/model
+
+# Original-power differential and the three stored classic city baselines
+corepack pnpm --filter micropolis exec vitest run cli/wasm/classic-power-compatibility.test.ts cli/wasm/sim.run.test.ts
+
+# Application test suite (full strategy sweep remains opt-in)
+corepack pnpm --filter micropolis run test
+
+# Svelte/TypeScript diagnostics
+corepack pnpm run check
+```
+
+Tests are checked into the repository and should be treated as the authority rather than a fixed test count in documentation. Fake-S266 acceptance uses the executable Node CLI, not fabricated outcome values. No real-model adapter is invoked by the normal test suite.
+
+## Project structure
+
+```text
+apps/micropolis/
+  src/lib/                  browser bridge, Command Bus, profiles and WASM artifacts
+  cli/model/                adapters, prompts, tools, runner, replay and tests
+  cli/wasm/                 headless engine tests and strategy-space experiment
+  cli/city/                 city-file analysis/editing
+packages/micropolis-engine/ C++ core, Makefile and Embind bindings
+packages/tile-renderer/     shared rendering backends
+content/micropolis/         bundled city saves and other assets
+docs/                      Dipolis runner and measured-result documentation
+documentation/             preserved upstream manuals, designs and history
+scripts/                   local task launcher and repository utilities
+.vscode/tasks.json          interactive model-run tasks
+```
+
+## Limitations and troubleshooting
+
+- **404 from a provider:** verify the full endpoint path and model/deployment. A base service URL is not necessarily a chat-completions endpoint.
+- **Run already exists:** use another run number, or `--resume` for the interrupted run. Do not delete valuable logs just to suppress this error.
+- **Replay mismatch:** engine inputs or recorded outcomes differ; preserve the original log and investigate rather than continuing from a different state.
+- **Missing usage:** some providers and old logs lack token counts. `tokenUsageComplete=false` means totals are partial, not zero-cost proof.
+- **Power capacity after construction:** new plants are counted during subsequent census/power scans, not necessarily immediately after the tool returns.
+- **Road funding:** low funding permits stochastic decay of eligible nonconductive roads; it does not remove a fixed fraction of roads or residents instantly. See the [17-year funding audit](docs/results/model-runs/road-funding-audit.md).
+- **Empty treasury:** construction can stop, imports can be limited, and service spending can be cut. The city continues running rather than producing a guaranteed bankruptcy termination.
+- **Determinism:** fixed seeds and unchanged inputs allow engine replay. Real model decisions are not guaranteed deterministic.
+- **Results:** marginal strategy means are descriptive, not causal effects; requested construction can differ from actual affordable construction.
+- **Writers:** do not run concurrent writers against the same protocol/CSV output directory.
+- **Security:** local credentials are plaintext on disk in the ignored env file. Restrict local access, rotate leaked keys, and inspect staged files before pushing.
+
+## Licensing and attribution
+
+Dipolis is explicitly a **modified MicropolisCore fork**. Original authorship and historical credit remain with Will Wright, Don Hopkins, Electronic Arts and the upstream contributors, as documented below. A renamed fork does not remove their licensing conditions.
+
+Read [LICENSE](LICENSE), [MicropolisGPLLicenseNotice.md](MicropolisGPLLicenseNotice.md), and [MicropolisPublicNameLicense.md](MicropolisPublicNameLicense.md). The Micropolis code is distributed under GPL version 3 or later with the documented Electronic Arts additional terms, including attribution and trademark restrictions. No Electronic Arts trademark rights or affiliation are claimed.
+
+The broader inherited monorepo includes components with their own notices, including [Screen Angel's license](apps/screen-angel/LICENSE.md). Check individual directories and asset notices rather than assuming one blanket license covers every inherited component. Original notices and the upstream documentation below are intentionally retained.
+
+## Preserved upstream documentation
+
+The following material describes MicropolisCore's upstream history and broader project vision. Upstream demos and future-oriented integrations are **not representations of a deployed Dipolis service or completed Dipolis features**.
+
+---
+
+# Micropolis (upstream)
 
 **Open source city simulation, based on the original SimCity Classic by Will Wright.**
 
