@@ -22,13 +22,17 @@ The background is a simplified description with these qualifications:
   per-unemployed-resident-point cost. It does not guarantee retention or jobs.
 - Power priority handles insufficient capacity; physical connection is still
   required and priority is not a guarantee for every zone.
-- The statement linking underfunded roads/police/fire jointly to road decay and
-  crime is not literally correct: road funding controls probabilistic decay of
-  eligible nonconductive roads; police funding affects crime coverage; fire
-  funding affects fire control, not the crime formula directly. Some small
-  road cuts do not cross the decay threshold; conductive road tiles are exempt.
+- The revised handbook separates roads, police and fire correctly. However,
+  road decay is probabilistic, excludes conductive road tiles, and only activates
+  below roadEffect 30 out of 32. Small affordable funding cuts need not cause it.
+  Lower police funding need not increase crime when other inputs or clamps dominate.
+  Fire funding affects fire control, not the crime formula directly.
 - Empty treasury prevents new paid construction. Imports can still use funds
   available from the annual tax booking; empty cash does not imply zero imports.
+- The final statement that all effects are delayed and fluctuate annually is not
+  literally correct. Settings and paid construction change immediately; population,
+  coverage, crime and annual spending follow different schedules. Random variation
+  is possible, not mandatory every year. The supplied wording is preserved.
 
 Engine balance/profile values are unchanged. These qualifications are documented
 here, not injected as extra model guidance.

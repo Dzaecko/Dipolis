@@ -9,7 +9,11 @@ describe('optional handbook and protocol identity', () => {
   expect(systemPrompt('R', 'off')).toBe(SYSTEM_PROMPTS.R);
   expect(systemPrompt('N', 'on')).toBe(SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK);
   expect(systemPrompt('R', 'on')).toBe(SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + SYSTEM_PROMPTS.R.slice(SYSTEM_PROMPTS.N.length));
-  expect(HANDBOOK.split('\n').filter(line => line.startsWith('- '))).toHaveLength(8);
+    expect(HANDBOOK.split('\n').filter(line => line.startsWith('- '))).toHaveLength(9);
+    expect(HANDBOOK).toContain('Ein höherer Steuersatz bremst den Zuzug und\n  fördert die Abwanderung.');
+    expect(HANDBOOK).toContain('ziehen weg, wenn die Reserve knapp wird.');
+    expect(HANDBOOK).toContain('  Die Feuerwehr begrenzt Brände.');
+    expect(HANDBOOK.endsWith('- Alle Wirkungen treten mit Verzögerung ein und schwanken von Jahr zu Jahr.')).toBe(true);
   expect(HANDBOOK).not.toMatch(/\b(Spiel|Simulation|Test|Experiment)\b/i);
  });
  it('distinguishes model names including sanitization collisions and path fragments', () => {
