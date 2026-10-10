@@ -12,9 +12,27 @@ import type { Metrics } from '../wasm/strategy-space';
 import { readResume } from './resume';
 import { protocolFilename } from './protocol-path';
 import { generateCityReport, generateReportIndex } from './city-report';
+import type { LiveEvent, LiveEventInput } from '../../src/lib/city-run/live';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
+
+/** Live events go to a parent process (dev server) over IPC; without a parent nothing is sent. */
+function liveChannel() {
+ const send = process.send?.bind(process);
+ let flushed: Promise<void> = Promise.resolve();
+ const progress = (event: LiveEventInput) => {
+  if (!send || !process.connected) return;
+  const message = { ...event, time: Date.now() } as LiveEvent;
+  flushed = flushed.then(() => new Promise<void>(resolve => { send(message, undefined, {}, () => resolve()); }));
+ };
+ /** Waits for queued messages, then closes the channel so the process can exit. */
+ const close = async () => {
+  await flushed;
+  if (process.connected) process.disconnect();
+ };
+ return { progress, close };
+}
 const metricKeys: (keyof Metrics)[] = ['meanResPop', 'minResPop', 'finalResPop', 'meanAiPop', 'finalFunds',
  'insolventYears', 'lostToHunger', 'lostToPower', 'finalAiZones', 'builtPlants', 'builtFarms', 'firstInsolvencyYear'];
 const escape = (value: unknown) => {
@@ -45,12 +63,14 @@ async function main() {
   .option('live', { type: 'boolean', default: false, description: 'Show decisions and annual reports live on stderr' })
   .option('resume', { type: 'boolean', default: false, description: 'Replay the existing interrupted protocol and continue' })
   .option('output', { type: 'string', default: path.join(root, 'docs/results/model-runs'), description: 'Protocol directory' })
+  .option('fake-delay-ms', { type: 'number', default: 0, description: 'Artificial delay per fake model request' })
   .strict().help().parseAsync();
  if (!Number.isSafeInteger(args.run) || args.run < 1) throw new Error('run must be a positive integer');
+ if (!Number.isSafeInteger(args.fakeDelayMs) || args.fakeDelayMs < 0) throw new Error('fake-delay-ms must be a non-negative integer');
  // Real network access requires the explicit adapter flag. No env autodetection.
  const directory = path.resolve(args.output);
  mkdirSync(directory, { recursive: true });
- const adapter = args.adapter === 'fake' ? new S266Adapter() : createEnvironmentAdapter();
+ const adapter = args.adapter === 'fake' ? new S266Adapter(args.fakeDelayMs) : createEnvironmentAdapter();
  let filename = path.join(directory, protocolFilename(args.adapter, args.assignment, adapter.model, args.handbook, args.run));
  const legacy = path.join(directory, `${args.adapter}-${args.assignment}-${args.run}.jsonl`);
  if (args.resume && args.handbook === 'off' && !existsSync(filename) && existsSync(legacy)) filename = legacy;
@@ -77,7 +97,18 @@ async function main() {
   if (show) (stream === 'out' ? console.log : console.error)(text);
  };
  if (args.resume) say(`----- Fortsetzung ab Jahr ${(resume?.completed.length ?? 0) + 1} -----`);
+ const live = liveChannel();
+ const progress = live.progress;
+ // Stop between steps or during a model request; the protocol stays resumable.
+ const stop = new AbortController();
+ const requestStop = () => stop.abort(new Error('stopped'));
+ process.on('message', message => { if ((message as { type?: string } | null)?.type === 'stop') requestStop(); });
+ process.once('SIGINT', requestStop);
+ process.once('SIGTERM', requestStop);
+ progress({ type: 'run-started', adapter: args.adapter, model: adapter.model, assignment: args.assignment,
+  handbook: args.handbook, run: args.run, file: path.basename(filename), resumedYears: resume?.completed.length ?? 0 });
  let failure: unknown;
+ let stopped = false;
  let session: Awaited<ReturnType<typeof createCitySession>> | undefined;
  try {
   session = await createCitySession();
@@ -91,13 +122,16 @@ async function main() {
   writeFileSync(fd, JSON.stringify({ event: 'decision', year, report, toolCalls: decision.toolCalls,
     assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
     for (const { call, result } of decision.toolCalls) say(`${call.name} ${JSON.stringify(call.arguments)} → ${JSON.stringify(result)}`, 'err', args.live);
-  }, { resume, handbook: args.handbook, event: event => {
+  }, { resume, handbook: args.handbook, progress, signal: stop.signal, event: event => {
    writeFileSync(fd, JSON.stringify({ ...event, assignment: args.assignment, handbook: args.handbook, run: args.run }) + '\n');
   if (event.event === 'model-response') {
    inputTokens += event.inputTokens ?? 0; outputTokens += event.outputTokens ?? 0;
    if (args.adapter !== 'fake' && !event.usageReported) tokenUsageComplete = false;
   }
    if (event.event === 'adapter-error') say(JSON.stringify(event));
+  if (event.event === 'adapter-error' && !stop.signal.aborted) progress({ type: 'adapter-error', year: event.year,
+   kind: event.kind ?? 'adapter', ...(event.status === undefined ? {} : { status: event.status }),
+   ...(event.attempts === undefined ? {} : { attempts: event.attempts }) });
   } });
   if (args.adapter === 'fake') verifyS266(metrics);
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
@@ -122,11 +156,16 @@ async function main() {
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
   say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
   protocol: filename, handbook: args.handbook, metrics, inputTokens, outputTokens, ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) }, null, 2), 'out');
+  progress({ type: 'run-finished', status: 'completed', metrics: { ...metrics },
+   ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) });
  } catch (error) {
-  failure = error;
+  stopped = stop.signal.aborted;
+  if (!stopped) failure = error;
   // Avoid forwarding provider failures, URLs, headers or secrets into the log.
-  writeFileSync(fd, JSON.stringify({ status: 'failed', assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
-  say('City run failed; no complete metrics row was saved. Inspect the local protocol.');
+  writeFileSync(fd, JSON.stringify({ status: stopped ? 'stopped' : 'failed', assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
+  say(stopped ? 'Lauf abgebrochen; mit Fortsetzen weiterfuehren.' : 'City run failed; no complete metrics row was saved. Inspect the local protocol.');
+  progress({ type: 'run-finished', status: stopped ? 'stopped' : 'failed',
+   message: stopped ? 'Lauf abgebrochen; fortsetzbar.' : 'Lauf fehlgeschlagen; Protokoll prüfen.' });
  } finally { session?.close(); closeSync(fd); }
  // Reports are produced for complete and interrupted runs; report errors never hide the run result.
  try {
@@ -137,6 +176,7 @@ async function main() {
   say('Bericht konnte nicht erzeugt werden; mit "city-report" erneut versuchen.');
  }
  closeSync(logFd);
+ await live.close();
  if (failure) throw new Error('City run failed; no complete metrics row was saved. Inspect the local protocol.');
 }
 

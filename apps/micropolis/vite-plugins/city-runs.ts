@@ -49,11 +49,12 @@ export function resolveRunFile(directory: string, name: string | null): string |
 export type ApiHandler = (req: IncomingMessage, res: ServerResponse, url: URL) => boolean | Promise<boolean>;
 
 /** Dev-server only: excluded from `vite build`, so no API ships with the static site. */
-export function cityRunsPlugin(options: { directory: string; extra?: ApiHandler[] }): Plugin {
+export function cityRunsPlugin(options: { directory: string; extra?: ApiHandler[]; onClose?: () => void }): Plugin {
 	return {
 		name: 'city-runs-api',
 		apply: 'serve',
 		configureServer(server) {
+			server.httpServer?.once('close', () => options.onClose?.());
 			server.middlewares.use(async (req, res, next) => {
 				const url = new URL(req.url ?? '/', 'http://localhost');
 				if (!url.pathname.startsWith('/api/city-runs')) return next();

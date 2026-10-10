@@ -2,6 +2,38 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Stadtmodell: Wiedergabe öffnen",
+      "dependsOn": ["Stadtmodell: Wiedergabe Dev-Server", "Stadtmodell: Wiedergabe Browser öffnen"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stadtmodell: Wiedergabe Dev-Server",
+      "type": "shell",
+      "command": "corepack",
+      "args": ["pnpm", "--filter", "micropolis", "run", "dev:vite", "--", "--strictPort"],
+      "options": { "cwd": "${workspaceFolder}", "env": { "VITE_PORT": "5188" } },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "city-replay-server",
+        "pattern": [{ "regexp": ".*" }],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE v",
+          "endsPattern": "Local:.*5188"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": false }
+    },
+    {
+      "label": "Stadtmodell: Wiedergabe Browser öffnen",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-Command", "Start-Process 'http://localhost:5188/replay'"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "Stadtmodell: Berichte neu erzeugen",
       "type": "shell",
       "command": "corepack",

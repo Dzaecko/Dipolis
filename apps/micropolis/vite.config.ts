@@ -4,8 +4,15 @@ import topLevelAwait from "vite-plugin-top-level-await";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { fileURLToPath } from 'node:url';
 import { cityRunsPlugin } from './vite-plugins/city-runs';
+import { LiveRunManager, liveRunHandlers } from './vite-plugins/live-runs';
 
 const modelRunsDirectory = fileURLToPath(new URL('../../docs/results/model-runs', import.meta.url));
+// The runner process is only started on request from /replay; nothing runs at server start.
+const liveRuns = new LiveRunManager({
+  appDirectory: fileURLToPath(new URL('.', import.meta.url)),
+  outputDirectory: modelRunsDirectory,
+  configFile: fileURLToPath(new URL('../../.env.city-model', import.meta.url)),
+});
 
 export default defineConfig({
   ssr: {
@@ -17,7 +24,7 @@ export default defineConfig({
     exclude: ['@micropolis/render-core', '@micropolis/tile-renderer'],
   },
   plugins: [
-    cityRunsPlugin({ directory: modelRunsDirectory }),
+    cityRunsPlugin({ directory: modelRunsDirectory, extra: [liveRunHandlers(liveRuns)], onClose: () => liveRuns.stop() }),
     sveltekit(),
     topLevelAwait(),
     viteStaticCopy({

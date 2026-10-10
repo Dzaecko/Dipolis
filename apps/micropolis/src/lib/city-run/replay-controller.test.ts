@@ -98,12 +98,13 @@ function instantClock(): ReplayClock {
 	return { now: () => now, sleep: async (ms) => { now += ms; }, yieldToUi: async () => {} };
 }
 
-function setup(source: AsyncIterator<ReplayStep, unknown>) {
+function setup(source: AsyncIterator<ReplayStep, unknown>, live = false) {
 	const executor = new FakeExecutor();
 	const listeners: Array<(state: ReplayState, event: ReplayEvent) => void> = [];
 	const events: ReplayEvent[] = [];
 	const controller = new ReplayController(source, executor, {
 		clock: instantClock(),
+		live,
 		onChange: (state, event) => { events.push(event); for (const listener of [...listeners]) listener(state, event); }
 	});
 	const until = (predicate: (state: ReplayState, event: ReplayEvent) => boolean) => new Promise<ReplayState>((resolve) => {
@@ -195,6 +196,30 @@ describe('ReplayController', () => {
 		await done;
 		expect(executor.log).toEqual(['reset', 'a', 'b', 'year1', 'c', 'year2']);
 		expect(controller.history).toHaveLength(all.length);
+		controller.dispose();
+	});
+
+	it('previews a live year while the model thinks, then recomputes before applying its commands', async () => {
+		const queue = new StepQueue();
+		queue.push({ type: 'year-start', year: 1, report: report(0) }, { type: 'think', year: 1 });
+		const { controller, executor, until } = setup(queue, true);
+		void controller.run();
+		await until((state) => state.phase === 'idle');
+		controller.play();
+		await until((state) => state.phase === 'waiting');
+		// The provisional year has elapsed. Late model output must discard it and restore year 1's start.
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(executor.log).toEqual(['reset', 'year1']);
+		const reason: ReplayStep = { type: 'reason', year: 1, reason: 'Weiterbauen.' };
+		const command: CommandStep = { type: 'command', year: 1, index: 0,
+			call: { id: 'late', name: 'tax.set', arguments: { rate: 7 } }, result: { handled: true } };
+		queue.push(reason, command, { type: 'year-end', year: 1, afterReport: report(1) });
+		controller.poke();
+		queue.close();
+		const done = until((state) => state.phase === 'done');
+		await done;
+		expect(executor.log).toEqual(['reset', 'year1', 'reset', 'late', 'year1']);
+		expect(controller.state.syncHistory[1]).toEqual({ synchronous: true, differences: [] });
 		controller.dispose();
 	});
 });

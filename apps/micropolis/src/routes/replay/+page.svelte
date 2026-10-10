@@ -14,9 +14,10 @@
 	import {
 		KEY_FIGURES, PHASE_LABELS, ReplayController, SPEED_LABELS, SYNC_LABELS, buildFootprintSize, buildLabel,
 		buildTimeline, builtCount, describeCommand, formatNumber, frameTicks, settingsFromReport, staticSteps,
-		stepsFromProtocol, type CommandStep, type ReplayEvent, type ReplayExecutor, type ReplaySpeed,
+		stepsFromProtocol, StepQueue, type CommandStep, type ReplayEvent, type ReplayExecutor, type ReplaySpeed, type ReplayStep,
 		type ReplayState, type SeriesKey, type Timeline
 	} from '$lib/city-run/replay-controller';
+	import { emptyProgress, joinYear, LiveStepBuilder, updateProgress, type LiveEvent, type LiveProgress } from '$lib/city-run/live';
 
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
@@ -24,6 +25,12 @@
 	}
 	interface Rect { x: number; y: number; w: number; h: number; }
 	interface Highlight { rects: Rect[]; label: string; color: string; until: number; }
+	interface LiveStatus {
+		running: boolean; session: number;
+		started: Extract<LiveEvent, { type: 'run-started' }> | null;
+		finished: Extract<LiveEvent, { type: 'run-finished' }> | null;
+		config: { model: string | null; error?: string };
+	}
 
 	/** Simulation advances only through the replay: timer, tick and pause paths are disabled. */
 	class ReplaySimulator extends MicropolisSimulator {
@@ -70,6 +77,25 @@
 	let showUnpowered = $state(true);
 	let showHungry = $state(true);
 	let followCamera = $state(true);
+
+	// ---------- live mode ----------
+	let mode = $state<'replay' | 'live'>('replay');
+	let liveStatus = $state<LiveStatus | null>(null);
+	let liveError = $state<string | null>(null);
+	let liveSession = 0;
+	let liveEvents = $state.raw<LiveEvent[]>([]);
+	let seenLiveEvents = new Set<string>();
+	let liveSteps: ReplayStep[] = [];
+	let liveBuilder = new LiveStepBuilder();
+	let liveQueue: StepQueue | null = null;
+	let liveAttached = $state(false);
+	let attachingLive = false;
+	let progress = $state<LiveProgress>(emptyProgress());
+	let now = $state(Date.now());
+	let eventSource: EventSource | null = null;
+	let clockTimer: ReturnType<typeof setInterval> | null = null;
+	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, fake: false, resume: false, confirming: false });
+	let startBusy = $state(false);
 
 	const dispatch: Dispatch = (id, args) => commandBus.dispatch(id, { source: 'script', simulator: sim, args });
 
@@ -217,20 +243,12 @@
 		loading = true;
 		loadError = null;
 		try {
-			const old = controller;
-			controller = null;
-			if (old) {
-				old.dispose();
-				await old.run();
-			}
+			await detachController();
 			const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(listing.file)}`);
 			if (!response.ok) throw new Error(`Protokoll konnte nicht geladen werden (HTTP ${response.status}).`);
 			const protocol = readProtocol(await response.text());
 			const steps = stepsFromProtocol(protocol);
-			const counts: Record<number, number> = {};
-			for (const step of steps) if (step.type === 'command') counts[step.year] = (counts[step.year] ?? 0) + 1;
-			commandCounts = counts;
-			timeline = buildTimeline(steps);
+			showSteps(steps);
 			loadedRun = listing;
 			highlights = [];
 			const next = new ReplayController(staticSteps(steps), createExecutor(), { speed, onChange });
@@ -243,6 +261,185 @@
 			loading = false;
 		}
 	}
+
+	function showSteps(steps: ReplayStep[]): void {
+		const counts: Record<number, number> = {};
+		for (const step of steps) if (step.type === 'command') counts[step.year] = (counts[step.year] ?? 0) + 1;
+		commandCounts = counts;
+		timeline = buildTimeline(steps);
+	}
+
+	async function detachController(): Promise<void> {
+		const old = controller;
+		controller = null;
+		liveQueue = null;
+		liveAttached = false;
+		if (old) {
+			old.dispose();
+			await old.run();
+		}
+	}
+
+	async function refreshRuns(): Promise<void> {
+		try {
+			const response = await fetch('/api/city-runs');
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			runs = await response.json() as RunListing[];
+			if (!runs.some((run) => run.file === selectedFile)) selectedFile = runs.find((run) => !run.error)?.file ?? '';
+		} catch {
+			runsError = 'Die Laufliste ist nur im Entwicklungsserver verfügbar (/api/city-runs).';
+		}
+	}
+
+	async function refreshLiveStatus(): Promise<void> {
+		try {
+			const response = await fetch('/api/city-runs/live/status');
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			liveStatus = await response.json() as LiveStatus;
+		} catch {
+			liveError = 'Live-Modus ist nur im Entwicklungsserver verfügbar.';
+		}
+	}
+
+	function receiveLive(session: number, event: LiveEvent): void {
+		if (session !== liveSession) {
+			// A new run replaces the previous stream; the view must re-attach to it.
+			liveSession = session;
+			liveEvents = [];
+			seenLiveEvents = new Set();
+			liveSteps = [];
+			liveBuilder = new LiveStepBuilder();
+			progress = emptyProgress();
+			if (liveAttached) void detachController();
+		}
+		const key = JSON.stringify(event);
+		if (seenLiveEvents.has(key)) return;
+		seenLiveEvents.add(key);
+		liveEvents = [...liveEvents, event];
+		progress = updateProgress(progress, event);
+		const steps = liveBuilder.push(event);
+		liveSteps.push(...steps);
+		if (liveAttached && liveQueue) {
+			if (steps.length) {
+				liveQueue.push(...steps);
+				showSteps(liveSteps);
+			}
+			if (event.type === 'run-finished') liveQueue.close();
+			controller?.poke();
+		}
+		if (event.type === 'run-started' || event.type === 'run-finished') {
+			void refreshLiveStatus();
+			void refreshRuns();
+		}
+		if (mode === 'live' && event.type === 'year-started' && !liveAttached && !attachingLive) void attachLive();
+	}
+
+	function connectLive(): void {
+		if (eventSource) return;
+		eventSource = new EventSource('/api/city-runs/live/events');
+		eventSource.onmessage = (message) => {
+			const { session, event } = JSON.parse(message.data) as { session: number; event: LiveEvent };
+			receiveLive(session, event);
+		};
+		eventSource.addEventListener('synced', () => {
+			// Auto-join a run that is already going when the live tab opens.
+			if (mode === 'live' && !liveAttached && liveEvents.length && !progress.finished) void attachLive();
+		});
+		eventSource.onerror = () => { liveError = 'Verbindung zum Entwicklungsserver unterbrochen; wird erneut versucht…'; };
+		eventSource.onopen = () => { liveError = null; };
+	}
+
+	/** Join the current run: earlier years are computed without display, then play live. */
+	async function attachLive(): Promise<void> {
+		if (!sim || !liveEvents.length || liveAttached || attachingLive) return;
+		attachingLive = true;
+		try {
+			await detachController();
+			const started = progress.started;
+			loadedRun = started ? {
+				file: started.file, model: started.model, assignment: started.assignment, handbook: started.handbook,
+				run: started.run, years: 0, complete: false, modified: ''
+			} : null;
+			const queue = new StepQueue();
+			queue.push(...liveSteps);
+			if (progress.finished) queue.close();
+			showSteps(liveSteps);
+			highlights = [];
+			const next = new ReplayController(queue, createExecutor(), {
+				speed, onChange, live: true, startYear: Math.max(1, joinYear(liveEvents))
+			});
+			liveQueue = queue;
+			liveAttached = true;
+			controller = next;
+			view = next.state;
+			void next.run();
+			next.play();
+		} finally {
+			attachingLive = false;
+		}
+	}
+
+	async function switchMode(next: 'replay' | 'live'): Promise<void> {
+		if (mode === next) return;
+		mode = next;
+		await detachController();
+		loadedRun = null;
+		timeline = null;
+		view = null;
+		if (next === 'live') {
+			connectLive();
+			await refreshLiveStatus();
+			if (liveEvents.length && !progress.finished) await attachLive();
+		}
+	}
+
+	async function startLiveRun(): Promise<void> {
+		if (!form.confirming) {
+			form.confirming = true;
+			return;
+		}
+		startBusy = true;
+		liveError = null;
+		try {
+			const response = await fetch('/api/city-runs/live/start', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					adapter: form.fake ? 'fake' : 'openai', assignment: form.assignment, handbook: form.handbook,
+					run: form.run, resume: form.resume, ...(form.fake ? { fakeDelayMs: 3000 } : {})
+				})
+			});
+			const body = await response.json() as { error?: string };
+			if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+			form.confirming = false;
+			connectLive();
+			await waitForLiveStart();
+			if (!liveAttached) await attachLive();
+		} catch (error) {
+			liveError = error instanceof Error ? error.message : String(error);
+		} finally {
+			startBusy = false;
+		}
+	}
+
+	async function waitForLiveStart(): Promise<void> {
+		for (let i = 0; i < 300 && !(progress.started && liveEvents.some((event) => event.type === 'year-started')); i++) {
+			if (progress.finished) throw new Error(progress.finished.message ?? 'Lauf konnte nicht gestartet werden.');
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
+
+	async function stopLiveRun(): Promise<void> {
+		try {
+			const response = await fetch('/api/city-runs/live/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+		} catch (error) {
+			liveError = error instanceof Error ? error.message : String(error);
+		}
+	}
+
+	const thinkingSeconds = $derived(progress.thinkingSince === null ? null : Math.max(0, Math.floor((now - progress.thinkingSince) / 1000)));
+	const liveRunning = $derived(!!liveStatus?.running || (!!progress.started && !progress.finished));
+	const configuredModel = $derived(liveStatus?.config.model ?? null);
 
 	function jump(year: number): void {
 		if (!controller || !timeline || year > timeline.availableYears) return;
@@ -401,13 +598,9 @@
 
 	onMount(async () => {
 		registerMicropolisCommands();
-		void fetch('/api/city-runs')
-			.then(async (response) => {
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				runs = await response.json() as RunListing[];
-				selectedFile = runs.find((run) => !run.error)?.file ?? '';
-			})
-			.catch(() => { runsError = 'Die Laufliste ist nur im Entwicklungsserver verfügbar (/api/city-runs).'; });
+		void refreshRuns();
+		void refreshLiveStatus();
+		clockTimer = setInterval(() => { now = Date.now(); }, 250);
 		try {
 			const replaySim = new ReplaySimulator();
 			// Callbacks must never mutate the engine.
@@ -431,6 +624,8 @@
 
 	onDestroy(() => {
 		destroyed = true;
+		eventSource?.close();
+		if (clockTimer) clearInterval(clockTimer);
 		if (rafId !== null) cancelAnimationFrame(rafId);
 		controller?.dispose();
 		micropolisReactive.registerMapPan(null);
@@ -443,19 +638,50 @@
 
 <div class="replay">
 	<header class="topbar">
-		<label>
-			<span>Lauf</span>
-			<select bind:value={selectedFile} disabled={loading || runs.length === 0}>
-				{#each runs as run (run.file)}
-					<option value={run.file} disabled={!!run.error}>{runLabel(run)}</option>
-				{/each}
-			</select>
-		</label>
-		<button class="primary" onclick={loadRun} disabled={!engineReady || !selectedFile || loading}>
-			{loading ? 'Lädt…' : 'Laden'}
-		</button>
+		<div class="mode-switch" role="group" aria-label="Wiedergabemodus">
+			<button class:selected={mode === 'replay'} onclick={() => void switchMode('replay')}>Protokoll</button>
+			<button class:selected={mode === 'live'} onclick={() => void switchMode('live')}>Live</button>
+		</div>
+		{#if mode === 'replay'}
+			<label>
+				<span>Lauf</span>
+				<select bind:value={selectedFile} disabled={loading || runs.length === 0}>
+					{#each runs as run (run.file)}
+						<option value={run.file} disabled={!!run.error}>{runLabel(run)}</option>
+					{/each}
+				</select>
+			</label>
+			<button class="primary" onclick={loadRun} disabled={!engineReady || !selectedFile || loading}>
+				{loading ? 'Lädt…' : 'Laden'}
+			</button>
+		{:else}
+			<div class="live-start">
+				{#if liveRunning}
+					<span class="live-indicator">● Lauf läuft</span>
+					{#if !liveAttached}<button class="primary" onclick={() => void attachLive()} disabled={!engineReady || !liveEvents.length}>Zuschalten</button>{/if}
+					<button class="danger" onclick={() => void stopLiveRun()}>Abbrechen</button>
+				{:else}
+					<label><span>Auftrag</span><select bind:value={form.assignment}><option value="N">N</option><option value="R">R</option></select></label>
+					<label><span>Handbuch</span><select bind:value={form.handbook}><option value="off">aus</option><option value="on">an</option></select></label>
+					<label><span>Laufnummer</span><input type="number" min="1" step="1" bind:value={form.run} /></label>
+					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen</label>
+					{#if !form.confirming}
+						<button class="primary" onclick={() => void startLiveRun()} disabled={startBusy}>{form.resume ? 'Lauf fortsetzen' : 'Neuen Lauf starten'}</button>
+					{:else}
+						<div class="confirm-start">
+							<strong>{form.fake ? 'Scheinlauf S266' : configuredModel ?? 'Modell nicht konfiguriert'}</strong>
+							<span>{form.resume ? 'Der vorhandene Lauf wird ab dem gespeicherten Stand fortgesetzt.' : form.fake ? 'Keine Modellkosten.' : 'Modellaufrufe können Kosten verursachen.'} Jetzt starten?</span>
+							<button class="primary" onclick={() => void startLiveRun()} disabled={startBusy || (!form.fake && !configuredModel)}>{startBusy ? 'Startet…' : 'Bestätigen'}</button>
+							<button onclick={() => form.confirming = false}>Abbrechen</button>
+						</div>
+					{/if}
+					<label class="fake-option"><input type="checkbox" bind:checked={form.fake} disabled={form.resume} />Schein-Adapter (3 s Verzögerung)</label>
+				{/if}
+			</div>
+		{/if}
 		{#if runsError}<span class="warn">{runsError}</span>{/if}
 		{#if loadError}<span class="warn">{loadError}</span>{/if}
+		{#if liveError}<span class="warn">{liveError}</span>{/if}
 		{#if engineError}<span class="warn">Engine: {engineError}</span>{/if}
 		{#if !engineReady && !engineError}<span class="muted">Engine wird geladen…</span>{/if}
 	</header>
@@ -491,7 +717,13 @@
 				{/each}
 			</ol>
 			<p class="status" class:error={view?.phase === 'error'}>{statusText}</p>
-			{#if view?.phase === 'running' || view?.phase === 'sync'}
+			{#if mode === 'live' && thinkingSeconds !== null}
+				<div class="thinking" role="status"><span class="thinking-dots">•••</span> Die KI überlegt · Jahr {progress.thinkingYear} · {thinkingSeconds} s</div>
+			{/if}
+			{#if mode === 'live' && progress.lastError}
+				<div class="warn">Modellaufruf {progress.lastError.kind}{progress.lastError.status ? ` · HTTP ${progress.lastError.status}` : ''}{progress.lastError.attempts ? ` · Versuch ${progress.lastError.attempts}` : ''}</div>
+			{/if}
+			{#if view?.phase === 'running' || view?.phase === 'sync' || (mode === 'live' && thinkingSeconds !== null)}
 				<div class="progress" title="Monate">
 					<div style:width="{(monthsDone / 12) * 100}%"></div>
 					<span>Monat {monthsDone}/12</span>
@@ -667,6 +899,15 @@
 	.topbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 	.topbar label { display: flex; gap: 0.4rem; align-items: center; flex: 1 1 420px; }
 	.topbar select { flex: 1; min-width: 0; padding: 0.3rem; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+	.mode-switch, .live-start, .confirm-start { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+	.live-start { flex: 1 1 600px; }
+	.live-start > label { flex: 0 1 auto; }
+	.live-start input[type='number'] { width: 5.5rem; padding: 0.3rem; }
+	.live-start .fake-option { flex: 0 0 auto; font-size: 0.82rem; }
+	.confirm-start { padding: 0.4rem 0.6rem; border: 1px solid var(--bad); border-radius: 5px; background: var(--bad-bg); }
+	.confirm-start > span { max-width: 24rem; }
+	.live-indicator { color: var(--ok); font-weight: 700; }
+	button.danger { color: var(--bad); border-color: var(--bad); }
 	button {
 		padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 4px; background: var(--card);
 		color: var(--text); cursor: pointer; font: inherit;
@@ -676,6 +917,9 @@
 	button.selected { outline: 2px solid var(--accent); }
 	.warn { color: var(--bad); }
 	.muted { color: var(--muted); font-weight: normal; }
+	.thinking { display: flex; align-items: center; gap: 0.35rem; margin: 0.3rem 0; padding: 0.4rem 0.55rem; color: var(--accent); background: var(--ok-bg); border-radius: 4px; font-weight: 600; font-variant-numeric: tabular-nums; }
+	.thinking-dots { letter-spacing: 0.1rem; animation: pulse 1s infinite alternate; }
+	@keyframes pulse { to { opacity: 0.25; } }
 
 	.map { grid-column: 1; grid-row: 2; position: relative; overflow: hidden; border-radius: 6px; min-height: 300px; }
 	.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }

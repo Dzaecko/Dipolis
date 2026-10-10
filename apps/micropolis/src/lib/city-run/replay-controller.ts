@@ -8,7 +8,11 @@ import { compareReports, type SyncResult } from './replay';
 export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; }
 export interface CommandStep { type: 'command'; year: number; index: number; call: ProtocolToolCall; result: ProtocolCallResult; }
 export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; }
-export type ReplayStep = YearStartStep | CommandStep | YearEndStep;
+/** Live only: the model's reasoning arrives before its commands. */
+export interface ReasonStep { type: 'reason'; year: number; reason: string; }
+/** Live only: animate a provisional year while the model is thinking. */
+export interface ThinkStep { type: 'think'; year: number; }
+export type ReplayStep = YearStartStep | CommandStep | YearEndStep | ReasonStep | ThinkStep;
 
 function joinReasons(decisions: Decision[]): string {
 	return [...new Set(decisions.map((decision) => decision.reason).filter(Boolean))].join('\n');
@@ -66,6 +70,11 @@ export class StepQueue implements AsyncIterator<ReplayStep, undefined> {
 	/** True when next() would have to wait for a producer. */
 	get starved(): boolean {
 		return this.buffer.length === 0 && !this.closed;
+	}
+
+	/** True if a buffered (not yet consumed) step matches. */
+	has(predicate: (step: ReplayStep) => boolean): boolean {
+		return this.buffer.some(predicate);
 	}
 
 	next(): Promise<IteratorResult<ReplayStep, undefined>> {
@@ -287,6 +296,8 @@ export interface AdvanceOptions {
 	yearMs: () => number;
 	/** Await between animation chunks: holds while paused, throws ReplayAborted on jump. */
 	checkpoint: () => Promise<void>;
+	/** Stop an in-flight live preview immediately when a model event arrives. */
+	signal?: AbortSignal;
 }
 
 export interface ReplayExecutor {
@@ -318,6 +329,13 @@ export interface ReplayControllerOptions {
 	speed?: ReplaySpeed;
 	clock?: ReplayClock;
 	onChange?: (state: ReplayState, event: ReplayEvent) => void;
+	/** First year to show; earlier years are computed without display (joining a running run). */
+	startYear?: number;
+	/**
+	 * Live: as soon as the next year's decisions arrive, the current year finishes without delay,
+	 * so playback never falls more than one year behind the run.
+	 */
+	live?: boolean;
 }
 
 export class ReplayController {
@@ -331,16 +349,19 @@ export class ReplayController {
 	private sourceDone = false;
 	private pendingNext: Promise<void> | null = null;
 	private waiters: Array<() => void> = [];
-	private jumpTarget: number | null = 1;
+	private jumpTarget: number | null;
 	private fastYear = false;
+	private previewYear: number | null = null;
+	private previewAbort: AbortController | null = null;
 	private running: Promise<void> | null = null;
 
 	constructor(private readonly source: AsyncIterator<ReplayStep, unknown>, private readonly executor: ReplayExecutor,
 		private readonly options: ReplayControllerOptions = {}) {
 		this.clock = options.clock ?? realClock;
+		this.jumpTarget = Math.max(1, Math.floor(options.startYear ?? 1));
 		this.s = {
 			phase: 'catch-up', paused: true, speed: options.speed ?? 'normal', year: null, report: null, reason: '',
-			commands: [], lastSync: null, syncHistory: {}, catchUp: { target: 1, year: 0 }, error: null
+			commands: [], lastSync: null, syncHistory: {}, catchUp: { target: this.jumpTarget, year: 0 }, error: null
 		};
 	}
 
@@ -422,6 +443,18 @@ export class ReplayController {
 		if (this.disposed || generation !== this.generation) throw new ReplayAborted();
 	}
 
+	/** Live: steps of a later year are already waiting, so the current year is behind. */
+	private behind(): boolean {
+		const year = this.s.year;
+		if (!this.options.live || year === null || !(this.source instanceof StepQueue)) return false;
+		if (this.history.slice(this.pos + 1).some((step) => step.year > year)) return true;
+		return this.source.has((step) => step.year > year && step.type !== 'year-start');
+	}
+
+	private hurry(): boolean {
+		return this.fastYear || this.behind();
+	}
+
 	private async checkpoint(generation: number): Promise<void> {
 		for (;;) {
 			this.check(generation);
@@ -435,7 +468,7 @@ export class ReplayController {
 		for (;;) {
 			this.check(generation);
 			const left = end - this.clock.now();
-			if (left <= 0 || this.fastYear) break;
+			if (left <= 0 || this.hurry()) break;
 			await Promise.race([this.clock.sleep(left), this.waitNotify()]);
 		}
 		await this.checkpoint(generation);
@@ -508,6 +541,7 @@ export class ReplayController {
 			lastSync: null, syncHistory: {}, error: null
 		} satisfies Partial<ReplayState>);
 		this.emit({ type: 'state' });
+		this.previewYear = null;
 		await this.executor.reset();
 		this.check(generation);
 		this.emit({ type: 'reset' });
@@ -523,7 +557,7 @@ export class ReplayController {
 				this.check(generation);
 			} else if (next.type === 'command') {
 				await this.executor.executeCommand(next, true);
-			} else {
+			} else if (next.type === 'year-end') {
 				await this.executor.advanceYear({ fast: () => true, yearMs: () => 0, checkpoint: async () => this.check(generation) });
 				await this.completeYear(next, generation);
 			}
@@ -550,9 +584,35 @@ export class ReplayController {
 	}
 
 	private async playStep(step: ReplayStep, generation: number): Promise<void> {
-		const fast = this.fastYear;
+		const fast = this.hurry();
 		const timings = this.timings;
-		if (step.type === 'year-start') {
+		if (step.type === 'think') {
+			// If a response is already buffered, replay the decision without showing a stale preview.
+			if (this.options.live && !this.history.slice(this.pos + 1).some((later) => later.year === step.year &&
+				(later.type === 'reason' || later.type === 'command' || later.type === 'year-end'))) {
+				this.s.year = step.year;
+				this.s.phase = 'waiting';
+				this.emit({ type: 'state' });
+				const abort = new AbortController();
+				this.previewAbort = abort;
+				this.previewYear = step.year;
+				try {
+					await this.executor.advanceYear({ fast: () => false, yearMs: () => this.timings.yearMs,
+						checkpoint: async () => {
+							this.check(generation);
+							if (abort.signal.aborted) throw new ReplayAborted();
+						}, signal: abort.signal });
+					this.check(generation);
+				} finally {
+					if (this.previewAbort === abort) this.previewAbort = null;
+				}
+			}
+		} else if (step.type === 'reason') {
+			this.s.year = step.year;
+			this.s.reason = step.reason;
+			this.s.phase = 'decision';
+			this.emit({ type: 'state' });
+		} else if (step.type === 'year-start') {
 			Object.assign(this.s, {
 				year: step.year, report: step.report, reason: step.reason ?? '', commands: [], lastSync: null, phase: 'report'
 			} satisfies Partial<ReplayState>);
@@ -574,7 +634,7 @@ export class ReplayController {
 			this.s.phase = 'running';
 			this.emit({ type: 'state' });
 			await this.executor.advanceYear({
-				fast: () => this.fastYear, yearMs: () => this.timings.yearMs, checkpoint: () => this.checkpoint(generation)
+				fast: () => this.hurry(), yearMs: () => this.timings.yearMs, checkpoint: () => this.checkpoint(generation)
 			});
 			this.check(generation);
 			const { sync, actual } = await this.completeYear(step, generation);
@@ -585,8 +645,18 @@ export class ReplayController {
 				this.s.paused = true;
 				this.emit({ type: 'state' });
 			} else {
-				await this.delay(timings.reportMs, generation);
+				await this.delay(this.hurry() ? 0 : timings.reportMs, generation);
 			}
 		}
+	}
+
+	/** A live event cancels the provisional year and recomputes to its start before applying decisions. */
+	poke(): void {
+		if (this.previewYear !== null) {
+			this.jumpTarget = this.previewYear;
+			this.generation++;
+			this.previewAbort?.abort();
+		}
+		this.notify();
 	}
 }

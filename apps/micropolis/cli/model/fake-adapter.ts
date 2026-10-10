@@ -4,7 +4,17 @@ import type { YearContext } from './runner';
 /** S266's decisions, not its outcomes; no model endpoint or credentials are used. */
 export class S266Adapter implements ChatAdapter {
  readonly model = 'fake-s266';
+ /** Optional artificial latency per request, e.g. to exercise live viewers. */
+ constructor(private readonly delayMs = 0) {}
  async chat(request: ChatRequest): Promise<ChatResponse> {
+  if (this.delayMs > 0) await new Promise<void>((resolve, reject) => {
+   const signal = request.signal;
+   const onAbort = () => { clearTimeout(timer); signal?.removeEventListener('abort', onAbort); reject(signal?.reason); };
+   const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve(); }, this.delayMs);
+   signal?.addEventListener('abort', onAbort, { once: true });
+   if (signal?.aborted) onAbort();
+  });
+  request.signal?.throwIfAborted();
   const last = request.messages.at(-1);
   if (last?.role === 'tool') return { content: 'Die Maßnahmen für dieses Jahr sind abgeschlossen.', toolCalls: [] };
   const user = request.messages.find(m => m.role === 'user');
