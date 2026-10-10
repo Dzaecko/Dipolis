@@ -1354,6 +1354,17 @@ int Micropolis::getAiZoneCount() const
     return count;
 }
 
+int Micropolis::getRoadTileCount() const
+{
+    int count = 0;
+    for (int x = 0; x < WORLD_W; ++x)
+        for (int y = 0; y < WORLD_H; ++y) {
+            const MapTile tile = map[x][y] & LOMASK;
+            if (tile >= ROADBASE && tile < POWERBASE) ++count;
+        }
+    return count;
+}
+
 void Micropolis::setServiceFunding(double road, double police, double fire)
 {
     if (!std::isfinite(road) || !std::isfinite(police) || !std::isfinite(fire) ||

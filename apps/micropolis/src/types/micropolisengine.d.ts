@@ -326,6 +326,9 @@ export interface Micropolis extends ClassHandle {
   roadFund: number;
   policeFund: number;
   fireFund: number;
+  roadPercent: number;
+  policePercent: number;
+  firePercent: number;
   aiCoverage: number;
   automationShare: number;
   unemploymentRate: number;
@@ -436,6 +439,7 @@ export interface Micropolis extends ClassHandle {
   markBaseline(): void;
   autoBuild(_0: number, _1: number): number;
   getAiZoneCount(): number;
+  getRoadTileCount(): number;
   setServiceFunding(_0: number, _1: number, _2: number): void;
   buildOwnedResidential(_0: number, _1: number, _2: number): ToolResult;
   buildFarm(_0: number, _1: number): ToolResult;

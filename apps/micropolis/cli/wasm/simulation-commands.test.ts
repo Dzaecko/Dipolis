@@ -11,6 +11,9 @@ type ScenarioEngine = Micropolis & {
 	autoBuild: (kind: number, count: number) => number;
 	getAiZoneCount: () => number;
 	setServiceFunding: (road: number, police: number, fire: number) => void;
+	roadPercent: number;
+	policePercent: number;
+	firePercent: number;
 };
 
 function numericReport(m: Micropolis) {
@@ -22,6 +25,15 @@ function numericReport(m: Micropolis) {
 		roadFund: m.roadFund,
 		policeFund: m.policeFund,
 		fireFund: m.fireFund,
+		roadFundingPercent: (m as ScenarioEngine).roadPercent * 100,
+		policeFundingPercent: (m as ScenarioEngine).policePercent * 100,
+		fireFundingPercent: (m as ScenarioEngine).firePercent * 100,
+		roadEffect: m.roadEffect,
+		policeEffect: m.policeEffect,
+		fireEffect: m.fireEffect,
+		crimeAverage: m.crimeAverage,
+		roadTotal: m.roadTotal,
+		roadTileCount: m.getRoadTileCount(),
 		foodImportCost: m.foodImportCost,
 		welfareCost: m.welfareCost,
 		cashFlow: m.cashFlow,
@@ -134,7 +146,16 @@ function createScenarioSimulator() {
 		baselineResPop: 100,
 		gainedResPop: 50,
 		lostToDemand: 70,
+		roadPercent: 1,
+		policePercent: 1,
+		firePercent: 1,
+		roadEffect: 32,
+		policeEffect: 1000,
+		fireEffect: 1000,
+		crimeAverage: 42,
+		roadTotal: 1234,
 		getAiZoneCount: vi.fn(() => 12),
+		getRoadTileCount: vi.fn(() => 100),
 		getParam: vi.fn(() => 0),
 		autoBuild: vi.fn((_kind: number, count: number) => {
 			const built = Math.min(count, 2);
@@ -142,7 +163,11 @@ function createScenarioSimulator() {
 			return built;
 		}),
 		setCityTax: vi.fn((rate: number) => { m.cityTax = rate; }),
-		setServiceFunding: vi.fn(),
+		setServiceFunding: vi.fn((road: number, police: number, fire: number) => {
+			m.roadPercent = road;
+			m.policePercent = police;
+			m.firePercent = fire;
+		}),
 		setFunds: vi.fn((amount: number) => { m.totalFunds = amount; }),
 		setSpeed: vi.fn((speed: number) => { m.simSpeed = speed; }),
 		setPasses: vi.fn((passes: number) => { m.simPasses = passes; }),
@@ -209,6 +234,33 @@ describe('scenario command contracts', () => {
 		expect(m.setServiceFunding).toHaveBeenCalledWith(0, 0.505, 1);
 		expect(result.data).toEqual({ built: 0, cost: 0, road: 0, police: 50.5, fire: 100 });
 		expect(m.totalFunds).toBe(10000);
+	});
+
+	it('always reports current independent funding percentages, service effects, crime and roads', async () => {
+		const { m, simulator } = createScenarioSimulator();
+		const initial = await commandBus.dispatch('report.get', { source: 'script', simulator });
+		expect(initial.data).toMatchObject({
+			roadFundingPercent: 100, policeFundingPercent: 100, fireFundingPercent: 100,
+			roadEffect: 32, policeEffect: 1000, fireEffect: 1000, crimeAverage: 42, roadTotal: 1234,
+		});
+		await commandBus.dispatch('budget.set-funding', {
+			source: 'script', simulator, args: { road: 100, police: 70, fire: 0 },
+		});
+		// Represent later engine budget adjustments, not the originally requested values.
+		m.policePercent = 0.405;
+		m.roadEffect = 20;
+		m.policeEffect = 405;
+		m.fireEffect = 0;
+		m.crimeAverage = 80;
+		m.roadTotal = 1200;
+		const report = await commandBus.dispatch('report.get', { source: 'script', simulator });
+		expect(report.data).toMatchObject({
+			roadFundingPercent: 100, policeFundingPercent: 40.5, fireFundingPercent: 0,
+			roadEffect: 20, policeEffect: 405, fireEffect: 0, crimeAverage: 80, roadTotal: 1200,
+		});
+		expect((await commandBus.dispatch('report.get', {
+			source: 'script', simulator, args: { serviceEffects: true },
+		})).data).toEqual(report.data);
 	});
 
 	it('validates every required funding percentage before changing anything', async () => {

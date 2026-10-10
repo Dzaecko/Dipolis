@@ -23,6 +23,9 @@ type ScenarioEngine = NonNullable<MicropolisSimulator['micropolis']> & {
   autoBuild?: (kind: number, count: number) => number;
   getAiZoneCount?: () => number;
   setServiceFunding?: (road: number, police: number, fire: number) => void;
+  roadPercent: number;
+  policePercent: number;
+  firePercent: number;
 };
 
 let registered = false;
@@ -262,7 +265,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       context: ['simulator', 'chat', 'llm', 'script'],
       policy: { risk: 'safe', allowLLM: true },
       enabled: hasMicropolis,
-      run: ({ simulator, args }) => {
+      run: ({ simulator }) => {
         const m = simulator?.micropolis as ScenarioEngine | undefined;
         if (!m) return { handled: false, message: 'simulator is unavailable' };
         if (!m.getAiZoneCount) return { handled: false, message: 'engine getAiZoneCount binding is unavailable' };
@@ -275,6 +278,15 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             roadFund: m.roadFund,
             policeFund: m.policeFund,
             fireFund: m.fireFund,
+            roadFundingPercent: m.roadPercent * 100,
+            policeFundingPercent: m.policePercent * 100,
+            fireFundingPercent: m.firePercent * 100,
+            roadEffect: m.roadEffect,
+            policeEffect: m.policeEffect,
+            fireEffect: m.fireEffect,
+            crimeAverage: m.crimeAverage,
+            roadTotal: m.roadTotal,
+            roadTileCount: m.getRoadTileCount(),
             foodImportCost: m.foodImportCost,
             welfareCost: m.welfareCost,
             cashFlow: m.cashFlow,
@@ -298,12 +310,6 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             powerPriority: m.getParam('powerPriority'),
             foodImportEnabled: m.getParam('foodImportEnabled'),
             welfareLevel: m.getParam('welfareLevel'),
-            // Opt-in diagnostics keep the default report contract unchanged.
-            ...(args?.serviceEffects === true ? {
-              roadEffect: m.roadEffect,
-              policeEffect: m.policeEffect,
-              fireEffect: m.fireEffect,
-            } : {}),
           },
         };
       },

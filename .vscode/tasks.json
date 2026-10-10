@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Stadtmodell: Auftrag N fortsetzen",
+      "type": "shell",
+      "command": "& '${workspaceFolder}/scripts/start-city-model.ps1' -Resume",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] }
+      },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true, "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "Stadtmodell: Auftrag N live starten",
+      "type": "shell",
+      "command": "& '${workspaceFolder}/scripts/start-city-model.ps1'",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "powershell.exe",
+          "args": ["-NoProfile", "-Command"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": true,
+        "close": false
+      },
+      "problemMatcher": []
+    }
+  ]
+}

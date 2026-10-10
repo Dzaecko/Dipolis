@@ -2549,6 +2549,7 @@ public:
     void markBaseline();
     int autoBuild(int kind, int count);
     int getAiZoneCount() const;
+    int getRoadTileCount() const;
     void setServiceFunding(double road, double police, double fire);
     ToolResult buildOwnedResidential(short x, short y, int owner);
     ToolResult buildFarm(short x, short y);
