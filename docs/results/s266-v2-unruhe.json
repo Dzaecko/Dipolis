@@ -1,0 +1,6157 @@
+{
+  "profile": "v2-unruhe",
+  "metrics": {
+    "meanResPop": 3710.6,
+    "minResPop": 3493,
+    "finalResPop": 3823,
+    "meanAiPop": 3150.8333333333335,
+    "finalFunds": 125713,
+    "insolventYears": 0,
+    "lostToHunger": 0,
+    "lostToPower": 0,
+    "finalAiZones": 120,
+    "builtPlants": 6,
+    "builtFarms": 10,
+    "firstInsolvencyYear": null
+  },
+  "years": [
+    {
+      "year": 1,
+      "report": {
+        "year": 2016,
+        "treasury": 60000,
+        "taxFund": 3361,
+        "aiTaxFund": 0,
+        "roadFund": 1922,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 100,
+        "fireFundingPercent": 100,
+        "roadEffect": 32,
+        "policeEffect": 1000,
+        "fireEffect": 1000,
+        "crimeAverage": 29,
+        "roadTotal": 2681,
+        "roadTileCount": 2375,
+        "foodImportCost": 2367,
+        "welfareCost": 0,
+        "cashFlow": -7828,
+        "resPop": 3658,
+        "aiPop": 0,
+        "baselineResPop": 3658,
+        "netResPopChange": 0,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 0,
+        "unemploymentRate": 0,
+        "automationShare": 0,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 0,
+        "automatedJobs": 0,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 6253,
+        "powerReserve": 0.4789166748523712,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 0
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year1-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call6",
+                "name": "build.farms",
+                "arguments": {
+                  "count": 10
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 10,
+                  "built": 10,
+                  "cost": 1010,
+                  "totalFunds": 58990
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year1-call7",
+                "name": "build.ai-zones",
+                "arguments": {
+                  "count": 30
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 30,
+                  "built": 30,
+                  "cost": 3030,
+                  "totalFunds": 55960
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2017,
+        "treasury": 50735,
+        "taxFund": 3430,
+        "aiTaxFund": 185,
+        "roadFund": 1904,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 54,
+        "roadTotal": 2712,
+        "roadTileCount": 2375,
+        "foodImportCost": 2209,
+        "welfareCost": 0,
+        "cashFlow": -5225,
+        "resPop": 3633,
+        "aiPop": 228,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 30,
+        "unemploymentRate": 0,
+        "automationShare": 0.0351937972009182,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 103,
+        "automatedJobs": 8.479999542236328,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 6699,
+        "powerReserve": 0.4410833418369293,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 2,
+      "report": {
+        "year": 2017,
+        "treasury": 50735,
+        "taxFund": 3430,
+        "aiTaxFund": 185,
+        "roadFund": 1904,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 54,
+        "roadTotal": 2712,
+        "roadTileCount": 2375,
+        "foodImportCost": 2209,
+        "welfareCost": 0,
+        "cashFlow": -5225,
+        "resPop": 3633,
+        "aiPop": 228,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 30,
+        "unemploymentRate": 0,
+        "automationShare": 0.0351937972009182,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 103,
+        "automatedJobs": 8.479999542236328,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 6699,
+        "powerReserve": 0.4410833418369293,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year2-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year2-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year2-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year2-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year2-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year2-call6",
+                "name": "build.ai-zones",
+                "arguments": {
+                  "count": 30
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 30,
+                  "built": 30,
+                  "cost": 3030,
+                  "totalFunds": 47705
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2018,
+        "treasury": 44015,
+        "taxFund": 3547,
+        "aiTaxFund": 927,
+        "roadFund": 1881,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 58,
+        "roadTotal": 2739,
+        "roadTileCount": 2375,
+        "foodImportCost": 1972,
+        "welfareCost": 0,
+        "cashFlow": -3690,
+        "resPop": 3633,
+        "aiPop": 756,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 60,
+        "unemploymentRate": 0,
+        "automationShare": 0.10823529213666916,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 519,
+        "automatedJobs": 42.39999771118164,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 7725,
+        "powerReserve": 0.35624998807907104,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 3,
+      "report": {
+        "year": 2018,
+        "treasury": 44015,
+        "taxFund": 3547,
+        "aiTaxFund": 927,
+        "roadFund": 1881,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 58,
+        "roadTotal": 2739,
+        "roadTileCount": 2375,
+        "foodImportCost": 1972,
+        "welfareCost": 0,
+        "cashFlow": -3690,
+        "resPop": 3633,
+        "aiPop": 756,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 60,
+        "unemploymentRate": 0,
+        "automationShare": 0.10823529213666916,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 519,
+        "automatedJobs": 42.39999771118164,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 7725,
+        "powerReserve": 0.35624998807907104,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year3-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year3-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year3-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year3-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year3-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year3-call6",
+                "name": "build.ai-zones",
+                "arguments": {
+                  "count": 30
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 30,
+                  "built": 30,
+                  "cost": 3030,
+                  "totalFunds": 40985
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2019,
+        "treasury": 38886,
+        "taxFund": 3449,
+        "aiTaxFund": 2005,
+        "roadFund": 1925,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 65,
+        "roadTotal": 2732,
+        "roadTileCount": 2375,
+        "foodImportCost": 1816,
+        "welfareCost": 104,
+        "cashFlow": -2099,
+        "resPop": 3601,
+        "aiPop": 1554,
+        "baselineResPop": 3658,
+        "netResPopChange": -57,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 90,
+        "unemploymentRate": 0.08428174257278442,
+        "automationShare": 0.22848597168922424,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 1122,
+        "automatedJobs": 91.68000030517578,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 9187,
+        "powerReserve": 0.22441667318344116,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 4,
+      "report": {
+        "year": 2019,
+        "treasury": 38886,
+        "taxFund": 3449,
+        "aiTaxFund": 2005,
+        "roadFund": 1925,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 65,
+        "roadTotal": 2732,
+        "roadTileCount": 2375,
+        "foodImportCost": 1816,
+        "welfareCost": 104,
+        "cashFlow": -2099,
+        "resPop": 3601,
+        "aiPop": 1554,
+        "baselineResPop": 3658,
+        "netResPopChange": -57,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 90,
+        "unemploymentRate": 0.08428174257278442,
+        "automationShare": 0.22848597168922424,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 1122,
+        "automatedJobs": 91.68000030517578,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 9187,
+        "powerReserve": 0.22441667318344116,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year4-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year4-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year4-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year4-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year4-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year4-call6",
+                "name": "build.ai-zones",
+                "arguments": {
+                  "count": 30
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 30,
+                  "built": 30,
+                  "cost": 3038,
+                  "totalFunds": 35848
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2020,
+        "treasury": 35848,
+        "taxFund": 3577,
+        "aiTaxFund": 3531,
+        "roadFund": 1896,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 71,
+        "roadTotal": 2726,
+        "roadTileCount": 2375,
+        "foodImportCost": 1685,
+        "welfareCost": 673,
+        "cashFlow": 0,
+        "resPop": 3493,
+        "aiPop": 2262,
+        "baselineResPop": 3658,
+        "netResPopChange": -165,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.14260375499725342,
+        "automationShare": 0.3243010640144348,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 1976,
+        "automatedJobs": 161.44000244140625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 10788,
+        "powerReserve": 0.10116666555404663,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 5,
+      "report": {
+        "year": 2020,
+        "treasury": 35848,
+        "taxFund": 3577,
+        "aiTaxFund": 3531,
+        "roadFund": 1896,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 71,
+        "roadTotal": 2726,
+        "roadTileCount": 2375,
+        "foodImportCost": 1685,
+        "welfareCost": 673,
+        "cashFlow": 0,
+        "resPop": 3493,
+        "aiPop": 2262,
+        "baselineResPop": 3658,
+        "netResPopChange": -165,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.14260375499725342,
+        "automationShare": 0.3243010640144348,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 1976,
+        "automatedJobs": 161.44000244140625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 10788,
+        "powerReserve": 0.10116666555404663,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year5-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year5-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year5-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year5-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year5-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2021,
+        "treasury": 37178,
+        "taxFund": 3645,
+        "aiTaxFund": 4005,
+        "roadFund": 1920,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 72,
+        "roadTotal": 2718,
+        "roadTileCount": 2375,
+        "foodImportCost": 1246,
+        "welfareCost": 565,
+        "cashFlow": 1330,
+        "resPop": 3532,
+        "aiPop": 2312,
+        "baselineResPop": 3658,
+        "netResPopChange": -126,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.11614322662353516,
+        "automationShare": 0.32083189487457275,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2241,
+        "automatedJobs": 183.1199951171875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 10868,
+        "powerReserve": 0.09266666322946548,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 6,
+      "report": {
+        "year": 2021,
+        "treasury": 37178,
+        "taxFund": 3645,
+        "aiTaxFund": 4005,
+        "roadFund": 1920,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 72,
+        "roadTotal": 2718,
+        "roadTileCount": 2375,
+        "foodImportCost": 1246,
+        "welfareCost": 565,
+        "cashFlow": 1330,
+        "resPop": 3532,
+        "aiPop": 2312,
+        "baselineResPop": 3658,
+        "netResPopChange": -126,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.11614322662353516,
+        "automationShare": 0.32083189487457275,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2241,
+        "automatedJobs": 183.1199951171875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12000,
+        "powerDemand": 10868,
+        "powerReserve": 0.09266666322946548,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year6-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year6-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year6-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year6-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year6-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year6-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3021,
+                  "totalFunds": 34157
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2022,
+        "treasury": 36322,
+        "taxFund": 3704,
+        "aiTaxFund": 4467,
+        "roadFund": 1923,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 72,
+        "roadTotal": 2787,
+        "roadTileCount": 2375,
+        "foodImportCost": 1076,
+        "welfareCost": 677,
+        "cashFlow": 2165,
+        "resPop": 3528,
+        "aiPop": 2543,
+        "baselineResPop": 3658,
+        "netResPopChange": -130,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.13408559560775757,
+        "automationShare": 0.34853240847587585,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2500,
+        "automatedJobs": 204.239990234375,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12700,
+        "powerDemand": 11425,
+        "powerReserve": 0.10354330390691757,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 7,
+      "report": {
+        "year": 2022,
+        "treasury": 36322,
+        "taxFund": 3704,
+        "aiTaxFund": 4467,
+        "roadFund": 1923,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 72,
+        "roadTotal": 2787,
+        "roadTileCount": 2375,
+        "foodImportCost": 1076,
+        "welfareCost": 677,
+        "cashFlow": 2165,
+        "resPop": 3528,
+        "aiPop": 2543,
+        "baselineResPop": 3658,
+        "netResPopChange": -130,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.13408559560775757,
+        "automationShare": 0.34853240847587585,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2500,
+        "automatedJobs": 204.239990234375,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12700,
+        "powerDemand": 11425,
+        "powerReserve": 0.10354330390691757,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year7-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year7-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year7-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year7-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year7-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2023,
+        "treasury": 38900,
+        "taxFund": 3802,
+        "aiTaxFund": 4585,
+        "roadFund": 1878,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 73,
+        "roadTotal": 2694,
+        "roadTileCount": 2375,
+        "foodImportCost": 1032,
+        "welfareCost": 635,
+        "cashFlow": 2578,
+        "resPop": 3576,
+        "aiPop": 2624,
+        "baselineResPop": 3658,
+        "netResPopChange": -82,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.14234274625778198,
+        "automationShare": 0.3533220589160919,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2566,
+        "automatedJobs": 209.59999084472656,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12700,
+        "powerDemand": 11549,
+        "powerReserve": 0.09314960986375809,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 8,
+      "report": {
+        "year": 2023,
+        "treasury": 38900,
+        "taxFund": 3802,
+        "aiTaxFund": 4585,
+        "roadFund": 1878,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 73,
+        "roadTotal": 2694,
+        "roadTileCount": 2375,
+        "foodImportCost": 1032,
+        "welfareCost": 635,
+        "cashFlow": 2578,
+        "resPop": 3576,
+        "aiPop": 2624,
+        "baselineResPop": 3658,
+        "netResPopChange": -82,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.14234274625778198,
+        "automationShare": 0.3533220589160919,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2566,
+        "automatedJobs": 209.59999084472656,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 12700,
+        "powerDemand": 11549,
+        "powerReserve": 0.09314960986375809,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year8-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year8-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year8-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year8-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year8-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year8-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3016,
+                  "totalFunds": 35884
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2024,
+        "treasury": 38950,
+        "taxFund": 3792,
+        "aiTaxFund": 4961,
+        "roadFund": 1908,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 75,
+        "roadTotal": 2720,
+        "roadTileCount": 2375,
+        "foodImportCost": 1002,
+        "welfareCost": 723,
+        "cashFlow": 3066,
+        "resPop": 3549,
+        "aiPop": 2903,
+        "baselineResPop": 3658,
+        "netResPopChange": -109,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.1861516237258911,
+        "automationShare": 0.3935461938381195,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2776,
+        "automatedJobs": 226.79998779296875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 13400,
+        "powerDemand": 12067,
+        "powerReserve": 0.09335821121931076,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 9,
+      "report": {
+        "year": 2024,
+        "treasury": 38950,
+        "taxFund": 3792,
+        "aiTaxFund": 4961,
+        "roadFund": 1908,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 75,
+        "roadTotal": 2720,
+        "roadTileCount": 2375,
+        "foodImportCost": 1002,
+        "welfareCost": 723,
+        "cashFlow": 3066,
+        "resPop": 3549,
+        "aiPop": 2903,
+        "baselineResPop": 3658,
+        "netResPopChange": -109,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.1861516237258911,
+        "automationShare": 0.3935461938381195,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 2776,
+        "automatedJobs": 226.79998779296875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 13400,
+        "powerDemand": 12067,
+        "powerReserve": 0.09335821121931076,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year9-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year9-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year9-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year9-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year9-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year9-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3021,
+                  "totalFunds": 35929
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2025,
+        "treasury": 39651,
+        "taxFund": 3910,
+        "aiTaxFund": 5475,
+        "roadFund": 1878,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 76,
+        "roadTotal": 2694,
+        "roadTileCount": 2375,
+        "foodImportCost": 1001,
+        "welfareCost": 1018,
+        "cashFlow": 3722,
+        "resPop": 3653,
+        "aiPop": 3173,
+        "baselineResPop": 3658,
+        "netResPopChange": -5,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.23711293935775757,
+        "automationShare": 0.423066645860672,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3064,
+        "automatedJobs": 250.3199920654297,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12610,
+        "powerReserve": 0.1022695004940033,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 10,
+      "report": {
+        "year": 2025,
+        "treasury": 39651,
+        "taxFund": 3910,
+        "aiTaxFund": 5475,
+        "roadFund": 1878,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 76,
+        "roadTotal": 2694,
+        "roadTileCount": 2375,
+        "foodImportCost": 1001,
+        "welfareCost": 1018,
+        "cashFlow": 3722,
+        "resPop": 3653,
+        "aiPop": 3173,
+        "baselineResPop": 3658,
+        "netResPopChange": -5,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.23711293935775757,
+        "automationShare": 0.423066645860672,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3064,
+        "automatedJobs": 250.3199920654297,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12610,
+        "powerReserve": 0.1022695004940033,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year10-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year10-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year10-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year10-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year10-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2026,
+        "treasury": 43452,
+        "taxFund": 3910,
+        "aiTaxFund": 5663,
+        "roadFund": 1915,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2807,
+        "roadTileCount": 2375,
+        "foodImportCost": 1005,
+        "welfareCost": 1191,
+        "cashFlow": 3801,
+        "resPop": 3611,
+        "aiPop": 3159,
+        "baselineResPop": 3658,
+        "netResPopChange": -47,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.21925681829452515,
+        "automationShare": 0.41735100746154785,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3169,
+        "automatedJobs": 258.8800048828125,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12614,
+        "powerReserve": 0.10539007186889648,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 11,
+      "report": {
+        "year": 2026,
+        "treasury": 43452,
+        "taxFund": 3910,
+        "aiTaxFund": 5663,
+        "roadFund": 1915,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2807,
+        "roadTileCount": 2375,
+        "foodImportCost": 1005,
+        "welfareCost": 1191,
+        "cashFlow": 3801,
+        "resPop": 3611,
+        "aiPop": 3159,
+        "baselineResPop": 3658,
+        "netResPopChange": -47,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.21925681829452515,
+        "automationShare": 0.41735100746154785,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3169,
+        "automatedJobs": 258.8800048828125,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12614,
+        "powerReserve": 0.10539007186889648,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year11-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year11-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year11-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year11-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year11-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2027,
+        "treasury": 47100,
+        "taxFund": 3714,
+        "aiTaxFund": 5519,
+        "roadFund": 1926,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2792,
+        "roadTileCount": 2375,
+        "foodImportCost": 914,
+        "welfareCost": 1004,
+        "cashFlow": 3648,
+        "resPop": 3635,
+        "aiPop": 3184,
+        "baselineResPop": 3658,
+        "netResPopChange": -23,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.22022688388824463,
+        "automationShare": 0.419505774974823,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3089,
+        "automatedJobs": 252.3199920654297,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12682,
+        "powerReserve": 0.10099291056394577,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 12,
+      "report": {
+        "year": 2027,
+        "treasury": 47100,
+        "taxFund": 3714,
+        "aiTaxFund": 5519,
+        "roadFund": 1926,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2792,
+        "roadTileCount": 2375,
+        "foodImportCost": 914,
+        "welfareCost": 1004,
+        "cashFlow": 3648,
+        "resPop": 3635,
+        "aiPop": 3184,
+        "baselineResPop": 3658,
+        "netResPopChange": -23,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.22022688388824463,
+        "automationShare": 0.419505774974823,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3089,
+        "automatedJobs": 252.3199920654297,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12682,
+        "powerReserve": 0.10099291056394577,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year12-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year12-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year12-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year12-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year12-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2028,
+        "treasury": 50772,
+        "taxFund": 3724,
+        "aiTaxFund": 5545,
+        "roadFund": 1940,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2796,
+        "roadTileCount": 2375,
+        "foodImportCost": 927,
+        "welfareCost": 1003,
+        "cashFlow": 3672,
+        "resPop": 3653,
+        "aiPop": 3166,
+        "baselineResPop": 3658,
+        "netResPopChange": -5,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.21642154455184937,
+        "automationShare": 0.4139244556427002,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3103,
+        "automatedJobs": 253.51998901367188,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12646,
+        "powerReserve": 0.10539007186889648,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 13,
+      "report": {
+        "year": 2028,
+        "treasury": 50772,
+        "taxFund": 3724,
+        "aiTaxFund": 5545,
+        "roadFund": 1940,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2796,
+        "roadTileCount": 2375,
+        "foodImportCost": 927,
+        "welfareCost": 1003,
+        "cashFlow": 3672,
+        "resPop": 3653,
+        "aiPop": 3166,
+        "baselineResPop": 3658,
+        "netResPopChange": -5,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.21642154455184937,
+        "automationShare": 0.4139244556427002,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3103,
+        "automatedJobs": 253.51998901367188,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12646,
+        "powerReserve": 0.10539007186889648,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year13-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year13-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year13-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year13-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year13-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2029,
+        "treasury": 54726,
+        "taxFund": 3861,
+        "aiTaxFund": 5615,
+        "roadFund": 1916,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2723,
+        "roadTileCount": 2375,
+        "foodImportCost": 847,
+        "welfareCost": 1071,
+        "cashFlow": 3954,
+        "resPop": 3632,
+        "aiPop": 3248,
+        "baselineResPop": 3658,
+        "netResPopChange": -26,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.222062885761261,
+        "automationShare": 0.42479607462882996,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3142,
+        "automatedJobs": 256.7200012207031,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12702,
+        "powerReserve": 0.09078013896942139,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 14,
+      "report": {
+        "year": 2029,
+        "treasury": 54726,
+        "taxFund": 3861,
+        "aiTaxFund": 5615,
+        "roadFund": 1916,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2723,
+        "roadTileCount": 2375,
+        "foodImportCost": 847,
+        "welfareCost": 1071,
+        "cashFlow": 3954,
+        "resPop": 3632,
+        "aiPop": 3248,
+        "baselineResPop": 3658,
+        "netResPopChange": -26,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.222062885761261,
+        "automationShare": 0.42479607462882996,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3142,
+        "automatedJobs": 256.7200012207031,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14100,
+        "powerDemand": 12702,
+        "powerReserve": 0.09078013896942139,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year14-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year14-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year14-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year14-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year14-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year14-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3016,
+                  "totalFunds": 51710
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2030,
+        "treasury": 56085,
+        "taxFund": 3733,
+        "aiTaxFund": 6041,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2755,
+        "roadTileCount": 2375,
+        "foodImportCost": 811,
+        "welfareCost": 1202,
+        "cashFlow": 4375,
+        "resPop": 3633,
+        "aiPop": 3451,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.2575117349624634,
+        "automationShare": 0.45115822553634644,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3380,
+        "automatedJobs": 276.1600036621094,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13288,
+        "powerReserve": 0.10527027398347855,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 15,
+      "report": {
+        "year": 2030,
+        "treasury": 56085,
+        "taxFund": 3733,
+        "aiTaxFund": 6041,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 77,
+        "roadTotal": 2755,
+        "roadTileCount": 2375,
+        "foodImportCost": 811,
+        "welfareCost": 1202,
+        "cashFlow": 4375,
+        "resPop": 3633,
+        "aiPop": 3451,
+        "baselineResPop": 3658,
+        "netResPopChange": -25,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.2575117349624634,
+        "automationShare": 0.45115822553634644,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3380,
+        "automatedJobs": 276.1600036621094,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13288,
+        "powerReserve": 0.10527027398347855,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year15-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year15-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year15-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year15-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year15-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2031,
+        "treasury": 60674,
+        "taxFund": 3802,
+        "aiTaxFund": 6039,
+        "roadFund": 1946,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2712,
+        "roadTileCount": 2375,
+        "foodImportCost": 756,
+        "welfareCost": 1100,
+        "cashFlow": 4589,
+        "resPop": 3574,
+        "aiPop": 3448,
+        "baselineResPop": 3658,
+        "netResPopChange": -84,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.24399328231811523,
+        "automationShare": 0.4480781555175781,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3380,
+        "automatedJobs": 276.0799865722656,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13206,
+        "powerReserve": 0.10770270228385925,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 16,
+      "report": {
+        "year": 2031,
+        "treasury": 60674,
+        "taxFund": 3802,
+        "aiTaxFund": 6039,
+        "roadFund": 1946,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2712,
+        "roadTileCount": 2375,
+        "foodImportCost": 756,
+        "welfareCost": 1100,
+        "cashFlow": 4589,
+        "resPop": 3574,
+        "aiPop": 3448,
+        "baselineResPop": 3658,
+        "netResPopChange": -84,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.24399328231811523,
+        "automationShare": 0.4480781555175781,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3380,
+        "automatedJobs": 276.0799865722656,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13206,
+        "powerReserve": 0.10770270228385925,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year16-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year16-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year16-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year16-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year16-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2032,
+        "treasury": 65300,
+        "taxFund": 3822,
+        "aiTaxFund": 6060,
+        "roadFund": 1883,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2762,
+        "roadTileCount": 2375,
+        "foodImportCost": 795,
+        "welfareCost": 1139,
+        "cashFlow": 4626,
+        "resPop": 3753,
+        "aiPop": 3449,
+        "baselineResPop": 3658,
+        "netResPopChange": 95,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.27624326944351196,
+        "automationShare": 0.44865038990974426,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3391,
+        "automatedJobs": 277.0400085449219,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13210,
+        "powerReserve": 0.1063513532280922,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 17,
+      "report": {
+        "year": 2032,
+        "treasury": 65300,
+        "taxFund": 3822,
+        "aiTaxFund": 6060,
+        "roadFund": 1883,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 78,
+        "roadTotal": 2762,
+        "roadTileCount": 2375,
+        "foodImportCost": 795,
+        "welfareCost": 1139,
+        "cashFlow": 4626,
+        "resPop": 3753,
+        "aiPop": 3449,
+        "baselineResPop": 3658,
+        "netResPopChange": 95,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.27624326944351196,
+        "automationShare": 0.44865038990974426,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3391,
+        "automatedJobs": 277.0400085449219,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13210,
+        "powerReserve": 0.1063513532280922,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year17-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year17-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year17-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year17-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year17-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2033,
+        "treasury": 69527,
+        "taxFund": 4037,
+        "aiTaxFund": 6002,
+        "roadFund": 1952,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2832,
+        "roadTileCount": 2375,
+        "foodImportCost": 951,
+        "welfareCost": 1438,
+        "cashFlow": 4227,
+        "resPop": 3819,
+        "aiPop": 3495,
+        "baselineResPop": 3658,
+        "netResPopChange": 161,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.2939722537994385,
+        "automationShare": 0.4528571367263794,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3359,
+        "automatedJobs": 274.3999938964844,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13186,
+        "powerReserve": 0.10121621936559677,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 18,
+      "report": {
+        "year": 2033,
+        "treasury": 69527,
+        "taxFund": 4037,
+        "aiTaxFund": 6002,
+        "roadFund": 1952,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2832,
+        "roadTileCount": 2375,
+        "foodImportCost": 951,
+        "welfareCost": 1438,
+        "cashFlow": 4227,
+        "resPop": 3819,
+        "aiPop": 3495,
+        "baselineResPop": 3658,
+        "netResPopChange": 161,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.2939722537994385,
+        "automationShare": 0.4528571367263794,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3359,
+        "automatedJobs": 274.3999938964844,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13186,
+        "powerReserve": 0.10121621936559677,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year18-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year18-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year18-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year18-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year18-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2034,
+        "treasury": 73771,
+        "taxFund": 3724,
+        "aiTaxFund": 6163,
+        "roadFund": 1974,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2826,
+        "roadTileCount": 2375,
+        "foodImportCost": 903,
+        "welfareCost": 1385,
+        "cashFlow": 4244,
+        "resPop": 3768,
+        "aiPop": 3528,
+        "baselineResPop": 3658,
+        "netResPopChange": 110,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.29041630029678345,
+        "automationShare": 0.45701298117637634,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3449,
+        "automatedJobs": 281.7599792480469,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13402,
+        "powerReserve": 0.09689189493656158,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 19,
+      "report": {
+        "year": 2034,
+        "treasury": 73771,
+        "taxFund": 3724,
+        "aiTaxFund": 6163,
+        "roadFund": 1974,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2826,
+        "roadTileCount": 2375,
+        "foodImportCost": 903,
+        "welfareCost": 1385,
+        "cashFlow": 4244,
+        "resPop": 3768,
+        "aiPop": 3528,
+        "baselineResPop": 3658,
+        "netResPopChange": 110,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.29041630029678345,
+        "automationShare": 0.45701298117637634,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3449,
+        "automatedJobs": 281.7599792480469,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 14800,
+        "powerDemand": 13402,
+        "powerReserve": 0.09689189493656158,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year19-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year19-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year19-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year19-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year19-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year19-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3021,
+                  "totalFunds": 70750
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2035,
+        "treasury": 75289,
+        "taxFund": 3655,
+        "aiTaxFund": 6513,
+        "roadFund": 1929,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2808,
+        "roadTileCount": 2375,
+        "foodImportCost": 922,
+        "welfareCost": 1593,
+        "cashFlow": 4539,
+        "resPop": 3782,
+        "aiPop": 3736,
+        "baselineResPop": 3658,
+        "netResPopChange": 124,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3286174535751343,
+        "automationShare": 0.48544567823410034,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3645,
+        "automatedJobs": 297.7599792480469,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13831,
+        "powerReserve": 0.10754838585853577,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 20,
+      "report": {
+        "year": 2035,
+        "treasury": 75289,
+        "taxFund": 3655,
+        "aiTaxFund": 6513,
+        "roadFund": 1929,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2808,
+        "roadTileCount": 2375,
+        "foodImportCost": 922,
+        "welfareCost": 1593,
+        "cashFlow": 4539,
+        "resPop": 3782,
+        "aiPop": 3736,
+        "baselineResPop": 3658,
+        "netResPopChange": 124,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3286174535751343,
+        "automationShare": 0.48544567823410034,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3645,
+        "automatedJobs": 297.7599792480469,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13831,
+        "powerReserve": 0.10754838585853577,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year20-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year20-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year20-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year20-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year20-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2036,
+        "treasury": 79989,
+        "taxFund": 3831,
+        "aiTaxFund": 6478,
+        "roadFund": 1963,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2760,
+        "roadTileCount": 2375,
+        "foodImportCost": 895,
+        "welfareCost": 1546,
+        "cashFlow": 4700,
+        "resPop": 3786,
+        "aiPop": 3759,
+        "baselineResPop": 3658,
+        "netResPopChange": 128,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.33374834060668945,
+        "automationShare": 0.4882982075214386,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3625,
+        "automatedJobs": 296.1600036621094,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13877,
+        "powerReserve": 0.1047096773982048,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 21,
+      "report": {
+        "year": 2036,
+        "treasury": 79989,
+        "taxFund": 3831,
+        "aiTaxFund": 6478,
+        "roadFund": 1963,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2760,
+        "roadTileCount": 2375,
+        "foodImportCost": 895,
+        "welfareCost": 1546,
+        "cashFlow": 4700,
+        "resPop": 3786,
+        "aiPop": 3759,
+        "baselineResPop": 3658,
+        "netResPopChange": 128,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.33374834060668945,
+        "automationShare": 0.4882982075214386,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3625,
+        "automatedJobs": 296.1600036621094,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13877,
+        "powerReserve": 0.1047096773982048,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year21-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year21-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year21-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year21-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year21-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2037,
+        "treasury": 84606,
+        "taxFund": 3635,
+        "aiTaxFund": 6506,
+        "roadFund": 1910,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2725,
+        "roadTileCount": 2375,
+        "foodImportCost": 897,
+        "welfareCost": 1528,
+        "cashFlow": 4617,
+        "resPop": 3749,
+        "aiPop": 3771,
+        "baselineResPop": 3658,
+        "netResPopChange": 91,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3255831003189087,
+        "automationShare": 0.48803889751434326,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3641,
+        "automatedJobs": 297.44000244140625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13871,
+        "powerReserve": 0.10509677231311798,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 22,
+      "report": {
+        "year": 2037,
+        "treasury": 84606,
+        "taxFund": 3635,
+        "aiTaxFund": 6506,
+        "roadFund": 1910,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2725,
+        "roadTileCount": 2375,
+        "foodImportCost": 897,
+        "welfareCost": 1528,
+        "cashFlow": 4617,
+        "resPop": 3749,
+        "aiPop": 3771,
+        "baselineResPop": 3658,
+        "netResPopChange": 91,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3255831003189087,
+        "automationShare": 0.48803889751434326,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3641,
+        "automatedJobs": 297.44000244140625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13871,
+        "powerReserve": 0.10509677231311798,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year22-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year22-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year22-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year22-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year22-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2038,
+        "treasury": 89436,
+        "taxFund": 3802,
+        "aiTaxFund": 6548,
+        "roadFund": 1960,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2737,
+        "roadTileCount": 2375,
+        "foodImportCost": 876,
+        "welfareCost": 1519,
+        "cashFlow": 4830,
+        "resPop": 3788,
+        "aiPop": 3754,
+        "baselineResPop": 3658,
+        "netResPopChange": 130,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3330730199813843,
+        "automationShare": 0.48777955770492554,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3665,
+        "automatedJobs": 299.3599853515625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13871,
+        "powerReserve": 0.1052258089184761,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 23,
+      "report": {
+        "year": 2038,
+        "treasury": 89436,
+        "taxFund": 3802,
+        "aiTaxFund": 6548,
+        "roadFund": 1960,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2737,
+        "roadTileCount": 2375,
+        "foodImportCost": 876,
+        "welfareCost": 1519,
+        "cashFlow": 4830,
+        "resPop": 3788,
+        "aiPop": 3754,
+        "baselineResPop": 3658,
+        "netResPopChange": 130,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3330730199813843,
+        "automationShare": 0.48777955770492554,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3665,
+        "automatedJobs": 299.3599853515625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13871,
+        "powerReserve": 0.1052258089184761,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year23-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year23-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year23-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year23-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year23-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2039,
+        "treasury": 93990,
+        "taxFund": 3665,
+        "aiTaxFund": 6517,
+        "roadFund": 1929,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 79,
+        "roadTotal": 2826,
+        "roadTileCount": 2375,
+        "foodImportCost": 924,
+        "welfareCost": 1592,
+        "cashFlow": 4554,
+        "resPop": 3844,
+        "aiPop": 3733,
+        "baselineResPop": 3658,
+        "netResPopChange": 186,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3383828401565552,
+        "automationShare": 0.4860939681529999,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3647,
+        "automatedJobs": 297.91998291015625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13889,
+        "powerReserve": 0.10703226178884506,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 24,
+      "report": {
+        "year": 2039,
+        "treasury": 93990,
+        "taxFund": 3665,
+        "aiTaxFund": 6517,
+        "roadFund": 1929,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 79,
+        "roadTotal": 2826,
+        "roadTileCount": 2375,
+        "foodImportCost": 924,
+        "welfareCost": 1592,
+        "cashFlow": 4554,
+        "resPop": 3844,
+        "aiPop": 3733,
+        "baselineResPop": 3658,
+        "netResPopChange": 186,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3383828401565552,
+        "automationShare": 0.4860939681529999,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3647,
+        "automatedJobs": 297.91998291015625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13889,
+        "powerReserve": 0.10703226178884506,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year24-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year24-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year24-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year24-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year24-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2040,
+        "treasury": 98700,
+        "taxFund": 3890,
+        "aiTaxFund": 6667,
+        "roadFund": 1976,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2787,
+        "roadTileCount": 2375,
+        "foodImportCost": 986,
+        "welfareCost": 1786,
+        "cashFlow": 4710,
+        "resPop": 3885,
+        "aiPop": 3754,
+        "baselineResPop": 3658,
+        "netResPopChange": 227,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.34663254022598267,
+        "automationShare": 0.4851696491241455,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3731,
+        "automatedJobs": 304.79998779296875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13805,
+        "powerReserve": 0.10625806450843811,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 25,
+      "report": {
+        "year": 2040,
+        "treasury": 98700,
+        "taxFund": 3890,
+        "aiTaxFund": 6667,
+        "roadFund": 1976,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2787,
+        "roadTileCount": 2375,
+        "foodImportCost": 986,
+        "welfareCost": 1786,
+        "cashFlow": 4710,
+        "resPop": 3885,
+        "aiPop": 3754,
+        "baselineResPop": 3658,
+        "netResPopChange": 227,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.34663254022598267,
+        "automationShare": 0.4851696491241455,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3731,
+        "automatedJobs": 304.79998779296875,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13805,
+        "powerReserve": 0.10625806450843811,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year25-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year25-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year25-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year25-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year25-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2041,
+        "treasury": 103347,
+        "taxFund": 3782,
+        "aiTaxFund": 6581,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2778,
+        "roadTileCount": 2375,
+        "foodImportCost": 959,
+        "welfareCost": 1674,
+        "cashFlow": 4647,
+        "resPop": 3879,
+        "aiPop": 3763,
+        "baselineResPop": 3658,
+        "netResPopChange": 221,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3467216491699219,
+        "automationShare": 0.4881421625614166,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3683,
+        "automatedJobs": 300.8800048828125,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13899,
+        "powerReserve": 0.10329031944274902,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 26,
+      "report": {
+        "year": 2041,
+        "treasury": 103347,
+        "taxFund": 3782,
+        "aiTaxFund": 6581,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 80,
+        "roadTotal": 2778,
+        "roadTileCount": 2375,
+        "foodImportCost": 959,
+        "welfareCost": 1674,
+        "cashFlow": 4647,
+        "resPop": 3879,
+        "aiPop": 3763,
+        "baselineResPop": 3658,
+        "netResPopChange": 221,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3467216491699219,
+        "automationShare": 0.4881421625614166,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3683,
+        "automatedJobs": 300.8800048828125,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13899,
+        "powerReserve": 0.10329031944274902,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year26-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year26-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year26-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year26-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year26-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2042,
+        "treasury": 108140,
+        "taxFund": 3871,
+        "aiTaxFund": 6627,
+        "roadFund": 1938,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2805,
+        "roadTileCount": 2375,
+        "foodImportCost": 963,
+        "welfareCost": 1683,
+        "cashFlow": 4793,
+        "resPop": 3902,
+        "aiPop": 3758,
+        "baselineResPop": 3658,
+        "netResPopChange": 244,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3449999690055847,
+        "automationShare": 0.48361870646476746,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3709,
+        "automatedJobs": 302.9599914550781,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13813,
+        "powerReserve": 0.10780645161867142,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 27,
+      "report": {
+        "year": 2042,
+        "treasury": 108140,
+        "taxFund": 3871,
+        "aiTaxFund": 6627,
+        "roadFund": 1938,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 81,
+        "roadTotal": 2805,
+        "roadTileCount": 2375,
+        "foodImportCost": 963,
+        "welfareCost": 1683,
+        "cashFlow": 4793,
+        "resPop": 3902,
+        "aiPop": 3758,
+        "baselineResPop": 3658,
+        "netResPopChange": 244,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3449999690055847,
+        "automationShare": 0.48361870646476746,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3709,
+        "automatedJobs": 302.9599914550781,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 13813,
+        "powerReserve": 0.10780645161867142,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year27-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year27-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year27-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year27-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year27-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2043,
+        "treasury": 112911,
+        "taxFund": 3782,
+        "aiTaxFund": 6664,
+        "roadFund": 1913,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2725,
+        "roadTileCount": 2375,
+        "foodImportCost": 966,
+        "welfareCost": 1695,
+        "cashFlow": 4771,
+        "resPop": 3881,
+        "aiPop": 3848,
+        "baselineResPop": 3658,
+        "netResPopChange": 223,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.35580241680145264,
+        "automationShare": 0.4942164421081543,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3729,
+        "automatedJobs": 304.6399841308594,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 14009,
+        "powerReserve": 0.09722580760717392,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 28,
+      "report": {
+        "year": 2043,
+        "treasury": 112911,
+        "taxFund": 3782,
+        "aiTaxFund": 6664,
+        "roadFund": 1913,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2725,
+        "roadTileCount": 2375,
+        "foodImportCost": 966,
+        "welfareCost": 1695,
+        "cashFlow": 4771,
+        "resPop": 3881,
+        "aiPop": 3848,
+        "baselineResPop": 3658,
+        "netResPopChange": 223,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.35580241680145264,
+        "automationShare": 0.4942164421081543,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3729,
+        "automatedJobs": 304.6399841308594,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 15500,
+        "powerDemand": 14009,
+        "powerReserve": 0.09722580760717392,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year28-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year28-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year28-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year28-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year28-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year28-call6",
+                "name": "build.power-plant",
+                "arguments": {
+                  "type": "coal"
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "requested": 1,
+                  "built": 1,
+                  "cost": 3027,
+                  "totalFunds": 109884
+                }
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2044,
+        "treasury": 114957,
+        "taxFund": 3792,
+        "aiTaxFund": 6986,
+        "roadFund": 1947,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2764,
+        "roadTileCount": 2376,
+        "foodImportCost": 975,
+        "welfareCost": 1862,
+        "cashFlow": 5073,
+        "resPop": 3885,
+        "aiPop": 4040,
+        "baselineResPop": 3658,
+        "netResPopChange": 227,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3875206708908081,
+        "automationShare": 0.5210985541343689,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3909,
+        "automatedJobs": 319.3599853515625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 16200,
+        "powerDemand": 14425,
+        "powerReserve": 0.10956790298223495,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 29,
+      "report": {
+        "year": 2044,
+        "treasury": 114957,
+        "taxFund": 3792,
+        "aiTaxFund": 6986,
+        "roadFund": 1947,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2764,
+        "roadTileCount": 2376,
+        "foodImportCost": 975,
+        "welfareCost": 1862,
+        "cashFlow": 5073,
+        "resPop": 3885,
+        "aiPop": 4040,
+        "baselineResPop": 3658,
+        "netResPopChange": 227,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3875206708908081,
+        "automationShare": 0.5210985541343689,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3909,
+        "automatedJobs": 319.3599853515625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 16200,
+        "powerDemand": 14425,
+        "powerReserve": 0.10956790298223495,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year29-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year29-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year29-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year29-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year29-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2045,
+        "treasury": 120328,
+        "taxFund": 3743,
+        "aiTaxFund": 7108,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2800,
+        "roadTileCount": 2376,
+        "foodImportCost": 901,
+        "welfareCost": 1791,
+        "cashFlow": 5371,
+        "resPop": 3838,
+        "aiPop": 4054,
+        "baselineResPop": 3658,
+        "netResPopChange": 180,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3855029344558716,
+        "automationShare": 0.5251049995422363,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3978,
+        "automatedJobs": 324.9599914550781,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 16200,
+        "powerDemand": 14503,
+        "powerReserve": 0.10586419701576233,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    },
+    {
+      "year": 30,
+      "report": {
+        "year": 2045,
+        "treasury": 120328,
+        "taxFund": 3743,
+        "aiTaxFund": 7108,
+        "roadFund": 1936,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2800,
+        "roadTileCount": 2376,
+        "foodImportCost": 901,
+        "welfareCost": 1791,
+        "cashFlow": 5371,
+        "resPop": 3838,
+        "aiPop": 4054,
+        "baselineResPop": 3658,
+        "netResPopChange": 180,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3855029344558716,
+        "automationShare": 0.5251049995422363,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3978,
+        "automatedJobs": 324.9599914550781,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 16200,
+        "powerDemand": 14503,
+        "powerReserve": 0.10586419701576233,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "decisions": [
+        {
+          "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen.",
+          "toolCalls": [
+            {
+              "call": {
+                "id": "year30-call1",
+                "name": "tax.set",
+                "arguments": {
+                  "rate": 7
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "rate": 7
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year30-call2",
+                "name": "welfare.set-level",
+                "arguments": {
+                  "level": 1
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year30-call3",
+                "name": "power.set-priority",
+                "arguments": {
+                  "priority": 0
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            },
+            {
+              "call": {
+                "id": "year30-call4",
+                "name": "budget.set-funding",
+                "arguments": {
+                  "roadFundingPercent": 100,
+                  "policeFundingPercent": 70,
+                  "fireFundingPercent": 70
+                }
+              },
+              "result": {
+                "handled": true,
+                "data": {
+                  "built": 0,
+                  "cost": 0,
+                  "road": 100,
+                  "police": 70,
+                  "fire": 70
+                }
+              }
+            },
+            {
+              "call": {
+                "id": "year30-call5",
+                "name": "food.set-import",
+                "arguments": {
+                  "enabled": true
+                }
+              },
+              "result": {
+                "handled": true
+              }
+            }
+          ]
+        },
+        {
+          "reason": "Die Maßnahmen für dieses Jahr sind abgeschlossen.",
+          "toolCalls": []
+        }
+      ],
+      "termination": "done",
+      "afterReport": {
+        "year": 2046,
+        "treasury": 125713,
+        "taxFund": 3841,
+        "aiTaxFund": 7070,
+        "roadFund": 1909,
+        "policeFund": 3500,
+        "fireFund": 3400,
+        "roadFundingPercent": 100,
+        "policeFundingPercent": 69.9999988079071,
+        "fireFundingPercent": 69.9999988079071,
+        "roadEffect": 32,
+        "policeEffect": 700,
+        "fireEffect": 700,
+        "crimeAverage": 82,
+        "roadTotal": 2781,
+        "roadTileCount": 2376,
+        "foodImportCost": 932,
+        "welfareCost": 1811,
+        "cashFlow": 5385,
+        "resPop": 3823,
+        "aiPop": 4072,
+        "baselineResPop": 3658,
+        "netResPopChange": 165,
+        "lostToPower": 0,
+        "lostToHunger": 0,
+        "aiZoneCount": 120,
+        "unemploymentRate": 0.3880261182785034,
+        "automationShare": 0.527302086353302,
+        "automationLimit": 0.8999999761581421,
+        "automationTaxFund": 3956,
+        "automatedJobs": 323.1999816894531,
+        "unrest": 0,
+        "unrestStage": 0,
+        "stage": 0,
+        "sabotageFires": 0,
+        "fires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "protestMonths": 0,
+        "sabotageMonths": 0,
+        "uprisingMonths": 0,
+        "foodCoverage": 1,
+        "hungryZoneCount": 0,
+        "powerCapacity": 16200,
+        "powerDemand": 14505,
+        "powerReserve": 0.10364197194576263,
+        "unpoweredZoneCount": 0,
+        "aiUnpoweredZoneCount": 0,
+        "cityTax": 7,
+        "powerPriority": 0,
+        "foodImportEnabled": 1,
+        "welfareLevel": 1
+      },
+      "reason": "Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen."
+    }
+  ]
+}

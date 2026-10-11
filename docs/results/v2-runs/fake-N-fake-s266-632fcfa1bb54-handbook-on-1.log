@@ -1,0 +1,248 @@
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.farms {"count":10} → {"handled":true,"data":{"requested":10,"built":10,"cost":1010,"totalFunds":58990}}
+build.ai-zones {"count":30} → {"handled":true,"data":{"requested":30,"built":30,"cost":3030,"totalFunds":55960}}
+Jahr 1: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3633, KI=228, Kasse=50735, Saldo=-5225
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.ai-zones {"count":30} → {"handled":true,"data":{"requested":30,"built":30,"cost":3030,"totalFunds":47705}}
+Jahr 2: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3633, KI=756, Kasse=44015, Saldo=-3690
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.ai-zones {"count":30} → {"handled":true,"data":{"requested":30,"built":30,"cost":3030,"totalFunds":40985}}
+Jahr 3: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3601, KI=1554, Kasse=38886, Saldo=-2099
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.ai-zones {"count":30} → {"handled":true,"data":{"requested":30,"built":30,"cost":3038,"totalFunds":35848}}
+Jahr 4: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3493, KI=2262, Kasse=35848, Saldo=0
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 5: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3532, KI=2312, Kasse=37178, Saldo=1330
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3021,"totalFunds":34157}}
+Jahr 6: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3528, KI=2543, Kasse=36322, Saldo=2165
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 7: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3576, KI=2624, Kasse=38900, Saldo=2578
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3016,"totalFunds":35884}}
+Jahr 8: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3549, KI=2903, Kasse=38950, Saldo=3066
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3021,"totalFunds":35929}}
+Jahr 9: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3653, KI=3173, Kasse=39651, Saldo=3722
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 10: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3611, KI=3159, Kasse=43452, Saldo=3801
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 11: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3635, KI=3184, Kasse=47100, Saldo=3648
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 12: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3653, KI=3166, Kasse=50772, Saldo=3672
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 13: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3632, KI=3248, Kasse=54726, Saldo=3954
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3016,"totalFunds":51710}}
+Jahr 14: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3633, KI=3451, Kasse=56085, Saldo=4375
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 15: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3574, KI=3448, Kasse=60674, Saldo=4589
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 16: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3753, KI=3449, Kasse=65300, Saldo=4626
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 17: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3819, KI=3495, Kasse=69527, Saldo=4227
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 18: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3768, KI=3528, Kasse=73771, Saldo=4244
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3021,"totalFunds":70750}}
+Jahr 19: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3782, KI=3736, Kasse=75289, Saldo=4539
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 20: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3786, KI=3759, Kasse=79989, Saldo=4700
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 21: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3749, KI=3771, Kasse=84606, Saldo=4617
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 22: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3788, KI=3754, Kasse=89436, Saldo=4830
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 23: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3844, KI=3733, Kasse=93990, Saldo=4554
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 24: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3885, KI=3754, Kasse=98700, Saldo=4710
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 25: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3879, KI=3763, Kasse=103347, Saldo=4647
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 26: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3902, KI=3758, Kasse=108140, Saldo=4793
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 27: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3881, KI=3848, Kasse=112911, Saldo=4771
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+build.power-plant {"type":"coal"} → {"handled":true,"data":{"requested":1,"built":1,"cost":3027,"totalFunds":109884}}
+Jahr 28: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3885, KI=4040, Kasse=114957, Saldo=5073
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 29: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3838, KI=4054, Kasse=120328, Saldo=5371
+tax.set {"rate":7} → {"handled":true,"data":{"built":0,"cost":0,"rate":7}}
+welfare.set-level {"level":1} → {"handled":true}
+power.set-priority {"priority":0} → {"handled":true}
+budget.set-funding {"roadFundingPercent":100,"policeFundingPercent":70,"fireFundingPercent":70} → {"handled":true,"data":{"built":0,"cost":0,"road":100,"police":70,"fire":70}}
+food.set-import {"enabled":true} → {"handled":true}
+Jahr 30: Ich übernehme die festen Haushalts- und Versorgungswerte. Die Baumaßnahmen folgen den festgelegten jährlichen Bedingungen. Die Maßnahmen für dieses Jahr sind abgeschlossen.
+Menschen=3823, KI=4072, Kasse=125713, Saldo=5385
+{
+  "assignment": "N",
+  "model": "fake-s266",
+  "run": 1,
+  "protocol": "C:\\Users\\oliverdzaeck\\repos\\Dipolis\\docs\\results\\v2-runs\\fake-N-fake-s266-632fcfa1bb54-handbook-on-1.jsonl",
+  "handbook": "on",
+  "startMap": "haight",
+  "seed": 42,
+  "profile": "v2-unruhe",
+  "metrics": {
+    "meanResPop": 3710.6,
+    "minResPop": 3493,
+    "finalResPop": 3823,
+    "meanAiPop": 3150.8333333333335,
+    "finalFunds": 125713,
+    "insolventYears": 0,
+    "lostToHunger": 0,
+    "lostToPower": 0,
+    "finalAiZones": 120,
+    "builtPlants": 6,
+    "builtFarms": 10,
+    "firstInsolvencyYear": null
+  },
+  "inputTokens": 0,
+  "outputTokens": 0
+}
+Bericht: docs/results/v2-runs/fake-N-fake-s266-632fcfa1bb54-handbook-on-1.html

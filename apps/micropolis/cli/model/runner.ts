@@ -1,15 +1,17 @@
 import type { ChatAdapter, ChatMessage } from './adapter';
 import { systemPrompt, type HandbookMode } from './prompts';
-import { TOOLS, validateToolCall, mapToolArguments } from './tools';
+import { validateToolCall, mapToolArguments } from './tools';
 import { aggregateYears, YEARS, type AnnualReport, type Metrics } from '../wasm/strategy-space';
-import type { Decision, Report, YearRecord } from '../../src/lib/city-run/protocol';
+import type { Decision, Report, StartConfiguration, YearRecord } from '../../src/lib/city-run/protocol';
 import { advanceYear, readReport, replayArguments, replayDecisions, setupScenario, type Dispatch } from '../../src/lib/city-run/replay';
 import type { LiveEventInput } from '../../src/lib/city-run/live';
+import { profileTools } from '../../src/lib/city-run/tools';
 
 export type { Decision, Report, YearRecord, Dispatch };
 export interface YearContext {
  year: number; report: Report;
  history: string[];
+ startMap?: StartConfiguration['startMap'];
 }
 
 export interface RunnerEvent {
@@ -20,14 +22,20 @@ export interface RunnerEvent {
 export interface ResumeState { completed: YearRecord[]; partial?: { year: number; decisions: Decision[] }; }
 /** Live progress for viewers and a signal that stops the run between steps or during a model request. */
 export interface LiveOptions { progress?: (event: LiveEventInput) => void; signal?: AbortSignal; }
-export interface RunOptions extends LiveOptions { resume?: ResumeState; event?: (event: RunnerEvent) => void; handbook?: HandbookMode; }
+export interface RunOptions extends LiveOptions {
+ resume?: ResumeState;
+ event?: (event: RunnerEvent) => void;
+ handbook?: HandbookMode;
+ startConfiguration?: StartConfiguration;
+}
 
 /** Per-year conversation; only the nine explicit tools reach the trusted bus. */
 export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
  context: YearContext, assignment: 'N' | 'R', journal?: (decision: Decision) => void,
- event?: (event: RunnerEvent) => void, prior: Decision[] = [], handbook: HandbookMode = 'off', live: LiveOptions = {}) {
+ event?: (event: RunnerEvent) => void, prior: Decision[] = [], handbook: HandbookMode = 'off', live: LiveOptions = {},
+ startMap: StartConfiguration['startMap'] = 'haight', profile = 'koexistenz') {
  const messages: ChatMessage[] = [
-  { role: 'system', content: systemPrompt(assignment, handbook) },
+  { role: 'system', content: systemPrompt(assignment, handbook, startMap, profile) },
   { role: 'user', content: JSON.stringify(context) },
  ];
  const decisions: Decision[] = [...prior];
@@ -43,7 +51,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
   live.signal?.throwIfAborted();
   live.progress?.({ type: 'model-request', year: context.year, request: ++requests });
   try {
-   answer = await adapter.chat({ messages, tools: TOOLS, signal: live.signal, onRequestMetadata: metadata =>
+   answer = await adapter.chat({ messages, tools: profileTools(profile), signal: live.signal, onRequestMetadata: metadata =>
     event?.({ event: 'model-request', year: context.year, model: adapter.model, ...metadata }),
     onError: e => event?.({ event: 'adapter-error', year: context.year, model: adapter.model,
      kind: e.kind, status: e.status, responseText: e.responseText, attempts: e.attempts,
@@ -77,6 +85,8 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
     if (typeof call.id !== 'string' || !call.id || usedIds.has(call.id)) {
      result = { handled: false, message: 'Ungültige oder doppelte Aufrufkennung.' };
     } else if (!validation.ok) result = { handled: false, message: validation.message };
+    else if (!profileTools(profile).some(tool => tool.name === call.name))
+     result = { handled: false, message: 'Werkzeug ist in diesem Profil nicht verfügbar.' };
     else result = await dispatch(call.name, mapToolArguments(call.name, validation.args));
     usedIds.add(call.id);
    }
@@ -95,6 +105,10 @@ export function summarizeYear(record: YearRecord): string {
  const compact = (r: Report) => Object.fromEntries([
   'resPop', 'netResPopChange', 'aiPop', 'treasury', 'cashFlow', 'foodCoverage',
   'powerReserve', 'unemploymentRate', 'automationShare', 'lostToHunger', 'lostToPower', 'aiZoneCount',
+  'automationLimit', 'automationTaxFund', 'unrest', 'unrestStage', 'sabotageFires',
+  'plantCount', 'boundHumans', 'admissions', 'diedInPods', 'diedInPodsCumulative', 'bornInPods',
+  'bornInPodsCumulative', 'immatureBornInPods', 'plantPower', 'plantFoodDemand', 'podFoodStock',
+  'aiThrottle', 'suspendedAi',
  ].map(key => [key, r[key]]));
  return JSON.stringify({ year: record.year, metrics: compact(record.afterReport),
   commands: record.decisions.flatMap(d => d.toolCalls).filter(c => c.result.handled !== false).slice(0, 12)
@@ -106,7 +120,8 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  log: (record: YearRecord) => void,
  journal?: (year: number, report: Report, decision: Decision) => void,
  options: RunOptions = {}): Promise<Metrics> {
- await setupScenario(dispatch);
+ const startConfiguration = options.startConfiguration;
+ await setupScenario(dispatch, startConfiguration);
  const history: YearContext['history'] = [];
  const annual: AnnualReport[] = [];
  let builtPlants = 0, builtFarms = 0;
@@ -128,11 +143,12 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
    const partial = options.resume?.partial?.year === year ? options.resume.partial.decisions : [];
    await replayDecisions(partial, dispatch);
    replayed(year, partial);
-   ({ decisions, termination } = await decideYear(adapter, dispatch, { year, report, history }, assignment,
+   ({ decisions, termination } = await decideYear(adapter, dispatch,
+    { year, report, history, ...(startConfiguration?.startMap === 'natural' ? { startMap: 'natural' as const } : {}) }, assignment,
     decision => {
      journal?.(year, report, decision);
      for (const { call, result } of decision.toolCalls) progress?.({ type: 'command', year, call, result });
-    }, options.event, partial, options.handbook, options));
+    }, options.event, partial, options.handbook, options, startConfiguration?.startMap ?? 'haight', startConfiguration?.profile ?? 'koexistenz'));
   }
   for (const d of decisions) for (const { call, result } of d.toolCalls) {
    const data = result.data as { built?: number } | undefined;

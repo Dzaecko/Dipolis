@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI_TILESET, FARM_TILESET, HUMAN_TILESET, MICROPOLIS_TILESET_COUNT, MicropolisSimulator } from './MicropolisSimulator';
+import { AI_TILESET, FARM_TILESET, BIO_TILESET, HUMAN_TILESET, MICROPOLIS_TILESET_COUNT, MicropolisSimulator } from './MicropolisSimulator';
 
 describe('Micropolis human/AI tileset selection', () => {
 	it('keeps AI and Farm tilesets reserved while cycling human variants', () => {
@@ -19,5 +19,8 @@ describe('Micropolis human/AI tileset selection', () => {
 		simulator.setHumanTileSet(HUMAN_TILESET - 1);
 		expect(simulator.humanTileSet).toBe(FARM_TILESET - 2);
 		expect(simulator.humanTileSet).not.toBe(FARM_TILESET);
+		expect(MICROPOLIS_TILESET_COUNT).toBe(11);
+		simulator.setHumanTileSet(BIO_TILESET);
+		expect(simulator.humanTileSet).not.toBe(BIO_TILESET);
 	});
 });

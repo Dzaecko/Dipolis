@@ -10,9 +10,9 @@ export async function createCitySession() {
  const engine = await loadMicropolisMainModule();
  const m = new engine.Micropolis();
  m.setCallback(createNoopJsCallback(engine), {});
- const simulator = { micropolis: m, framesPerSecond: 0, setFramesPerSecond: () => {} } as unknown as MicropolisSimulator;
+ const simulator = { micropolis: m, micropolisengine: engine, framesPerSecond: 0, setFramesPerSecond: () => {} } as unknown as MicropolisSimulator;
  // The autonomous runner is the explicit authorization boundary. Using
  // script executes the pre-authorized allowlist rather than queuing UI approval.
  const dispatch: Dispatch = (id, args) => commandBus.dispatch(id, { source: 'script', simulator, args, actor: 'city-runner' });
- return { dispatch, close: () => m.delete() };
+ return { dispatch, engine, micropolis: m, close: () => m.delete() };
 }

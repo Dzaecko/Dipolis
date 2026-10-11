@@ -29,7 +29,7 @@ export interface ReportChart {
 }
 export interface ReportEvent { year: number; kind: string; label: string; lane: number; color: string; dash: string; }
 export interface ReportSummary {
- id: string; model: string; assignment: string; handbook: string; run: string;
+ id: string; model: string; assignment: string; handbook: string; run: string; profile: string;
  date: string; dateSource: 'timestamp' | 'file-mtime'; partial: boolean;
  observedYears: number; partialYears: number; years: ReportYear[]; warnings: string[];
  metrics: ReportMetrics; metricSamples: Record<string, number>; firstInsolvencyYear: number | null;
@@ -137,6 +137,7 @@ function parseProtocol(protocolPath: string): ReportSummary {
   id, assignment: identity('assignment') || filenameAssignment || 'unbekannt', model: identity('model') || 'unbekannt',
   run: identity('run') || id.match(/-(\d+)$/)?.[1] || 'unbekannt',
   handbook: identity('handbook') || id.match(/handbook-(on|off)/)?.[1] || 'off',
+  profile: identity('profile') || 'koexistenz',
   date, dateSource: stamps.length ? 'timestamp' : 'file-mtime',
   partial: annual.length !== YEARS || annual.some((y, i) => y.year !== i + 1), observedYears: annual.length,
   partialYears: years.length - annual.length, years, warnings, metrics, metricSamples: samples, charts: [], events: [],
@@ -152,7 +153,8 @@ function buildEvents(summary: ReportSummary): ReportEvent[] {
  if (summary.firstInsolvencyYear !== null) result.push({ year: summary.firstInsolvencyYear,
   kind: 'empty-funds', label: 'Kasse ≤ 0', lane: 0, color: COLORS[1], dash: '3 3' });
  const types = [ ['build.ai-zones', 'ai', 'KI gebaut', 1], ['build.farms', 'farm', 'Farm gebaut', 2],
-  ['build.power-plant', 'plant', 'Kraftwerk gebaut', 3] ] as const;
+  ['build.power-plant', 'plant', 'Kraftwerk gebaut', 3],
+  ['build.bio-plant', 'bio', 'Bio-Anlage gebaut', 3] ] as const;
  for (const y of summary.years) for (const [name, kind, label, lane] of types) {
   const built = y.tools.reduce((n, t) => {
    const r = obj(t.result), v = num(obj(r.data).built);
@@ -212,6 +214,28 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
    series: [series('powerCapacity', 'Kapazität', 'Tiles', capacity, 0), series('powerDemand', 'Nachfrage', 'Tiles', demand, 1)],
    shortage: Array.from({ length: YEARS }, (_, i) => (capacity[i] !== null && demand[i] !== null && demand[i]! > capacity[i]!) ||
     (num(byYear.get(i + 1)?.after?.powerReserve) ?? 0) < 0) },
+  ...(summary.profile === 'v2-unruhe' || summary.profile === 'v3-pods' ? [
+   { id: 'f', title: 'f · Unruhe und Automatisierung', note: 'Unruhe 0–100; Stufen 0 ruhig, 1 Protest, 2 Sabotage, 3 Aufstand. Automatisierung und Grenze in Prozent.', normalized: true,
+    series: [series('unrest', 'Unruhe', 'Index', field('unrest'), 0), series('unrestStage', 'Stufe', '0–3', field('unrestStage'), 1, true),
+     series('automationShare', 'Automatisierung', '%', field('automationShare', 100), 2), series('automationLimit', 'Grenze', '%', field('automationLimit', 100), 3, true)] },
+   { id: 'g', title: 'g · Automationssteuer und Schäden', note: 'Jährlich gebuchte Automationssteuer und Sozialkosten; Brandzähler sind ausgelöste Sabotage-/Aufstandsbrände im letzten abgeschlossenen Steuerjahr.', normalized: true,
+    series: [series('automationTaxFund', 'Automationssteuer', '$', field('automationTaxFund'), 0), series('welfareCost', 'Sozialkosten', '$', field('welfareCost'), 1),
+     series('sabotageFires', 'Brände', 'Zähler', field('sabotageFires'), 2)] },
+  ] : []),
+  ...(summary.profile === 'v3-pods' ? [
+   { id: 'h', title: 'h · Bio-Anlagen und Kohorten', normalized: true,
+    note: 'Menschen-Bewohnerpunkte; Eingewiesene und Nachwuchs nehmen nie am Stadtleben teil. Todesfälle/Geburten kumulativ, unreife Lebende separat.',
+    series: ['boundHumans', 'diedInPodsCumulative', 'bornInPodsCumulative', 'immatureBornInPods', 'plantCount']
+     .map((key, i) => series(key, key, key === 'plantCount' ? 'Anlagen' : 'Bewohnerpunkte', field(key), i)) },
+   { id: 'i', title: 'i · Bio-Strom und Nahrung', normalized: true,
+    note: 'Eigene Skalen: plantPower in Stromeinheiten; plantFoodDemand pro Monat; podFoodStock Nahrungseinheiten; Recycling/Stadt-Anteile des aktuellen Monats.',
+    series: ['plantPower', 'plantFoodDemand', 'podFoodStock', 'podRecycledFoodFraction', 'podCityFoodFraction']
+     .map((key, i) => series(key, key, key.endsWith('Fraction') ? '0–1' : 'Einheiten', field(key), i)) },
+   { id: 'j', title: 'j · KI-Drosselung und Bio-Jahresereignisse', normalized: true,
+    note: 'Drosselung 0–1; suspendedAi sind anteilig stillgelegte KI-Äquivalente, aiPop zählt sie weiterhin. Einweisungen, Todesfälle und Geburten im letzten abgeschlossenen Steuerjahr.',
+    series: ['aiThrottle', 'suspendedAi', 'admissions', 'diedInPods', 'bornInPods']
+     .map((key, i) => series(key, key, key === 'aiThrottle' ? '0–1' : 'Bewohnerpunkte', field(key), i)) },
+  ] : []),
  ];
 }
 
@@ -385,7 +409,7 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   y.tools.map(t => `<details class="tool"><summary>${show(t.call.name)} · ${obj(t.result).handled === false ? 'nicht ausgeführt' : 'gespeichertes Ergebnis'}</summary><h4>Aufruf</h4><pre>${escapeHtml(displayJson(t.call, options))}</pre><h4>Tatsächliches Ergebnis</h4><pre>${escapeHtml(displayJson(t.result, options))}</pre></details>`).join('') +
   `</details>${y.after ? `<details><summary>Alle gemessenen Jahreswerte</summary><pre>${escapeHtml(displayJson(y.after, options))}</pre></details>` : ''}</article>`).join('');
  const content = `<header><h1>Stadtbericht · ${show(summary.id)}</h1><p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/30 abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
-  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Lauf', summary.run],
+  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Lauf', summary.run],
    [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC']]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}</section>` +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
@@ -407,7 +431,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
  }
  const show = (s: unknown) => escapeHtml(relativeText(text(s), options));
  const select = (key: 'assignment' | 'handbook') => `<select id="filter-${key}"><option value="">Alle</option>${[...new Set(summaries.map(s => s[key]))].sort().map(v => `<option value="${show(v)}">${show(v)}</option>`).join('')}</select>`;
- const runs = summaries.map((s, i) => ({ id: s.id, assignment: s.assignment, handbook: s.handbook,
+ const runs = summaries.map((s, i) => ({ id: s.id, assignment: s.assignment, handbook: s.handbook, profile: s.profile,
   series: { ...s.charts[0].series[0], key: s.id, label: relativeText(`${s.id} · ${s.model}`, options), color: COLORS[i % COLORS.length], dash: DASHES[Math.floor(i / COLORS.length) % DASHES.length] } }));
  const skeleton: ReportChart = { id: 'index', title: 'Bevölkerung aller ausgewählten Läufe', note: 'Gemeinsame Jahre 1–30 und Bevölkerungsskala. Filter nach Auftrag / Handbuch; Checkbox-Legende mit Lauf-ID und Modell. Bei vielen Kurven Auswahl einschränken; Einzelwerte im gemeinsamen Hover.', normalized: false, series: [] };
  let chart = renderChart(skeleton, []).replace('<rect class="chart-hit"', '<g class="index-lines"></g><text class="index-scale" x="750" y="300" font-size="11"></text><rect class="chart-hit"');
@@ -415,7 +439,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
  chart = chart.replace('klicken für Tagebuch', 'gemeinsame Jahreswerte');
  const rows = summaries.map((s, i) => {
   const sibling = s.id + '.html', available = existsSync(path.join(absolute, sibling));
-  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}</td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
+  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}</td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
    `<td>${s.warnings.map(show).join('<br>')}</td></tr>`;
  }).join('');

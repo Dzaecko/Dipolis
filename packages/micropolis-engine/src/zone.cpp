@@ -608,9 +608,18 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
     } else {
         tpop = getResZonePop(tile);
     }
+    if (params.podsEnabled && !aiOwned) {
+        tpop = max(0, (int)tpop - humanPodOffsetMap.worldGet(pos.posX, pos.posY));
+    }
 
     if (aiOwned) {
         aiPop += tpop;
+        if (params.podsEnabled && aiThrottle == 1.0) return;
+        if (params.unrestEnabled && unrestStage == 3 &&
+            getRandom16() / 65536.0f < params.unrestUprisingOutmigration) {
+            doResOut(pos, tpop, 3);
+            return;
+        }
     } else {
         const int previousPop = previousHumanResPopMap.worldGet(pos.posX, pos.posY);
         const int populationDelta = (int)tpop - previousPop;
@@ -685,6 +694,11 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
  */
 void Micropolis::doResIn(const Position &pos, int pop, int value)
 {
+    if (params.podsEnabled && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
+        setHumanZonePopulation(pos, min(40, pop + 8));
+        incRateOfGrowth(pos, 8);
+        return;
+    }
     short pollution = pollutionDensityMap.worldGet(pos.posX, pos.posY);
     const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
 
@@ -743,6 +757,11 @@ void Micropolis::doResIn(const Position &pos, int pop, int value)
  */
 void Micropolis::doResOut(const Position &pos, int pop, int value)
 {
+    if (params.podsEnabled && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
+        setHumanZonePopulation(pos, max(0, pop - 8));
+        incRateOfGrowth(pos, -8);
+        return;
+    }
     static short Brdr[9] = {0,3,6,1,4,7,2,5,8};
     short x, y, loc, z;
     const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
@@ -1022,6 +1041,9 @@ short Micropolis::evalCom(const Position &pos, int traf)
  */
 void Micropolis::doIndustrial(const Position &pos, bool zonePower)
 {
+    if (params.podsEnabled && ownerMap.worldGet(pos.posX, pos.posY) == 4) {
+        return;
+    }
     short tpop, zscore, TrfGood;
 
     MapTile tile = map[pos.posX][pos.posY] & LOMASK;

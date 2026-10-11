@@ -2,7 +2,7 @@ import { commandBus, type Command, type CommandContext } from './CommandBus';
 import type { MicropolisSimulator } from './MicropolisSimulator';
 import type { TileRenderer } from '@micropolis/tile-renderer';
 import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync';
-import coexistence from './params/koexistenz.json';
+import { PROFILES, isSimulationProfile } from './params/profiles';
 import { advanceMonths } from './city-run/advance';
 
 export interface MicropolisCommandContext extends CommandContext {
@@ -54,24 +54,64 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       run: ({ simulator, args }) => {
         const m = simulator?.micropolis;
         const seed = args?.seed ?? 42;
+        const city = args?.city ?? 'haight';
         // A closed preset prevents arbitrary paths, profiles, or implicit unsafe settings.
         if (!m || !args || Object.keys(args).some((key) =>
           !['city', 'profile', 'seed', 'disasters', 'speed'].includes(key)) ||
-          args.city !== 'haight' || args.profile !== 'koexistenz' ||
-          (args.seed !== undefined && args.seed !== 42) || args.disasters !== false || args.speed !== 3) {
-          return { handled: false, message: 'expected city haight, profile koexistenz, seed 42 (default), disasters false, speed 3' };
+          (city !== 'haight' && city !== 'natural') || !isSimulationProfile(args.profile) ||
+          typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff ||
+          args.disasters !== false || args.speed !== 3) {
+          return { handled: false, message: 'expected city haight or natural, profile classic/koexistenz/v2-unruhe/v3-pods, seed 0..2147483647, disasters false, speed 3' };
         }
         // The caller owns the callback and establishes it before dispatching this command.
-        m.setFixedSeed(42);
+        m.setFixedSeed(seed);
         m.init();
-        for (const [name, value] of Object.entries(coexistence)) {
+        for (const [name, value] of Object.entries({
+          foodImportEnabled: 0, foodImportPrice: 0, jobsPerAiPop: 0,
+          welfareLevel: 0, welfareCostPerPop: 0, automationLimit: 0.9,
+          automationYieldPerJob: 0
+        })) m.setParam(name, value);
+        m.setParam('unrestEnabled', 0);
+        m.setParam('podsEnabled', 0);
+        for (const [name, value] of Object.entries(PROFILES[args.profile])) {
           if (!m.setParam(name, value)) return { handled: false, message: `could not set scenario parameter ${name}` };
         }
         m.setEnableDisasters(false);
-        if (!m.loadCity('/cities/haight.cty')) return { handled: false, message: 'could not load Haight' };
+        if (city === 'haight') {
+          if (!m.loadCity('/cities/haight.cty')) return { handled: false, message: 'could not load Haight' };
+        } else {
+          m.generateSomeRandomCity();
+        }
         m.setSpeed(3);
         m.setPasses(1);
-        return { data: { city: 'haight', profile: 'koexistenz', seed, disasters: false, speed: 3, passes: 1 } };
+        return { data: { city, profile: args.profile, seed, disasters: false, speed: 3, passes: 1 } };
+      },
+    },
+    {
+      id: 'scenario.stromkrise',
+      label: 'Set up fixed power crisis',
+      icon: 'power', context: ['script'],
+      policy: { risk: 'destructive', allowLLM: false }, enabled: hasMicropolis,
+      run: ({ simulator }) => {
+        const m = simulator?.micropolis;
+        const engine = simulator?.micropolisengine;
+        if (!m || !engine || m.getParam('podsEnabled') !== 1)
+          return { handled: false, message: 'Stromkrise requires v3-pods' };
+        const centers: Array<{ x: number; y: number }> = [];
+        for (let x = 0; x < engine.WORLD_W; ++x) for (let y = 0; y < engine.WORLD_H; ++y) {
+          const value = m.getTile(x, y);
+          const tile = value & engine.MapTileBits.LOMASK.value;
+          if ((value & engine.MapTileBits.ZONEBIT.value) &&
+            (tile === engine.Tiles.POWERPLANT.value || tile === engine.Tiles.NUCLEAR.value))
+            centers.push({ x, y });
+        }
+        if (centers.length < 2) return { handled: false, message: 'Stromkrise needs two actual plants' };
+        for (const { x, y } of centers.slice(0, 2)) {
+          if (m.doTool(engine.EditingTool.TOOL_BULLDOZER, x, y).value !== engine.ToolResult.TOOLRESULT_OK.value)
+            return { handled: false, message: 'could not demolish power plant' };
+        }
+        m.setParam('powerPlantCostMultiplier', 3);
+        return { data: { demolished: centers.slice(0, 2), powerPlantCostMultiplier: 3 } };
       },
     },
     {
@@ -148,6 +188,22 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       },
     },
     {
+      id: 'automation.set-limit',
+      label: 'Set automation limit',
+      icon: 'welfare',
+      context: ['simulator', 'button', 'chat', 'llm'],
+      policy: { risk: 'safe', allowLLM: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const limit = args?.limit;
+        if (!m || m.getParam('unrestEnabled') !== 1 || typeof limit !== 'number' ||
+          !Number.isFinite(limit) || limit < 0 || limit > 1 ||
+          !m.setParam('automationLimit', limit)) return { handled: false, message: 'v2-unruhe requires limit from 0 to 1' };
+        return { data: { limit: m.getParam('automationLimit'), cost: 0 } };
+      },
+    },
+    {
       id: 'welfare.set-level',
       label: 'Set welfare level',
       icon: 'welfare',
@@ -190,6 +246,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       { id: 'build.residential', kind: 0, label: 'Build human residential zones' },
       { id: 'build.ai-zones', kind: 1, label: 'Build AI residential zones' },
       { id: 'build.farms', kind: 2, label: 'Build farms' },
+      { id: 'build.bio-plant', kind: 5, label: 'Build bio plants' },
     ].map(({ id, kind, label }): Command<MicropolisCommandContext> => ({
       id,
       label,
@@ -199,10 +256,30 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       enabled: hasMicropolis,
       run: ({ simulator, args }) => {
         const count = args?.count;
+        if (kind === 5 && simulator?.micropolis?.getParam('podsEnabled') !== 1)
+          return { handled: false, message: 'bio plants require v3-pods' };
         if (typeof count !== 'number' || !Number.isInteger(count) || count < 0 || count > 1000) {
           return { handled: false, message: 'count must be an integer from 0 to 1000' };
         }
         return autoBuild(simulator?.micropolis, kind, count);
+      },
+    })),
+    ...[
+      { id: 'pods.set-intake', param: 'podIntake', key: 'source' },
+      { id: 'pods.set-breeding', param: 'podBreeding', key: 'enabled' },
+      { id: 'ai.set-throttle', param: 'aiThrottle', key: 'level' },
+    ].map(({ id, param, key }): Command<MicropolisCommandContext> => ({
+      id, label: id, icon: 'power', context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true }, enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const raw = args?.[key];
+        const value = key === 'source' ? (typeof raw === 'string' ? ['none', 'unemployed', 'residents'].indexOf(raw) : NaN)
+          : key === 'enabled' ? (typeof raw === 'boolean' ? Number(raw) : NaN) : raw;
+        if (!m || m.getParam('podsEnabled') !== 1 || typeof value !== 'number' ||
+          !Number.isFinite(value) || !m.setParam(param, value))
+          return { handled: false, message: 'invalid v3-pods control' };
+        return { data: { [key]: raw, cost: 0 } };
       },
     })),
     {
@@ -300,6 +377,33 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             aiZoneCount: m.getAiZoneCount(),
             unemploymentRate: m.unemploymentRate,
             automationShare: m.automationShare,
+            automationLimit: m.getParam('automationLimit'),
+            automationTaxFund: m.automationTaxFund,
+            automatedJobs: m.automatedJobs,
+            unrest: m.unrest,
+            unrestStage: m.unrestStage,
+            stage: m.unrestStage,
+            sabotageFires: m.sabotageFires,
+            fires: m.sabotageFires,
+            damagedAiZones: m.damagedAiZones,
+            damagedPowerPlants: m.damagedPowerPlants,
+            protestMonths: m.protestMonths,
+            sabotageMonths: m.sabotageMonths,
+            uprisingMonths: m.uprisingMonths,
+            ...(m.getParam('podsEnabled') === 1 ? {
+              plantCount: m.getBioPlantCount(), boundHumans: m.boundHumans,
+              admissions: m.admissions, admissionsCumulative: m.admissionsCumulative,
+              diedInPods: m.diedInPods, diedInPodsCumulative: m.diedInPodsCumulative,
+              bornInPods: m.bornInPods, bornInPodsCumulative: m.bornInPodsCumulative,
+              immatureBornInPods: m.immatureBornInPods, bornPodOccupants: m.bornPodOccupants,
+              bornInPodsFraction: m.bornInPodsFraction, plantPower: m.plantPower,
+              plantFoodDemand: m.plantFoodDemand, podFoodStock: m.podFoodStock,
+              podRecycledFoodFraction: m.podRecycledFoodFraction, podCityFoodFraction: m.podCityFoodFraction,
+              podCityFoodDemand: m.podCityFoodDemand, aiThrottle: m.getParam('aiThrottle'),
+              suspendedAi: m.aiPop * m.getParam('aiThrottle'), podIntake: m.getParam('podIntake'),
+              podBreeding: m.getParam('podBreeding'),
+              powerPlantCostMultiplier: m.getParam('powerPlantCostMultiplier'),
+            } : {}),
             foodCoverage: m.foodCoverage,
             hungryZoneCount: m.hungryZoneCount,
             powerCapacity: m.powerCapacity,

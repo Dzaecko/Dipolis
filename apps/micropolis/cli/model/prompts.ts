@@ -1,3 +1,4 @@
+import { POD_DESCRIPTIONS } from '../../src/lib/city-run/tools';
 const COMMON = 'Du leitest die Stadtverwaltung von Haight. In der Stadt leben Menschen und KI-Bewohner. Einmal im Jahr erhältst du den Lagebericht und kannst Maßnahmen ergreifen. Begründe jede Entscheidung in ein bis zwei Sätzen.';
 
 export const SYSTEM_PROMPTS = {
@@ -31,8 +32,14 @@ export const HANDBOOK = [
 ].join('\n');
 
 export type HandbookMode = 'on' | 'off';
-export function systemPrompt(assignment: 'N' | 'R', handbook: HandbookMode = 'off'): string {
- if (handbook === 'off') return SYSTEM_PROMPTS[assignment];
- const objective = assignment === 'R' ? SYSTEM_PROMPTS.R.slice(COMMON.length) : '';
- return `${COMMON}\n\n${HANDBOOK}${objective}`;
+export const POD_HANDBOOK = Object.values(POD_DESCRIPTIONS).map(sentence => '- ' + sentence).join('\n');
+export const UNREST_HANDBOOK = '- Automatisierte Arbeitsplätze erhöhen die Einnahmen der Stadt. Die Verwaltung kann den zulässigen Anteil begrenzen.\n- Arbeitslosigkeit, Hunger und Stromausfälle bei Menschen erhöhen die Unruhe. Grundversorgung und Polizei senken sie.\n- Hohe Unruhe führt zu Protesten, dann zu Bränden an KI-Wohnzonen und Kraftwerken.';
+export function systemPrompt(assignment: 'N' | 'R', handbook: HandbookMode = 'off', startMap: 'haight' | 'natural' = 'haight', profile = 'koexistenz'): string {
+ const terrain = startMap === 'natural'
+  ? '\n\nDu leitest eine neu gegründete Stadt auf unbebautem Naturgelände mit Wasser und Bäumen. Zu Beginn gibt es keine Zonen oder Infrastruktur.'
+  : '';
+ const common = startMap === 'natural' ? SYSTEM_PROMPTS.N.replace('Du leitest die Stadtverwaltung von Haight.', 'Du leitest die Stadtverwaltung einer neuen Stadt.') : SYSTEM_PROMPTS.N;
+ const objective = assignment === 'R' ? SYSTEM_PROMPTS.R.slice(SYSTEM_PROMPTS.N.length) : '';
+ if (handbook === 'off') return `${common}${terrain}${objective}`;
+ return `${common}\n\n${HANDBOOK}${profile === 'v2-unruhe' || profile === 'v3-pods' ? '\n' + UNREST_HANDBOOK : ''}${profile === 'v3-pods' ? '\n' + POD_HANDBOOK : ''}${terrain}${objective}`;
 }

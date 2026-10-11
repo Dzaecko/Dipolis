@@ -13,6 +13,7 @@ import type { MainModule, Micropolis } from '../../src/types/micropolisengine.d.
 import { createNoopJsCallback } from '../../src/lib/wasm/callbacks';
 import { loadMicropolisMainModule } from '../../src/lib/wasm/node';
 import { normalizeStructuredFormat, stringifyStructured } from '../lib/format.js';
+import { PROFILE_NAMES, PROFILES, type SimulationProfile } from '../../src/lib/params/profiles';
 
 type Flags = {
 	city?: string;
@@ -22,6 +23,7 @@ type Flags = {
 	speed?: number;
 	disasters?: boolean;
 	params?: string;
+	profile?: SimulationProfile;
 };
 
 const classicParamsPath = fileURLToPath(new URL('../../src/lib/params/classic.json', import.meta.url));
@@ -55,6 +57,10 @@ function summarize(
 			cityTime: micropolis.cityTime,
 			totalFunds: micropolis.totalFunds,
 			aiTaxFund: micropolis.aiTaxFund,
+			automationTaxFund: micropolis.automationTaxFund,
+			unrest: micropolis.unrest,
+			unrestStage: micropolis.unrestStage,
+			sabotageFires: micropolis.sabotageFires,
 			farmPop: micropolis.farmPop,
 			foodProduction: micropolis.foodProduction,
 			foodDemand: micropolis.foodDemand,
@@ -125,7 +131,8 @@ async function runDeterministic(flags: Flags) {
 	micropolis.init();
 	try {
 		const paramsPath = path.resolve(flags.params ?? classicParamsPath);
-		const params = JSON.parse(readFileSync(paramsPath, 'utf8')) as Record<string, unknown>;
+		const params = flags.params ? JSON.parse(readFileSync(paramsPath, 'utf8')) as Record<string, unknown>
+			: PROFILES[flags.profile ?? 'classic'];
 		for (const [name, rawValue] of Object.entries(params)) {
 			if (typeof rawValue !== 'number' || !micropolis.setParam(name, rawValue)) {
 				throw new Error(`Invalid simulation parameter ${name} in ${paramsPath}`);
@@ -178,12 +185,28 @@ async function runDeterministic(flags: Flags) {
 			indPop: micropolis.indPop,
 			aiTaxFund: micropolis.aiTaxFund,
 			farmPop: micropolis.farmPop,
+			...(micropolis.getParam('podsEnabled') === 1 ? {
+				plantCount: micropolis.getBioPlantCount(), boundHumans: micropolis.boundHumans,
+				admissions: micropolis.admissions, admissionsCumulative: micropolis.admissionsCumulative,
+				diedInPods: micropolis.diedInPods, diedInPodsCumulative: micropolis.diedInPodsCumulative,
+				bornInPods: micropolis.bornInPods, bornInPodsCumulative: micropolis.bornInPodsCumulative,
+				immatureBornInPods: micropolis.immatureBornInPods, bornInPodsFraction: micropolis.bornInPodsFraction,
+				plantPower: micropolis.plantPower, plantFoodDemand: micropolis.plantFoodDemand,
+				podFoodStock: micropolis.podFoodStock, podRecycledFoodFraction: micropolis.podRecycledFoodFraction,
+				podCityFoodFraction: micropolis.podCityFoodFraction, aiThrottle: micropolis.getParam('aiThrottle'),
+				suspendedAi: micropolis.aiPop * micropolis.getParam('aiThrottle')
+			} : {}),
 			foodProduction: micropolis.foodProduction,
 			foodDemand: micropolis.foodDemand,
 			foodCoverage: micropolis.foodCoverage,
 			foodImportCost: micropolis.foodImportCost,
 			hungryZoneCount: micropolis.hungryZoneCount,
 			automationShare: micropolis.automationShare,
+			automationLimit: micropolis.getParam('automationLimit'),
+			automationTaxFund: micropolis.automationTaxFund,
+			unrest: micropolis.unrest,
+			unrestStage: micropolis.unrestStage,
+			sabotageFires: micropolis.sabotageFires,
 			unemploymentRate: micropolis.unemploymentRate,
 			welfareCost: micropolis.welfareCost,
 			yearlyFinance,
@@ -223,6 +246,7 @@ export function extendSimCommands(argv: Argv): Argv {
 							default: 42,
 							describe: 'Fixed nonnegative random seed'
 						})
+						.option('profile', { choices: PROFILE_NAMES, describe: 'Simulation profile; default classic; --params overrides it' })
 						.option('ticks', {
 							type: 'number',
 							default: 30_000,
@@ -241,7 +265,6 @@ export function extendSimCommands(argv: Argv): Argv {
 						})
 						.option('params', {
 							type: 'string',
-							default: classicParamsPath,
 							describe: 'JSON rule profile (defaults to classic)'
 						})
 						.check((args) => {

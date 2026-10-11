@@ -38,6 +38,16 @@ describe('step generation', () => {
 		expect(steps[6]).toMatchObject({ type: 'command', index: 1, result: { handled: false } });
 		expect(steps[8]).toMatchObject({ reason: 'Teiljahr', report: report(2) });
 	});
+
+	it('defaults historical protocols to Haight and reads persisted natural start settings', () => {
+		const historical = readProtocol(JSON.stringify({ event: 'year-completed', year: 1 }));
+		expect(historical.meta).toMatchObject({ startMap: 'haight', seed: 42 });
+		const selected = readProtocol(JSON.stringify({
+			event: 'run-started', assignment: 'N', model: 'm', handbook: 'off', run: 1,
+			startMap: 'natural', seed: 123
+		}));
+		expect(selected.meta).toMatchObject({ startMap: 'natural', seed: 123 });
+	});
 });
 
 describe('timeline', () => {

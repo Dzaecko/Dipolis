@@ -86,6 +86,24 @@ async function runSim(city: string, seed = 42, paramsPath = classicParamsPath, t
 }
 
 describe('headless deterministic simulation CLI', () => {
+	it('explicit v2/v3 profiles are not masked by the default params path', async () => {
+		const run = async (flags: string[]) => {
+			const { stdout } = await execFileAsync(process.execPath,
+				[tsxPath, cliPath, 'sim', 'run', '--ticks', '100', ...flags],
+				{ cwd: process.cwd(), timeout: 30000, maxBuffer: 1024 * 1024 });
+			return JSON.parse(stdout);
+		};
+		const pods = await run(['--profile', 'v3-pods']);
+		expect(pods.plantCount).toBe(0);
+		expect(pods.boundHumans).toBe(0);
+		expect(pods.foodDemand).toBeGreaterThan(0);
+		const v2 = await run(['--profile', 'v2-unruhe']);
+		expect(v2.foodDemand).toBeGreaterThan(0);
+		expect(v2.plantCount).toBeUndefined();
+		const classic = await run([]);
+		expect(classic.foodDemand).toBe(0);
+		expect(await run(['--profile', 'v3-pods', '--params', classicParamsPath])).toEqual(classic);
+	}, 120000);
 	it(
 		'sim run produces identical output in two separate processes with seed 42',
 		async () => {

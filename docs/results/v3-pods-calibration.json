@@ -1,0 +1,48 @@
+{
+  "source": "v2-unruhe-calibration.json; fixed stabilized years21..25, reusing existing v2 measurement, no new tuning",
+  "measuredYears": [
+    {
+      "year": 21,
+      "resPop": 3557
+    },
+    {
+      "year": 22,
+      "resPop": 3575
+    },
+    {
+      "year": 23,
+      "resPop": 3557
+    },
+    {
+      "year": 24,
+      "resPop": 3602
+    },
+    {
+      "year": 25,
+      "resPop": 3549
+    }
+  ],
+  "measuredPopulation": 3568,
+  "tenPercent": 356.8,
+  "capacity": 357,
+  "coalOutput": 700,
+  "podPowerPerHuman": 1.96078431372549,
+  "powerDerivation": "700 / round(0.1 * measured mean human resPop); full fresh single plant equals one coal plant",
+  "recycleDerivation": "120 adult months * 1 food/month / 3 = 40 recycled food/death; 1/3 steady adult-only demand. Born maturation gives 40/144 = 27.78% at an all-born stationary age distribution.",
+  "breedingDerivation": "birthRate=1/(120 adult+24 immature)=1/144 per occupant/month. Constant hazard approximation at full age-stable occupancy; deterministic carry, cap discards blocked whole births. A simultaneous original cohort can die before replacement, not guaranteed stability.",
+  "fixed": {
+    "podsEnabled": 1,
+    "podsPerPlant": 357,
+    "podPowerPerHuman": 1.96078431372549,
+    "podFoodPerHuman": 1,
+    "recycledFoodPerHuman": 40,
+    "podBirthRate": 0.006944444444444444,
+    "podLifetimeMonths": 120,
+    "podMaturityMonths": 24,
+    "podStarvationAging": 1,
+    "unrestBoundWeight": 30,
+    "unrestDeathsWeight": 50,
+    "unrestBirthsWeight": 20
+  },
+  "noOptimization": true
+}

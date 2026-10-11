@@ -296,7 +296,9 @@ void Micropolis::voteProblems(const short problemTable[PROBNUM])
     int voteCount = 0; // Number of votes
     int loopCount = 0; // Number of attempts
     while (voteCount < 100 && loopCount < 600) {
-        if (getRandom(300) < problemTable[problem]) {
+        // Keep the legacy extra random draw without reading past the problem table.
+        int severity = problem < PROBNUM ? problemTable[problem] : 0;
+        if (getRandom(300) < severity) {
             problemVotes[problem]++;
             voteCount++;
         }

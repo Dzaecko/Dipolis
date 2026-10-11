@@ -88,6 +88,10 @@ let automationShare = $state(0);
 let unemploymentRate = $state(0);
 let welfareCost = $state(0);
 let welfareLevel = $state(0);
+let unrest = $state(0);
+let unrestStage = $state(0);
+let automationLimit = $state(0.9);
+let automationTaxFund = $state(0);
 
 function syncPowerFromEngine(): void {
 	const m = attachedSimulator?.micropolis;
@@ -103,6 +107,10 @@ function syncPowerFromEngine(): void {
 	unemploymentRate = m.unemploymentRate;
 	welfareCost = m.welfareCost;
 	welfareLevel = m.getParam('welfareLevel');
+	unrest = m.unrest;
+	unrestStage = m.unrestStage;
+	automationLimit = m.getParam('automationLimit');
+	automationTaxFund = m.automationTaxFund;
 }
 
 function syncFoodFromEngine(): void {
@@ -763,6 +771,10 @@ export const micropolisReactive = {
 	get automationShare() {
 		return automationShare;
 	},
+	get unrest() { return unrest; },
+	get unrestStage() { return unrestStage; },
+	get automationLimit() { return automationLimit; },
+	get automationTaxFund() { return automationTaxFund; },
 	get unemploymentRate() {
 		return unemploymentRate;
 	},

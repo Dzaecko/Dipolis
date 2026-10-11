@@ -1,5 +1,9 @@
 # Prerequisites
 *.d
+/.engine-emsdk/
+/packages/micropolis-engine/.compiler-scratch/
+/packages/micropolis-engine/build-diagnostics.log
+/packages/micropolis-engine/build-production.log
 /.env.city-model
 
 # Compiled Object files

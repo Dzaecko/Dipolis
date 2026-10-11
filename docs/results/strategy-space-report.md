@@ -1,5 +1,7 @@
 # Strategieraum — 304 Strategien, jeweils 30 Jahre
 
+**Baseline correction authorized by the user (2026-10-11):** the safe engine removes the undefined `voteProblems` stack read. S266 was actually remeasured before v2; `s266-safe-engine.json` stores all annual outcomes. Only its CSV reference row was replaced (meanResPop 3736.9, finalResPop 3826, meanAiPop 4489.2, finalFunds 38591). Tables, rankings, summary and checkpoint below remain the historical 304-strategy experiment, not a newly measured full experiment. Do not resume that historical checkpoint against the rebuilt engine. See `v2-unruhe-report.md` for the separately measured new profile.
+
 Sampling-Seed 20261009; Simulations-Seed 42. Jahreswerte 1–30 nach Stichtag, kein Einschwingen in den Mitteln. Alle Werte wurden gemessen; Mittel sind hier auf zwei Dezimalstellen gerundet, CSV enthält volle Genauigkeit.
 
 **195 von 304 Strategien haben insolventYears = 0.**

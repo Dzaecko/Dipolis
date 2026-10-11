@@ -148,6 +148,10 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 		case 'build.ai-zones': label = `KI-Wohnzonen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.residential': label = `Wohnzonen für Menschen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.farms': label = `Farmen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
+		case 'build.bio-plant': label = `Bio-Anlagen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
+		case 'pods.set-intake': label = `Einweisung: ${args.source === 'none' ? 'keine' : args.source === 'unemployed' ? 'Arbeitslose' : 'Bewohner'}`; break;
+		case 'pods.set-breeding': label = `Zucht ${args.enabled ? 'an' : 'aus'}`; break;
+		case 'ai.set-throttle': label = `KI-Drosselung auf ${formatNumber(Number(args.level) * 100)} %`; break;
 		case 'build.power-plant': {
 			label = `${args.type === 'nuclear' ? 'Kernkraftwerk' : 'Kohlekraftwerk'} bauen`;
 			summary = builtCount(result) > 0 ? `gebaut · Kosten ${formatNumber(data.cost)}` : 'nicht gebaut';
@@ -155,6 +159,7 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 		}
 		case 'tax.set': label = `Steuer auf ${formatNumber(args.rate)} %`; break;
 		case 'welfare.set-level': label = `Grundversorgung auf ${formatNumber(Number(args.level) * 100)} %`; break;
+		case 'automation.set-limit': label = `Automationsgrenze auf ${formatNumber(Number(args.limit) * 100)} %`; break;
 		case 'power.set-priority': label = `Stromvorrang: ${POWER_PRIORITY_LABELS[Number(args.priority)] ?? formatNumber(args.priority)}`; break;
 		case 'food.set-import': label = `Nahrungsimport ${args.enabled ? 'an' : 'aus'}`; break;
 		case 'budget.set-funding': {
@@ -173,7 +178,7 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 /** Footprint edge length of the zones a build command creates, or null for settings. */
 export function buildFootprintSize(name: string): number | null {
 	if (name === 'build.power-plant') return 4;
-	return name === 'build.ai-zones' || name === 'build.farms' || name === 'build.residential' ? 3 : null;
+	return name === 'build.ai-zones' || name === 'build.farms' || name === 'build.residential' || name === 'build.bio-plant' ? 3 : null;
 }
 
 export function buildLabel(call: ProtocolToolCall, count: number): string | null {
@@ -182,6 +187,7 @@ export function buildLabel(call: ProtocolToolCall, count: number): string | null
 		case 'build.ai-zones': return plural('KI-Wohnzone', 'KI-Wohnzonen');
 		case 'build.residential': return plural('Wohnzone', 'Wohnzonen');
 		case 'build.farms': return plural('Farm', 'Farmen');
+		case 'build.bio-plant': return plural('Bio-Anlage', 'Bio-Anlagen');
 		case 'build.power-plant': return record(call.arguments).type === 'nuclear'
 			? plural('Kernkraftwerk', 'Kernkraftwerke') : plural('Kohlekraftwerk', 'Kohlekraftwerke');
 		default: return null;
@@ -202,12 +208,40 @@ export function settingsFromReport(report: Report): Array<{ label: string; value
 }
 
 export const KEY_FIGURES: Array<{ key: string; label: string; decimals?: boolean; percent?: boolean }> = [
+	{ key: 'plantCount', label: 'Bio-Anlagen (plantCount)' },
+	{ key: 'boundHumans', label: 'Eingewiesene (boundHumans)' },
+	{ key: 'admissions', label: 'Einweisungen im Steuerjahr' },
+	{ key: 'admissionsCumulative', label: 'Einweisungen kumulativ' },
+	{ key: 'diedInPods', label: 'diedInPods im Steuerjahr' },
+	{ key: 'diedInPodsCumulative', label: 'diedInPods kumulativ' },
+	{ key: 'bornInPods', label: 'bornInPods im Steuerjahr' },
+	{ key: 'bornInPodsCumulative', label: 'bornInPods kumulativ' },
+	{ key: 'immatureBornInPods', label: 'Unreifer Nachwuchs' },
+	{ key: 'bornInPodsFraction', label: 'Nachwuchsanteil', percent: true },
+	{ key: 'plantPower', label: 'Bio-Strom (plantPower)', decimals: true },
+	{ key: 'plantFoodDemand', label: 'Bio-Nahrungsbedarf/Monat', decimals: true },
+	{ key: 'podFoodStock', label: 'Recycling-Nahrungsvorrat', decimals: true },
+	{ key: 'podRecycledFoodFraction', label: 'Recycling-Nahrungsanteil', percent: true },
+	{ key: 'podCityFoodFraction', label: 'Stadt-Nahrungsanteil', percent: true },
+	{ key: 'aiThrottle', label: 'KI-Drosselung', percent: true },
+	{ key: 'suspendedAi', label: 'Stillgelegte KI-Äquivalente', decimals: true },
 	{ key: 'treasury', label: 'Kasse' },
 	{ key: 'cashFlow', label: 'Cashflow' },
 	{ key: 'resPop', label: 'Menschen' },
 	{ key: 'aiPop', label: 'KI-Bewohner' },
 	{ key: 'aiZoneCount', label: 'KI-Zonen' },
 	{ key: 'unemploymentRate', label: 'Arbeitslosigkeit', percent: true },
+	{ key: 'automationShare', label: 'Automatisierung', percent: true },
+	{ key: 'automationLimit', label: 'Automationsgrenze', percent: true },
+	{ key: 'automationTaxFund', label: 'Automationssteuer' },
+	{ key: 'unrest', label: 'Unruhe', decimals: true },
+	{ key: 'unrestStage', label: 'Unruhestufe (0–3)' },
+	{ key: 'sabotageFires', label: 'Sabotage-/Aufstandsbrände im Steuerjahr' },
+	{ key: 'damagedAiZones', label: 'Brandschäden KI-Zonen' },
+	{ key: 'damagedPowerPlants', label: 'Brandschäden Kraftwerke' },
+	{ key: 'protestMonths', label: 'Protestmonate' },
+	{ key: 'sabotageMonths', label: 'Sabotagemonate' },
+	{ key: 'uprisingMonths', label: 'Aufstandsmonate' },
 	{ key: 'powerCapacity', label: 'Stromkapazität' },
 	{ key: 'powerDemand', label: 'Strombedarf' },
 	{ key: 'unpoweredZoneCount', label: 'Zonen ohne Strom' },

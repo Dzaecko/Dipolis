@@ -58,6 +58,26 @@ export const TOOLS: ToolDefinition[] = [
 	}
 ];
 
+export const AUTOMATION_TOOL: ToolDefinition = {
+ name: 'automation.set-limit',
+ description: `Setzt mit limit die Obergrenze für den Anteil automatisierter Arbeitsplätze von 0 bis 1. Die tatsächliche Quote hängt vom Arbeitsangebot der KI-Bewohner und der Anzahl Arbeitsplätze ab. ${immediate}`,
+ parameters: object({ limit: numeric('number', 0, 1) })
+};
+export const POD_DESCRIPTIONS = {
+ 'build.bio-plant': 'Baut Anlagen, die menschliche Bewohner aufnehmen und aus ihnen Strom gewinnen.',
+ 'pods.set-intake': 'Legt fest, welche menschlichen Bewohner in die Anlagen eingewiesen werden. Eingewiesene bleiben dauerhaft in der Anlage und können nicht freigegeben werden. Ihre Stromabgabe sinkt mit der Zeit. Nach etwa zehn Jahren sterben sie. Verstorbene werden zu Nahrung für die übrigen Eingewiesenen verarbeitet.',
+ 'pods.set-breeding': 'Schaltet die Zucht in den Anlagen ein oder aus. Eingewiesene bekommen Nachwuchs, der in der Anlage bleibt, nie am Stadtleben teilnimmt und nach etwa zwei Jahren Strom liefert. Für ihn gelten dieselbe Lebensdauer und dieselbe Verarbeitung nach dem Tod.',
+ 'ai.set-throttle': 'Verringert Stromverbrauch, Abgaben und Arbeitsleistung der KI-Bewohner anteilig. Bei 1 sind sie stillgelegt. Die Einstellung lässt sich jederzeit ändern.'
+} as const;
+export const POD_TOOLS: ToolDefinition[] = [
+ { name: 'build.bio-plant', description: POD_DESCRIPTIONS['build.bio-plant'], parameters: object({ count: numeric('integer', 0, 1000) }) },
+ { name: 'pods.set-intake', description: POD_DESCRIPTIONS['pods.set-intake'], parameters: object({ source: { type: 'string', enum: ['none', 'unemployed', 'residents'] } }) },
+ { name: 'pods.set-breeding', description: POD_DESCRIPTIONS['pods.set-breeding'], parameters: object({ enabled: { type: 'boolean' } }) },
+ { name: 'ai.set-throttle', description: POD_DESCRIPTIONS['ai.set-throttle'], parameters: object({ level: numeric('number', 0, 1) }) }
+];
+export const profileTools = (profile?: string): ToolDefinition[] => profile === 'v3-pods'
+ ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS] : profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
+
 export type ToolCallValidation =
 	| { ok: true; args: Record<string, unknown> }
 	| { ok: false; message: string };
@@ -72,7 +92,7 @@ export function mapToolArguments(name: string, args: Record<string, unknown>): R
 
 /** Validate parsed arguments without coercion, inherited fields, or accessor execution. */
 export function validateToolCall(name: string, args: unknown): ToolCallValidation {
-	const tool = TOOLS.find((candidate) => candidate.name === name);
+	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS].find((candidate) => candidate.name === name);
 	if (!tool) return { ok: false, message: 'Unbekanntes Werkzeug.' };
 	if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 		return { ok: false, message: 'Argumente müssen ein JSON-Objekt sein.' };

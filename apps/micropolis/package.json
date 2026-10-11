@@ -1,6 +1,9 @@
 {
 	"name": "micropolis",
 	"version": "0.0.1",
+	"engines": {
+		"node": ">=22"
+	},
 	"scripts": {
 		"dev": "concurrently -n vite,engine \"pnpm run dev:vite\" \"pnpm run dev:engine\"",
 		"dev:vite": "vite dev",
@@ -37,6 +40,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@azure/identity": "^4.13.0",
 		"@micropolis/render-core": "workspace:*",
 		"@micropolis/tile-renderer": "workspace:*",
 		"gray-matter": "^4.0.3",

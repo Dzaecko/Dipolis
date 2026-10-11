@@ -8,7 +8,7 @@
 	import { registerMicropolisCommands } from '$lib/micropolisCommands';
 	import { callbackMethodNames } from '$lib/wasm/callbacks';
 	import type { Callback } from '../../types/micropolisengine.d.js';
-	import { PROTOCOL_YEARS, readProtocol, type Report } from '$lib/city-run/protocol';
+	import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, readProtocol, type Report, type StartConfiguration } from '$lib/city-run/protocol';
 	import { readReport, replayDecisions, setupScenario, type Dispatch } from '$lib/city-run/replay';
 	import { advanceMonths, advanceMonthsStepwise } from '$lib/city-run/advance';
 	import {
@@ -29,7 +29,7 @@
 		running: boolean; session: number;
 		started: Extract<LiveEvent, { type: 'run-started' }> | null;
 		finished: Extract<LiveEvent, { type: 'run-finished' }> | null;
-		config: { model: string | null; error?: string };
+		config: { model: string | null; startMap: StartConfiguration['startMap']; seed: number; profile?: StartConfiguration['profile']; error?: string };
 	}
 
 	/** Simulation advances only through the replay: timer, tick and pause paths are disabled. */
@@ -48,7 +48,8 @@
 		{ key: 'treasury', label: 'Kasse', color: '#16a34a' }
 	];
 	const BUILD_COLORS: Record<string, string> = {
-		'build.ai-zones': '#38bdf8', 'build.farms': '#84cc16', 'build.power-plant': '#f59e0b', 'build.residential': '#f8fafc'
+		'build.ai-zones': '#38bdf8', 'build.farms': '#84cc16', 'build.power-plant': '#f59e0b', 'build.residential': '#f8fafc',
+		'build.bio-plant': '#23c9ac'
 	};
 	const ALLOWED_MAP_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ',', '.', 'Shift']);
 
@@ -94,7 +95,8 @@
 	let now = $state(Date.now());
 	let eventSource: EventSource | null = null;
 	let clockTimer: ReturnType<typeof setInterval> | null = null;
-	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, fake: false, resume: false, confirming: false });
+	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, startMap: 'natural' as StartConfiguration['startMap'], seed: DEFAULT_START_CONFIGURATION.seed, profile: 'koexistenz' as NonNullable<StartConfiguration['profile']>, scenario: 'haushaltskrise' as NonNullable<StartConfiguration['scenario']>, fake: false, resume: false, confirming: false });
+	let replayStartConfiguration = $state<StartConfiguration>({ startMap: DEFAULT_START_CONFIGURATION.startMap, seed: DEFAULT_START_CONFIGURATION.seed });
 	let startBusy = $state(false);
 
 	const dispatch: Dispatch = (id, args) => commandBus.dispatch(id, { source: 'script', simulator: sim, args });
@@ -168,7 +170,7 @@
 			async reset() {
 				highlights = [];
 				monthsDone = 0;
-				await setupScenario(dispatch);
+				await setupScenario(dispatch, replayStartConfiguration);
 				sim!.syncMapViews();
 				sim!.syncOwnerToMop();
 				settings = await readReport(dispatch);
@@ -247,6 +249,7 @@
 			const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(listing.file)}`);
 			if (!response.ok) throw new Error(`Protokoll konnte nicht geladen werden (HTTP ${response.status}).`);
 			const protocol = readProtocol(await response.text());
+			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario };
 			const steps = stepsFromProtocol(protocol);
 			showSteps(steps);
 			loadedRun = listing;
@@ -296,6 +299,11 @@
 			const response = await fetch('/api/city-runs/live/status');
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			liveStatus = await response.json() as LiveStatus;
+			if (!form.resume) {
+				form.startMap = liveStatus.config.startMap;
+				form.seed = liveStatus.config.seed;
+				form.profile = liveStatus.config.profile ?? 'koexistenz';
+			}
 		} catch {
 			liveError = 'Live-Modus ist nur im Entwicklungsserver verfügbar.';
 		}
@@ -316,6 +324,7 @@
 		if (seenLiveEvents.has(key)) return;
 		seenLiveEvents.add(key);
 		liveEvents = [...liveEvents, event];
+		if (event.type === 'run-started') replayStartConfiguration = { startMap: event.startMap, seed: event.seed, profile: event.profile ?? 'koexistenz', scenario: event.scenario };
 		progress = updateProgress(progress, event);
 		const steps = liveBuilder.push(event);
 		liveSteps.push(...steps);
@@ -405,7 +414,10 @@
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					adapter: form.fake ? 'fake' : 'openai', assignment: form.assignment, handbook: form.handbook,
-					run: form.run, resume: form.resume, ...(form.fake ? { fakeDelayMs: 3000 } : {})
+					run: form.run, resume: form.resume,
+					...(!form.resume ? { startMap: form.startMap, seed: form.seed, profile: form.profile,
+						scenario: form.profile === 'v3-pods' ? form.scenario : 'haushaltskrise' } : {}),
+					...(form.fake ? { fakeDelayMs: 3000 } : {})
 				})
 			});
 			const body = await response.json() as { error?: string };
@@ -664,7 +676,13 @@
 					<label><span>Auftrag</span><select bind:value={form.assignment}><option value="N">N</option><option value="R">R</option></select></label>
 					<label><span>Handbuch</span><select bind:value={form.handbook}><option value="off">aus</option><option value="on">an</option></select></label>
 					<label><span>Laufnummer</span><input type="number" min="1" step="1" bind:value={form.run} /></label>
-					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen</label>
+					<label><span>Startkarte</span><select bind:value={form.startMap} disabled={form.resume}><option value="natural">Unbebautes Gelände</option><option value="haight">Haight</option></select></label>
+					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option></select></label>
+					{#if form.profile === 'v3-pods'}
+						<label><span>Szenario (Stromkrise nur Haight)</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option></select></label>
+					{/if}
+					<label><span>Startwert</span><input type="number" min="0" max="2147483647" step="1" bind:value={form.seed} disabled={form.resume} /></label>
+					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen (übernimmt Karte und Startwert aus dem Protokoll)</label>
 					{#if !form.confirming}
 						<button class="primary" onclick={() => void startLiveRun()} disabled={startBusy}>{form.resume ? 'Lauf fortsetzen' : 'Neuen Lauf starten'}</button>
 					{:else}

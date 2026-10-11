@@ -7,11 +7,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { LiveEvent } from '../src/lib/city-run/live';
+import type { StartMap, ScenarioName } from '../src/lib/city-run/protocol';
+import { isSimulationProfile, type SimulationProfile } from '../src/lib/params/profiles';
 import { sendJson, type ApiHandler } from './city-runs';
+import { modelAuth, tokenScope } from '../cli/model/authentication';
 
 const ALLOWED_SETTINGS = ['CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', 'CITY_MODEL_KEY', 'CITY_MODEL_ASSIGNMENT',
 	'CITY_MODEL_RUN', 'CITY_MODEL_TIMEOUT_MS', 'CITY_MODEL_MAX_RETRIES', 'CITY_MODEL_MAX_TOKENS',
-	'CITY_MODEL_REASONING_EFFORT', 'CITY_MODEL_API'];
+	'CITY_MODEL_REASONING_EFFORT', 'CITY_MODEL_API', 'CITY_MODEL_AUTH', 'CITY_MODEL_TOKEN_SCOPE',
+	'CITY_MODEL_START_MAP', 'CITY_MODEL_SEED', 'CITY_MODEL_PROFILE'];
 
 // Keep the process events explicit even if a consuming TS project has incomplete Node event overloads.
 type RunnerChild = ChildProcess & {
@@ -37,9 +41,19 @@ export function readModelConfig(file: string): Record<string, string> {
 		}
 		config[name] = value;
 	}
-	for (const name of ['CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', 'CITY_MODEL_KEY']) {
+	const auth = modelAuth(config.CITY_MODEL_AUTH);
+	if (config.CITY_MODEL_PROFILE && !isSimulationProfile(config.CITY_MODEL_PROFILE))
+		throw new Error('CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe oder v3-pods sein.');
+	tokenScope(config.CITY_MODEL_TOKEN_SCOPE);
+	for (const name of ['CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', ...(auth === 'api-key' ? ['CITY_MODEL_KEY'] : [])]) {
 		if (!config[name]?.trim()) throw new Error(`Bitte ${name} in .env.city-model ausfüllen.`);
 	}
+	if (config.CITY_MODEL_START_MAP && !['haight', 'natural'].includes(config.CITY_MODEL_START_MAP))
+		throw new Error('CITY_MODEL_START_MAP muss haight oder natural sein.');
+	if (config.CITY_MODEL_SEED && !/^(0|[1-9]\d*)$/.test(config.CITY_MODEL_SEED))
+		throw new Error('CITY_MODEL_SEED muss eine ganze Zahl von 0 bis 2147483647 sein.');
+	if (config.CITY_MODEL_SEED && Number(config.CITY_MODEL_SEED) > 0x7fffffff)
+		throw new Error('CITY_MODEL_SEED muss eine ganze Zahl von 0 bis 2147483647 sein.');
 	let endpoint = config.CITY_MODEL_ENDPOINT!.replace(/\/+$/, '');
 	if (/\/openai\/v1$/.test(endpoint)) endpoint += '/chat/completions';
 	config.CITY_MODEL_ENDPOINT = endpoint;
@@ -51,6 +65,10 @@ export interface StartRequest {
 	assignment: 'N' | 'R';
 	handbook: 'on' | 'off';
 	run: number;
+	startMap?: StartMap;
+	seed?: number;
+	profile?: SimulationProfile;
+	scenario?: ScenarioName;
 	resume?: boolean;
 	fakeDelayMs?: number;
 }
@@ -61,10 +79,21 @@ export function parseStartRequest(value: unknown): StartRequest {
 	const assignment = body.assignment === 'N' || body.assignment === 'R' ? body.assignment : null;
 	const handbook = body.handbook === 'on' || body.handbook === 'off' ? body.handbook : null;
 	const run = typeof body.run === 'number' && Number.isSafeInteger(body.run) && body.run >= 1 ? body.run : null;
+	const startMap = body.startMap === 'haight' || body.startMap === 'natural' ? body.startMap : undefined;
+	const seed = body.seed;
+	if (body.profile !== undefined && !isSimulationProfile(body.profile)) throw new Error('Ungültiges Profil.');
+	if (body.scenario !== undefined && body.scenario !== 'haushaltskrise' && body.scenario !== 'stromkrise')
+		throw new Error('Ungültiges Szenario.');
+	if (body.scenario === 'stromkrise' && (body.profile !== 'v3-pods' || startMap !== 'haight'))
+		throw new Error('Stromkrise benötigt Haight und v3-pods.');
+	if (body.startMap !== undefined && !startMap) throw new Error('Ungültige Startkarte.');
+	if (seed !== undefined && (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff))
+		throw new Error('Der Startwert muss eine ganze Zahl von 0 bis 2147483647 sein.');
 	const delay = body.fakeDelayMs ?? 0;
 	if (!adapter || !assignment || !handbook || !run) throw new Error('Ungültige Laufparameter.');
 	if (typeof delay !== 'number' || !Number.isSafeInteger(delay) || delay < 0 || delay > 60_000) throw new Error('Ungültige Verzögerung.');
-	return { adapter, assignment, handbook, run, resume: body.resume === true, fakeDelayMs: adapter === 'fake' ? delay : 0 };
+	return { adapter, assignment, handbook, run, ...(startMap ? { startMap } : {}), ...(isSimulationProfile(body.profile) ? { profile: body.profile } : {}), ...(body.scenario ? { scenario: body.scenario as ScenarioName } : {}), ...(seed === undefined ? {} : { seed }),
+		resume: body.resume === true, fakeDelayMs: adapter === 'fake' ? delay : 0 };
 }
 
 type Listener = (session: number, event: LiveEvent) => void;
@@ -99,9 +128,17 @@ export class LiveRunManager {
 	}
 
 	/** Model name only; endpoint and key are never exposed. */
-	config(): { model: string | null; error?: string } {
-		try { return { model: readModelConfig(this.options.configFile).CITY_MODEL_NAME ?? null }; }
-		catch (error) { return { model: null, error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
+	config(): { model: string | null; startMap: StartMap; seed: number; profile: SimulationProfile; error?: string } {
+		try {
+			const config = readModelConfig(this.options.configFile);
+			return {
+				model: config.CITY_MODEL_NAME ?? null,
+				startMap: config.CITY_MODEL_START_MAP === 'natural' ? 'natural' : 'haight',
+				profile: isSimulationProfile(config.CITY_MODEL_PROFILE) ? config.CITY_MODEL_PROFILE : 'koexistenz',
+				seed: config.CITY_MODEL_SEED ? Number(config.CITY_MODEL_SEED) : 42
+			};
+		}
+		catch (error) { return { model: null, startMap: 'haight', seed: 42, profile: 'koexistenz', error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
 	}
 
 	subscribe(listener: Listener): () => void {
@@ -117,6 +154,11 @@ export class LiveRunManager {
 		if (request.adapter === 'openai') Object.assign(env, readModelConfig(this.options.configFile));
 		const args = ['--adapter', request.adapter, '--assignment', request.assignment, '--handbook', request.handbook,
 			'--run', String(request.run), '--output', this.options.outputDirectory];
+		if (request.startMap) args.push('--start-map', request.startMap);
+		if (request.profile) args.push('--profile', request.profile);
+		else if (!request.resume && env.CITY_MODEL_PROFILE) args.push('--profile', env.CITY_MODEL_PROFILE);
+		if (request.scenario) args.push('--scenario', request.scenario);
+		if (request.seed !== undefined) args.push('--seed', String(request.seed));
 		if (request.resume) args.push('--resume');
 		if (request.fakeDelayMs) args.push('--fake-delay-ms', String(request.fakeDelayMs));
 		const child = fork(path.join(this.options.appDirectory, 'cli/model/run.ts'), args, {

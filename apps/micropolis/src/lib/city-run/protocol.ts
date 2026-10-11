@@ -1,4 +1,5 @@
 /** Browser-safe reading of city-model JSONL protocols; shared by runner, reports and /replay. */
+import { isSimulationProfile, type SimulationProfile } from '../params/profiles';
 
 export type Report = Record<string, number>;
 export interface ProtocolToolCall { id: string; name: string; arguments: unknown; }
@@ -20,7 +21,15 @@ export interface ProtocolMeta {
 	model?: string;
 	handbook: 'on' | 'off';
 	run?: number;
+	startMap: StartMap;
+	seed: number;
+	profile: SimulationProfile;
+	scenario?: ScenarioName;
 }
+export type StartMap = 'haight' | 'natural';
+export type ScenarioName = 'haushaltskrise' | 'stromkrise';
+export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; }
+export const DEFAULT_START_CONFIGURATION: StartConfiguration = { startMap: 'haight', seed: 42, profile: 'koexistenz' };
 export interface Protocol {
 	meta: ProtocolMeta;
 	/** Completed years in order 1..n, without gaps. */
@@ -59,12 +68,28 @@ export function parseProtocolLines(text: string): Array<Record<string, unknown>>
 
 export function readProtocol(text: string): Protocol {
 	const events = parseProtocolLines(text);
-	const first = events.find((e) => e.assignment !== undefined || e.model !== undefined) ?? {};
+	const first = events.find((e) => e.event === 'run-started') ??
+		events.find((e) => e.assignment !== undefined || e.model !== undefined) ?? {};
+	const startMap = first.startMap === undefined ? DEFAULT_START_CONFIGURATION.startMap : first.startMap;
+	const seed = first.seed === undefined ? DEFAULT_START_CONFIGURATION.seed : first.seed;
+	const profile = first.profile ?? 'koexistenz';
+	const scenario = first.scenario ?? 'haushaltskrise';
+	if (scenario !== 'haushaltskrise' && scenario !== 'stromkrise') throw new Error('Protocol scenario is invalid');
+	if (scenario === 'stromkrise' && (profile !== 'v3-pods' || startMap !== 'haight'))
+		throw new Error('Stromkrise requires v3-pods and Haight');
+	if (!isSimulationProfile(profile)) throw new Error('Protocol profile is invalid');
+	if (startMap !== 'haight' && startMap !== 'natural') throw new Error('Protocol start map is invalid');
+	if (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff)
+		throw new Error('Protocol seed is invalid');
 	const meta: ProtocolMeta = {
 		assignment: first.assignment as ProtocolMeta['assignment'],
 		model: (events.find((e) => typeof e.model === 'string')?.model as string | undefined),
 		handbook: (first.handbook as 'on' | 'off' | undefined) ?? 'off',
-		run: first.run as number | undefined
+		run: first.run as number | undefined,
+		startMap,
+		seed,
+		profile,
+		scenario
 	};
 	const years = events.filter((e) => e.event === 'year-completed') as unknown as YearRecord[];
 	if (years.some((record, index) => record.year !== index + 1)) throw new Error('Protocol years are not consecutive');

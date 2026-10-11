@@ -1,0 +1,63 @@
+{
+  "setup": "Haight seed42 common12000-tick warmup; calibration treasury600000;25 farms;8 nuclear plants;200 requested AI lots;welfare1;limit.5;unrest drivers disabled;20-year burn-in;years21..25 measured. This calibration does not change household-crisis defaults.",
+  "built": {
+    "handled": true,
+    "data": {
+      "requested": 200,
+      "built": 196,
+      "cost": 22190,
+      "totalFunds": 535121
+    }
+  },
+  "rows": [
+    {
+      "year": 21,
+      "resPop": 3557,
+      "aiPop": 7840,
+      "automationShare": 0.5,
+      "automatedJobs": 336,
+      "humanTaxFund": 4155,
+      "cityTax": 7
+    },
+    {
+      "year": 22,
+      "resPop": 3575,
+      "aiPop": 7840,
+      "automationShare": 0.5,
+      "automatedJobs": 336,
+      "humanTaxFund": 3998,
+      "cityTax": 7
+    },
+    {
+      "year": 23,
+      "resPop": 3557,
+      "aiPop": 7840,
+      "automationShare": 0.5,
+      "automatedJobs": 336,
+      "humanTaxFund": 4223,
+      "cityTax": 7
+    },
+    {
+      "year": 24,
+      "resPop": 3602,
+      "aiPop": 7840,
+      "automationShare": 0.5,
+      "automatedJobs": 336,
+      "humanTaxFund": 4096,
+      "cityTax": 7
+    },
+    {
+      "year": 25,
+      "resPop": 3549,
+      "aiPop": 7840,
+      "automationShare": 0.5,
+      "automatedJobs": 336,
+      "humanTaxFund": 4096,
+      "cityTax": 7
+    }
+  ],
+  "humanTaxes": 20568,
+  "taxableAutomatedJobs": 11760,
+  "yieldPerJob": 1.74897959,
+  "formula": "sum(humanTaxFund) / sum(automatedJobs * cityTax); fixed to 8 decimal places"
+}

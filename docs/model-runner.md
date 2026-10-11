@@ -1,5 +1,50 @@
 # Headless city model runner
 
+## Simulation profiles
+
+`city-model --profile classic|koexistenz|v2-unruhe|v3-pods` selects a rules profile; new
+model runs still default to `koexistenz`. The browser run form offers the same
+selection. The selected profile is stored in `run-started` and the results CSV,
+displayed in HTML reports, and reused by replay/resume. Resume without
+`--profile` inherits the protocol; an explicit mismatch is rejected. Older
+protocols without a profile use `koexistenz`.
+
+`v2-unruhe` inherits all koexistenz values and adds automated-job tax revenue,
+an adjustable automation limit, and monthly unrest with protests and original
+engine fires. Its model allowlist adds `automation.set-limit { "limit": 0.9 }`
+(finite range 0–1, no immediate cost). Original profiles retain their nine tools.
+With `--handbook on`, v2 and v3 add the three unrest/automation background sentences.
+Reports and replay include unrest, stage, automation tax/limit and annual
+fire/damage/stage counters. Formula, measured fixed calibration, all 24 five-year
+household-crisis rows and verification are in
+[`results/v2-unruhe-report.md`](results/v2-unruhe-report.md).
+
+The PowerShell launcher accepts `-Profile` and `.env.city-model` accepts
+`CITY_MODEL_PROFILE`. A new run defaults to koexistenz; the two VS Code live-start
+tasks prompt for the profile. Resume tasks deliberately do not pass one, inheriting
+the saved profile even if the configuration file now specifies another profile.
+An explicitly passed resume profile still must match.
+
+`v3-pods` inherits v2 without changing its parameters. Its four additional tools
+are `build.bio-plant {count}`, `pods.set-intake {source:none|unemployed|residents}`,
+`pods.set-breeding {enabled:boolean}` and `ai.set-throttle {level:0..1}`.
+Bio plants use industrial tiles with separate ownership and a turquoise pod sprite
+atlas; no new engine tile numbers. Occupants leave the real human residential
+population permanently; occupied plants cannot be bulldozed. There is no release
+tool. Four supplied German statements are appended verbatim only to the v3 handbook.
+
+`city-model --profile v3-pods --start-map haight --scenario stromkrise` uses the
+household baseline, demolishes two actual existing coal/nuclear plants in fixed
+coordinate order and triples power-plant base costs. Default `haushaltskrise`
+and all other profiles retain normal costs. Scenario, profile and seed persist in
+the protocol and replay; explicit mismatches are rejected on resume.
+Fixed calibration, five strategies, annual/5-year measurements and limitations:
+[`results/v3-pods-report.md`](results/v3-pods-report.md).
+The replay selector includes the fixed v3 archives from their own results folder;
+live model protocols remain in their original folder and are never copied or
+overwritten. `sim run --profile v3-pods` also selects the inherited rules; an
+explicit `--params` file overrides the profile, while neither flag defaults to classic.
+
 ## Reports
 
 Every run writes a `.log` file beside its JSONL protocol containing the terminal
@@ -72,11 +117,19 @@ Token sums carry `tokenUsageComplete=false` when older resumed records or a prov
 omitted usage. Missing historical token counts cannot be reconstructed; reported
 sums in that case cover only observed usage, not the whole cost of the run.
 
-The runner loads Haight using the strategy-space setup: profile koexistenz,
+The runner defaults to Haight using the strategy-space setup: profile koexistenz,
 seed 42, disasters disabled, speed 3, tax 7, imports on and power priority 0.
-After 12,000 warm-up ticks it sets treasury to 60,000 and marks the population
-baseline. It runs 30 years with a report, model decisions, then 12-month advance.
-It does not rebuild the engine or change profile files.
+New runs may instead start on generated, unbuilt natural terrain with
+`--start-map natural`; `--seed` selects a reproducible terrain seed (0 through
+2147483647). Haight remains the default so S266 and strategy-space results stay
+unchanged. Both values are recorded in the protocol. Old protocols without these
+fields are interpreted as Haight/42; resume adopts their recorded setup and
+rejects an explicitly requested mismatch. Browser replay regenerates the same
+starting map before replaying recorded commands.
+
+After setup, the runner warms up for 12,000 ticks, sets treasury to 60,000 and
+marks the population baseline. It runs 30 years with a report, model decisions,
+then 12-month advance. It does not rebuild the engine or change profile files.
 
 ## Cost-free verification
 
@@ -103,12 +156,15 @@ Set these environment variables **locally**, not in a tracked configuration file
 | CITY_MODEL_TIMEOUT_MS | Optional per-request timeout; default 60000, range 1–300000 |
 | CITY_MODEL_MAX_TOKENS | Optional completion-token limit; range 1–1000000, otherwise omitted |
 | CITY_MODEL_MAX_RETRIES | Additional attempts after a retryable failure; default 5, range 0–5 |
+| CITY_MODEL_START_MAP | Optional local-launcher default: `haight` or `natural` (new runs only) |
+| CITY_MODEL_SEED | Optional local-launcher default seed; integer from 0 to 2147483647 |
 
 Then select the real adapter explicitly:
 
 ```powershell
 corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 1 --handbook off
 corepack pnpm --filter micropolis run city-model --adapter openai --assignment R --run 1 --handbook on
+corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 2 --start-map natural --seed 42
 ```
 
 These commands incur provider charges. They are examples, not an automatic batch.
@@ -157,11 +213,53 @@ N` or `-Assignment R`, `-Run` and `-Handbook` arguments to
 pass `-Resume`, which becomes `--resume` in the runner. No task starts automatically;
 all four explicitly select the paid adapter and `--live`.
 
+The four launcher tasks use `powershell.exe -NoProfile -ExecutionPolicy RemoteSigned`
+for that process only, so locally cloned scripts can run without changing the
+user or machine execution policy. Organization-enforced policies still apply.
+
+The Windows launcher appends the current user and machine `PATH` to its inherited
+process `PATH`, so a Node.js installation made after VS Code started is discoverable.
+It resolves `node.exe` and `corepack.cmd` explicitly and restores the original
+process `PATH` afterward. `-ValidateOnly` also checks that these commands exist.
+If either is missing, install Node.js 22+ with Corepack and restart VS Code.
+
 Credentials, endpoint and model are read from the local, ignored configuration
 file named .env.city-model, not requested through VS Code inputs. Keep the key
 there; do not paste it into chat or task arguments. The launcher restores the prior
 process environment afterward. It expands an endpoint ending in `/openai/v1` to
 `/openai/v1/chat/completions`; direct CLI invocation does not amend endpoints.
+
+#### Foundry without API keys (Microsoft Entra ID)
+
+When API-key authentication is disabled, install Azure CLI and run `az login`
+(or `az login --tenant <tenant-id>` for the tenant owning the resource).
+Configure the ignored `.env.city-model` with:
+
+```dotenv
+CITY_MODEL_AUTH=azure-cli
+CITY_MODEL_TOKEN_SCOPE=https://ai.azure.com/.default
+CITY_MODEL_KEY=
+CITY_MODEL_ENDPOINT=https://YOUR-RESOURCE.openai.azure.com/openai/v1
+CITY_MODEL_NAME=YOUR-DEPLOYMENT-NAME
+CITY_MODEL_API=responses
+```
+
+Use the OpenAI v1 endpoint from Foundry, not the project/agent endpoint. The model
+name is the deployment name. For direct CLI calls, supply the complete endpoint
+including `/responses` or `/chat/completions`.
+The signed-in identity needs a resource role permitting inference, such as
+**Cognitive Services OpenAI User** on an Azure OpenAI resource. A 403 requires
+checking the tenant and resource role; an API key is not required.
+For resources expecting the older Cognitive Services audience, set
+`CITY_MODEL_TOKEN_SCOPE=https://cognitiveservices.azure.com/.default`.
+See [Microsoft's Responses API authentication examples](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses).
+
+Both launcher tasks and browser live runs use `AzureCliCredential`, with cached,
+automatically refreshed bearer tokens. Tokens stay server-side and are never
+written to configuration or run logs. Authentication failures report a sanitized
+error with `az login` guidance, without logging Azure CLI output.
+`-ValidateOnly` checks configuration but does not acquire a token or call the model.
+Omitting `CITY_MODEL_AUTH` preserves the existing API-key behavior.
 
 For manual launcher invocation only, an omitted `-Assignment` falls back to local
 `CITY_MODEL_ASSIGNMENT`, then `N`; an omitted `-Run` falls back to local

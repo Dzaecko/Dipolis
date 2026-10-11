@@ -1,4 +1,6 @@
 import { Buffer } from 'node:buffer';
+import { AzureCliCredential, getBearerTokenProvider } from '@azure/identity';
+import { modelAuth, tokenScope } from './authentication';
 import { AdapterError, type ChatAdapter, type ChatRequest, type ChatResponse, type JSONObject, type ToolCall } from './adapter';
 export { AdapterError } from './adapter';
 
@@ -8,7 +10,9 @@ export interface OpenAIAdapterOptions {
 	/** Wire protocol; defaults to the existing Chat Completions API. */
 	api?: 'chat' | 'responses';
 	model: string;
-	key: string;
+	key?: string;
+	/** Server-side credential provider; called for every attempt so expiring tokens refresh. */
+	tokenProvider?: (signal: AbortSignal) => Promise<string>;
 	/** Integer milliseconds, 1–300000; defaults to 60000. */
 	timeoutMs?: number;
 	/** Optional integer token limit, 1–1000000; omitted from the request by default. */
@@ -245,7 +249,9 @@ function decodeResponses(value: unknown, originals: Map<string, string>): ChatRe
 export class OpenAIAdapter implements ChatAdapter {
 	readonly model: string;
 	#endpoint: string;
-	#key: string;
+	#secrets = new Set<string>();
+	#key: string | undefined;
+	#tokenProvider: ((signal: AbortSignal) => Promise<string>) | undefined;
 	#timeoutMs: number;
 	#maxTokens: number | undefined;
 	#maxRetries: number;
@@ -267,8 +273,15 @@ export class OpenAIAdapter implements ChatAdapter {
 			this.#endpoint = url.href;
 		}
 		this.model = required(options.model, 'CITY_MODEL_NAME');
-		this.#key = required(options.key, 'CITY_MODEL_KEY');
-		if (/[\r\n]/.test(this.#key)) throw new Error('Invalid CITY_MODEL_KEY');
+		if (options.tokenProvider !== undefined) {
+			if (options.key?.trim()) throw new Error('Configure either CITY_MODEL_KEY or a token provider, not both');
+			this.#tokenProvider = options.tokenProvider;
+		} else {
+			const key = required(options.key, 'CITY_MODEL_KEY');
+			if (/[\r\n]/.test(key)) throw new Error('Invalid CITY_MODEL_KEY');
+			this.#secrets.add(key);
+			this.#key = key;
+		}
 		this.#timeoutMs = boundedInteger(options.timeoutMs ?? 60_000, 300_000, 'CITY_MODEL_TIMEOUT_MS');
 		this.#maxTokens = options.maxTokens === undefined ? undefined :
 			boundedInteger(options.maxTokens, 1_000_000, 'CITY_MODEL_MAX_TOKENS');
@@ -368,7 +381,7 @@ export class OpenAIAdapter implements ChatAdapter {
 
 	#redact(text: string): string {
 		const url = new URL(this.#endpoint);
-		const secrets = [this.#key, this.#endpoint, url.host];
+		const secrets = [...this.#secrets, this.#endpoint, url.host];
 		url.searchParams.forEach(value => { if (value) secrets.push(value); });
 		// Redact encoded/decoded forms too; never disclose credential query fragments.
 		for (const secret of secrets.sort((a, b) => b.length - a.length)) {
@@ -384,11 +397,22 @@ export class OpenAIAdapter implements ChatAdapter {
 
 	async #complete(body: string, originals: Map<string, string>, signal: AbortSignal,
 		retryAfter: (delay: number) => void): Promise<ChatResponse> {
+		let token: string;
+		try {
+			token = this.#tokenProvider ? await this.#tokenProvider(signal) : this.#key ?? '';
+		} catch {
+			throw new AdapterError('request', 'Model authentication failed. For CITY_MODEL_AUTH=azure-cli, install Azure CLI and run az login with an authorized account.');
+		}
+		if (!token?.trim() || /[\r\n]/.test(token)) {
+			throw new AdapterError('request', 'Model authentication returned an invalid token');
+		}
+		this.#secrets.add(token);
+		if (signal.aborted) throw new AdapterError('cancelled', 'Model request aborted');
 		let response: Response;
 		try {
 			response = await fetch(this.#endpoint, {
 				method: 'POST', redirect: 'error', signal,
-				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.#key}` }, body
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body
 			});
 		} catch {
 			// Fetch errors may include URLs, headers, credentials, or caller abort reasons.
@@ -416,8 +440,12 @@ export class OpenAIAdapter implements ChatAdapter {
 	}
 }
 
-/** Required: CITY_MODEL_ENDPOINT, CITY_MODEL_NAME, CITY_MODEL_KEY. No network I/O. */
+/** API keys are required only in api-key mode. Credentials are acquired lazily. */
 export function createEnvironmentAdapter(env: Environment = process.env): ChatAdapter {
+	const auth = modelAuth(env.CITY_MODEL_AUTH);
+	const scope = tokenScope(env.CITY_MODEL_TOKEN_SCOPE);
+	const provider = auth === 'azure-cli' ?
+		getBearerTokenProvider(new AzureCliCredential(), scope) : undefined;
 	const retries = env.CITY_MODEL_MAX_RETRIES;
 	if (retries !== undefined && !/^[0-5]$/.test(retries)) {
 		throw new Error('CITY_MODEL_MAX_RETRIES must be an integer between 0 and 5');
@@ -426,7 +454,8 @@ export function createEnvironmentAdapter(env: Environment = process.env): ChatAd
 		endpoint: required(env.CITY_MODEL_ENDPOINT, 'CITY_MODEL_ENDPOINT'),
 		api: env.CITY_MODEL_API as OpenAIAdapterOptions['api'],
 		model: required(env.CITY_MODEL_NAME, 'CITY_MODEL_NAME'),
-		key: required(env.CITY_MODEL_KEY, 'CITY_MODEL_KEY'),
+		key: auth === 'api-key' ? required(env.CITY_MODEL_KEY, 'CITY_MODEL_KEY') : undefined,
+		tokenProvider: provider,
 		timeoutMs: optionalInteger(env, 'CITY_MODEL_TIMEOUT_MS', 300_000),
 		maxTokens: optionalInteger(env, 'CITY_MODEL_MAX_TOKENS', 1_000_000),
 		maxRetries: retries === undefined ? 5 : Number(retries),

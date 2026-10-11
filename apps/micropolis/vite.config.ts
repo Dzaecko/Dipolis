@@ -24,7 +24,9 @@ export default defineConfig({
     exclude: ['@micropolis/render-core', '@micropolis/tile-renderer'],
   },
   plugins: [
-    cityRunsPlugin({ directory: modelRunsDirectory, extra: [liveRunHandlers(liveRuns)], onClose: () => liveRuns.stop() }),
+    cityRunsPlugin({ directory: modelRunsDirectory,
+      archives: { 'v3-pods': fileURLToPath(new URL('../../docs/results/v3-pods-runs', import.meta.url)) },
+      extra: [liveRunHandlers(liveRuns)], onClose: () => liveRuns.stop() }),
     sveltekit(),
     topLevelAwait(),
     viteStaticCopy({

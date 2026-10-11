@@ -49,7 +49,7 @@ export function resolveRunFile(directory: string, name: string | null): string |
 export type ApiHandler = (req: IncomingMessage, res: ServerResponse, url: URL) => boolean | Promise<boolean>;
 
 /** Dev-server only: excluded from `vite build`, so no API ships with the static site. */
-export function cityRunsPlugin(options: { directory: string; extra?: ApiHandler[]; onClose?: () => void }): Plugin {
+export function cityRunsPlugin(options: { directory: string; archives?: Record<string, string>; extra?: ApiHandler[]; onClose?: () => void }): Plugin {
 	return {
 		name: 'city-runs-api',
 		apply: 'serve',
@@ -60,10 +60,16 @@ export function cityRunsPlugin(options: { directory: string; extra?: ApiHandler[
 				if (!url.pathname.startsWith('/api/city-runs')) return next();
 				try {
 					if (req.method === 'GET' && url.pathname === '/api/city-runs') {
-						return sendJson(res, 200, listCityRuns(options.directory));
+						const archives = Object.entries(options.archives ?? {}).flatMap(([prefix, directory]) =>
+							listCityRuns(directory).map(run => ({ ...run, file: `${prefix}:${run.file}` })));
+						return sendJson(res, 200, [...listCityRuns(options.directory), ...archives]);
 					}
 					if (req.method === 'GET' && url.pathname === '/api/city-runs/file') {
-						const file = resolveRunFile(options.directory, url.searchParams.get('name'));
+						const name = url.searchParams.get('name');
+						const prefix = name?.split(':')[0];
+						const archive = prefix && options.archives?.[prefix];
+						const file = archive && name ? resolveRunFile(archive, name.slice(prefix!.length + 1))
+							: resolveRunFile(options.directory, name);
 						if (!file) return sendJson(res, 404, { error: 'Protokoll nicht gefunden' });
 						res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
 						res.setHeader('Cache-Control', 'no-store');

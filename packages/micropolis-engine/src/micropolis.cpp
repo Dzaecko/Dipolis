@@ -89,6 +89,10 @@
  * Simulator constructor.
  */
 Micropolis::Micropolis() :
+        callback(NULL),
+        callbackVal(emscripten::val::null()),
+        spriteList(NULL),
+        freeSprites(NULL),
         populationDensityMap(0),
         trafficDensityMap(0),
         pollutionDensityMap(0),
@@ -104,6 +108,7 @@ Micropolis::Micropolis() :
         zoneStatusMap(0),
         aiHouseMap(0),
         previousHumanResPopMap(0),
+        humanPodOffsetMap(0),
         humanLossCauseMap(0),
         rateOfGrowthMap(0),
         fireStationMap(0),
@@ -162,6 +167,27 @@ void Micropolis::init()
     humanLossCauseMap.clear();
     humanTaxFund = 0;
     welfareCost = 0;
+    automationTaxFund = 0;
+    unrest = 0.0f;
+    bioPlants.clear();
+    humanPodOffsetMap.clear();
+    podBreeding = false;
+    podIntake = 0;
+    aiThrottle = 0.0;
+    powerPlantCostMultiplier = 1.0;
+    podMonth = 0;
+    boundHumans = admissions = admissionsCumulative = 0;
+    diedInPods = diedInPodsCumulative = bornInPods = bornInPodsCumulative = 0;
+    immatureBornInPods = bornPodOccupants = 0;
+    pendingAdmissions = pendingPodDeaths = pendingPodBirths = 0;
+    plantPower = plantFoodDemand = podFoodStock = podCityFoodDemand = 0.0;
+    pendingPodCityFood = 0.0;
+    podRecycledFoodFraction = podCityFoodFraction = bornInPodsFraction = suspendedAi = 0.0;
+    unrestStage = 0;
+    sabotageFires = damagedAiZones = damagedPowerPlants = 0;
+    protestMonths = sabotageMonths = uprisingMonths = 0;
+    pendingSabotageFires = pendingDamagedAiZones = pendingDamagedPowerPlants = 0;
+    for (int i = 0; i < 3; ++i) pendingStageMonths[i] = 0;
 
     // short comPop;
     comPop = 0;
@@ -717,6 +743,17 @@ void Micropolis::destroy()
 
     destroyMapArrays();
 
+    while (spriteList != NULL) {
+        SimSprite *sprite = spriteList;
+        spriteList = sprite->next;
+        delete sprite;
+    }
+    while (freeSprites != NULL) {
+        SimSprite *sprite = freeSprites;
+        freeSprites = sprite->next;
+        delete sprite;
+    }
+
     // TODO: Clean up all other stuff:
 
 }
@@ -1224,7 +1261,7 @@ static bool isIndustrialCenterTile(MapTile tile)
 
 bool Micropolis::setZoneOwner(int x, int y, int owner)
 {
-    if (!testBounds(x, y) || owner < 0 || owner > 3) {
+    if (!testBounds(x, y) || owner < 0 || owner > 4 || (owner == 4 && !params.podsEnabled) || occupiedBioTile(x, y)) {
         return false;
     }
 
@@ -1233,7 +1270,7 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
     const bool zoneCenter = (value & ZONEBIT) != 0;
     const bool residentialCenter = zoneCenter && tile < HOSPITAL;
     const bool farmCenter = zoneCenter && isIndustrialCenterTile(tile);
-    const bool validOwnerCenter = owner == 3
+    const bool validOwnerCenter = owner == 3 || owner == 4
         ? farmCenter
         : owner == 0
             ? (residentialCenter || farmCenter)
@@ -1250,6 +1287,48 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
 bool Micropolis::setParam(const std::string &name, double value)
 {
     if (!std::isfinite(value)) return false;
+    if (name == "podsEnabled") {
+        if (value != 0 && value != 1) return false;
+        params.podsEnabled = value == 1;
+        return true;
+    }
+    if (name == "podsPerPlant") {
+        if (value < 1 || value > 100000 || std::floor(value) != value) return false;
+        params.podsPerPlant = (int)value;
+        return true;
+    }
+    if (name == "podIntake" || name == "podBreeding" || name == "aiThrottle" || name == "powerPlantCostMultiplier") {
+        if (!params.podsEnabled) return false;
+        if (name == "podIntake") {
+            if (value < 0 || value > 2 || std::floor(value) != value) return false;
+            podIntake = (short)value;
+        } else if (name == "podBreeding") {
+            if (value != 0 && value != 1) return false;
+            podBreeding = value == 1;
+        } else if (name == "aiThrottle") {
+            if (value < 0 || value > 1) return false;
+            aiThrottle = value;
+            suspendedAi = aiPop * aiThrottle;
+        } else {
+            if (value < 1 || value > 10) return false;
+            powerPlantCostMultiplier = value;
+        }
+        return true;
+    }
+    if (name == "podPowerPerHuman" || name == "podFoodPerHuman" || name == "recycledFoodPerHuman" ||
+        name == "podBirthRate" || name == "podLifetimeMonths" || name == "podMaturityMonths" ||
+        name == "podStarvationAging") {
+        if (value < 0 || value > 100000 || (name == "podLifetimeMonths" && value < 1) ||
+            (name == "podBirthRate" && value > 1)) return false;
+        if (name == "podPowerPerHuman") params.podPowerPerHuman = value;
+        else if (name == "podFoodPerHuman") params.podFoodPerHuman = value;
+        else if (name == "recycledFoodPerHuman") params.recycledFoodPerHuman = value;
+        else if (name == "podBirthRate") params.podBirthRate = value;
+        else if (name == "podLifetimeMonths") params.podLifetimeMonths = value;
+        else if (name == "podMaturityMonths") params.podMaturityMonths = value;
+        else params.podStarvationAging = value;
+        return true;
+    }
 
     if (name == "aiPowerPerPop" || name == "powerPriority") {
         if (std::floor(value) != value) return false;
@@ -1263,16 +1342,18 @@ bool Micropolis::setParam(const std::string &name, double value)
         return true;
     }
 
-    if (name == "foodImportEnabled") {
+    if (name == "foodImportEnabled" || name == "unrestEnabled") {
         if (value != 0.0 && value != 1.0) return false;
-        params.foodImportEnabled = value == 1.0;
+        if (name == "foodImportEnabled") params.foodImportEnabled = value == 1.0;
+        else params.unrestEnabled = value == 1.0;
         return true;
     }
 
-    if (name == "welfareLevel" || name == "maxAutomation") {
+    if (name == "welfareLevel" || name == "maxAutomation" || name == "automationLimit") {
         if (value < 0.0 || value > 1.0) return false;
         if (name == "welfareLevel") params.welfareLevel = (float)value;
-        else params.maxAutomation = (float)value;
+        else if (name == "maxAutomation") params.maxAutomation = (float)value;
+        else params.automationLimit = (float)value;
         return true;
     }
 
@@ -1285,6 +1366,31 @@ bool Micropolis::setParam(const std::string &name, double value)
     else if (name == "foodImportPrice") params.foodImportPrice = (float)value;
     else if (name == "jobsPerAiPop") params.jobsPerAiPop = (float)value;
     else if (name == "welfareCostPerPop") params.welfareCostPerPop = (float)value;
+    else if (name == "automationYieldPerJob") params.automationYieldPerJob = (float)value;
+    else if (name == "unrestUnemploymentWeight") params.unrestUnemploymentWeight = (float)value;
+    else if (name == "unrestHungerWeight") params.unrestHungerWeight = (float)value;
+    else if (name == "unrestPowerWeight") params.unrestPowerWeight = (float)value;
+    else if (name == "unrestWelfareWeight") params.unrestWelfareWeight = (float)value;
+    else if (name == "unrestPoliceWeight") params.unrestPoliceWeight = (float)value;
+    else if (name == "unrestBoundWeight") params.unrestBoundWeight = (float)value;
+    else if (name == "unrestDeathsWeight") params.unrestDeathsWeight = (float)value;
+    else if (name == "unrestBirthsWeight") params.unrestBirthsWeight = (float)value;
+    else if (name == "unrestProtestThreshold" || name == "unrestSabotageThreshold" || name == "unrestUprisingThreshold") {
+        if (value > 100.0) return false;
+        if (name == "unrestProtestThreshold") params.unrestProtestThreshold = (float)value;
+        else if (name == "unrestSabotageThreshold") params.unrestSabotageThreshold = (float)value;
+        else params.unrestUprisingThreshold = (float)value;
+    }
+    else if (name == "unrestInertia" || name == "unrestProtestTaxReduction" ||
+        name == "unrestSabotageProbability" || name == "unrestUprisingProbability" ||
+        name == "unrestUprisingOutmigration") {
+        if (value > 1.0) return false;
+        if (name == "unrestInertia") params.unrestInertia = (float)value;
+        else if (name == "unrestProtestTaxReduction") params.unrestProtestTaxReduction = (float)value;
+        else if (name == "unrestSabotageProbability") params.unrestSabotageProbability = (float)value;
+        else if (name == "unrestUprisingProbability") params.unrestUprisingProbability = (float)value;
+        else params.unrestUprisingOutmigration = (float)value;
+    }
     else return false;
     return true;
 }
@@ -1303,6 +1409,22 @@ void Micropolis::markBaseline()
 
 double Micropolis::getParam(const std::string &name) const
 {
+    if (name == "podsEnabled") return params.podsEnabled;
+    if (name == "podsPerPlant") return params.podsPerPlant;
+    if (name == "podIntake") return podIntake;
+    if (name == "podBreeding") return podBreeding;
+    if (name == "aiThrottle") return aiThrottle;
+    if (name == "powerPlantCostMultiplier") return powerPlantCostMultiplier;
+    if (name == "podPowerPerHuman") return params.podPowerPerHuman;
+    if (name == "podFoodPerHuman") return params.podFoodPerHuman;
+    if (name == "recycledFoodPerHuman") return params.recycledFoodPerHuman;
+    if (name == "podBirthRate") return params.podBirthRate;
+    if (name == "podLifetimeMonths") return params.podLifetimeMonths;
+    if (name == "podMaturityMonths") return params.podMaturityMonths;
+    if (name == "podStarvationAging") return params.podStarvationAging;
+    if (name == "unrestBoundWeight") return params.unrestBoundWeight;
+    if (name == "unrestDeathsWeight") return params.unrestDeathsWeight;
+    if (name == "unrestBirthsWeight") return params.unrestBirthsWeight;
     if (name == "aiPowerPerPop") return params.aiPowerPerPop;
     if (name == "aiReserveLow") return params.aiReserveLow;
     if (name == "aiReserveHigh") return params.aiReserveHigh;
@@ -1316,6 +1438,22 @@ double Micropolis::getParam(const std::string &name) const
     if (name == "jobsPerAiPop") return params.jobsPerAiPop;
     if (name == "welfareLevel") return params.welfareLevel;
     if (name == "welfareCostPerPop") return params.welfareCostPerPop;
+    if (name == "unrestEnabled") return params.unrestEnabled ? 1.0 : 0.0;
+    if (name == "automationLimit") return params.automationLimit;
+    if (name == "automationYieldPerJob") return params.automationYieldPerJob;
+    if (name == "unrestInertia") return params.unrestInertia;
+    if (name == "unrestUnemploymentWeight") return params.unrestUnemploymentWeight;
+    if (name == "unrestHungerWeight") return params.unrestHungerWeight;
+    if (name == "unrestPowerWeight") return params.unrestPowerWeight;
+    if (name == "unrestWelfareWeight") return params.unrestWelfareWeight;
+    if (name == "unrestPoliceWeight") return params.unrestPoliceWeight;
+    if (name == "unrestProtestThreshold") return params.unrestProtestThreshold;
+    if (name == "unrestSabotageThreshold") return params.unrestSabotageThreshold;
+    if (name == "unrestUprisingThreshold") return params.unrestUprisingThreshold;
+    if (name == "unrestProtestTaxReduction") return params.unrestProtestTaxReduction;
+    if (name == "unrestSabotageProbability") return params.unrestSabotageProbability;
+    if (name == "unrestUprisingProbability") return params.unrestUprisingProbability;
+    if (name == "unrestUprisingOutmigration") return params.unrestUprisingOutmigration;
     return std::numeric_limits<double>::quiet_NaN();
 }
 ToolResult Micropolis::buildOwnedResidential(short x, short y, int owner)
@@ -1390,7 +1528,7 @@ int Micropolis::checkOwnerInvariant()
             const Byte owner = ownerMap.worldGet(x, y);
             const bool residentialCenter = tile < HOSPITAL;
             const bool farmCenter = isIndustrialCenterTile(tile);
-            const bool validOwnerCenter = owner == 3
+            const bool validOwnerCenter = owner == 3 || owner == 4
                 ? farmCenter
                 : (owner == 1 || owner == 2)
                     ? residentialCenter

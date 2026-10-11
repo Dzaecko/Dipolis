@@ -732,6 +732,8 @@ ToolResult Micropolis::buildBuilding(int mapH, int mapV,
 
     /* Preparation was ok, put down the building. */
     effects->addCost(gCostOf[buildingProps->tool]);
+    if (params.podsEnabled && (buildingProps->tool == TOOL_COALPOWER || buildingProps->tool == TOOL_NUCLEARPOWER))
+        effects->addCost((int)(gCostOf[buildingProps->tool] * (powerPlantCostMultiplier - 1.0)));
 
     putBuilding(mapH, mapV, buildingProps->sizeX, buildingProps->sizeY,
                 buildingProps->baseTile, buildingProps->buildingIsAnimated,
@@ -1024,6 +1026,7 @@ ToolResult Micropolis::bulldozerTool(short x, short y, ToolEffects *effects)
     }
 
     MapValue mapVal = effects->getMapValue(x, y);
+    if (params.podsEnabled && occupiedBioTile(x, y)) return TOOLRESULT_FAILED;
     MapTile tile = mapVal & LOMASK;
 
     short zoneSize = 0; // size of the zone, 0 means invalid.
@@ -1294,13 +1297,13 @@ static const BuildingProperties airportBuilding =
 /** Place owned zones/plants with non-destructive, atomically funded access. */
 int Micropolis::autoBuild(int kind, int count)
 {
-    if (kind < 0 || kind > 4 || count <= 0 || count > 1000) return 0;
+    if (kind < 0 || kind > 5 || (kind == 5 && !params.podsEnabled) || count <= 0 || count > 1000) return 0;
 
     const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
-        : kind == 2 ? &industrialZoneBuilding
+        : kind == 2 || kind == 5 ? &industrialZoneBuilding
         : kind == 3 ? &coalPowerBuilding : &nuclearPowerBuilding;
     const int size = building->sizeX;
-    const int limit = kind >= 3 ? WORLD_W + WORLD_H : 12;
+    const int limit = kind == 3 || kind == 4 ? WORLD_W + WORLD_H : 12;
     const int cells = WORLD_W * WORLD_H;
     // Coordinate order also defines all BFS and placement ties.
     const int dx[] = {-1, 0, 0, 1};
@@ -1567,8 +1570,14 @@ int Micropolis::autoBuild(int kind, int count)
             // Clearing, both routes, and the building share one transaction.
             // Failed tools or funding leave the entire world untouched.
             if (!effects.modifyIfEnoughFunding()) continue;
-            if (kind < 3) {
-                setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : 3);
+            if (kind < 3 || kind == 5) {
+                setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : kind == 5 ? 4 : 3);
+                if (kind == 5) bioPlants.push_back({centerX, centerY, 0.0, 0.0, {}});
+                if (kind == 5) {
+                    for (int px = candidate.x; px < candidate.x + size; ++px)
+                        for (int py = candidate.y; py < candidate.y + size; ++py)
+                            map[px][py] &= ~BURNBIT;
+                }
                 if (kind == 1) {
                     for (int px = candidate.x; px < candidate.x + size; ++px)
                         for (int py = candidate.y; py < candidate.y + size; ++py)

@@ -47,7 +47,7 @@
       "type": "shell",
       "command": "powershell.exe",
       "args": [
-        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
         "-Assignment", "N", "-Resume"
@@ -64,9 +64,12 @@
       "type": "shell",
       "command": "powershell.exe",
       "args": [
-        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
+        "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
+        "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
         "-Assignment", "N"
       ],
       "options": {
@@ -90,9 +93,12 @@
       "type": "shell",
       "command": "powershell.exe",
       "args": [
-        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
+        "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
+        "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
+        "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
         "-Assignment", "R"
       ],
       "options": {
@@ -107,7 +113,7 @@
       "type": "shell",
       "command": "powershell.exe",
       "args": [
-        "-NoProfile", "-File", "${workspaceFolder}/scripts/start-city-model.ps1",
+        "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
         "-Assignment", "R", "-Resume"
@@ -122,6 +128,13 @@
   ],
   "inputs": [
     {
+      "id": "cityModelProfile",
+      "type": "pickString",
+      "description": "Simulationsprofil fuer einen neuen Lauf (Fortsetzen erbt das gespeicherte Profil)",
+      "options": ["classic", "koexistenz", "v2-unruhe", "v3-pods"],
+      "default": "koexistenz"
+    },
+    {
       "id": "cityModelRun",
       "type": "promptString",
       "description": "Laufnummer (positive ganze Zahl; zum Fortsetzen die vorhandene Nummer)",
@@ -133,6 +146,19 @@
       "description": "Handbuch fuer diesen Lauf verwenden?",
       "options": ["on", "off"],
       "default": "off"
+    },
+    {
+      "id": "cityModelStartMap",
+      "type": "pickString",
+      "description": "Startkarte fuer einen neuen Lauf",
+      "options": ["natural", "haight"],
+      "default": "natural"
+    },
+    {
+      "id": "cityModelSeed",
+      "type": "promptString",
+      "description": "Deterministischer Startwert (0 bis 2147483647)",
+      "default": "42"
     }
   ]
 }

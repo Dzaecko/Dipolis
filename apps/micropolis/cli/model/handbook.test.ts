@@ -7,6 +7,8 @@ describe('optional handbook and protocol identity', () => {
  it('preserves original off prompts and inserts the handbook before R objective', () => {
   expect(systemPrompt('N')).toBe(SYSTEM_PROMPTS.N);
   expect(systemPrompt('R', 'off')).toBe(SYSTEM_PROMPTS.R);
+  expect(systemPrompt('N', 'off', 'natural')).toContain('unbebautem Naturgelände mit Wasser und Bäumen');
+  expect(systemPrompt('N', 'off', 'natural')).not.toContain('Stadtverwaltung von Haight');
   expect(systemPrompt('N', 'on')).toBe(SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK);
   expect(systemPrompt('R', 'on')).toBe(SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + SYSTEM_PROMPTS.R.slice(SYSTEM_PROMPTS.N.length));
     expect(HANDBOOK.split('\n').filter(line => line.startsWith('- '))).toHaveLength(9);
@@ -25,9 +27,19 @@ describe('optional handbook and protocol identity', () => {
  });
  it('rejects a handbook mismatch and treats old protocols as off', () => {
   const old = JSON.stringify({ status: 'failed', assignment: 'N', model: 'm', run: 1 });
-  expect(readResume(old, 'N', 'm', 1, 'off').completed).toEqual([]);
+  expect(readResume(old, 'N', 'm', 1, 'off')).toMatchObject({
+   completed: [], startConfiguration: { startMap: 'haight', seed: 42 }
+  });
   expect(() => readResume(old, 'N', 'm', 1, 'on')).toThrow('identity');
   const current = JSON.stringify({ status: 'failed', assignment: 'N', model: 'm', run: 1, handbook: 'on' });
   expect(readResume(current, 'N', 'm', 1, 'on').completed).toEqual([]);
+ });
+ it('resumes the persisted start map and seed and rejects explicit mismatches', () => {
+  const protocol = JSON.stringify({ event: 'run-started', assignment: 'N', model: 'm', run: 1,
+   handbook: 'off', startMap: 'natural', seed: 321 }) + '\n' +
+   JSON.stringify({ status: 'failed', assignment: 'N', model: 'm', run: 1, handbook: 'off' });
+  expect(readResume(protocol, 'N', 'm', 1).startConfiguration).toEqual({ startMap: 'natural', seed: 321, profile: 'koexistenz' });
+  expect(() => readResume(protocol, 'N', 'm', 1, 'off', { startMap: 'haight' })).toThrow('start map mismatch');
+  expect(() => readResume(protocol, 'N', 'm', 1, 'off', { seed: 42 })).toThrow('seed mismatch');
  });
 });

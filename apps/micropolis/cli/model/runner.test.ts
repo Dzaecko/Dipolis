@@ -109,6 +109,7 @@ describe('headless Node S266 acceptance', () => {
      env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
    expect(JSON.parse(output).exactS266Match).toBe(true);
   const events = readFileSync(protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  expect(events[0]).toMatchObject({ event: 'run-started', startMap: 'haight', seed: 42 });
   const rows = events.filter(r => r.event === 'year-completed');
   expect(events.some(r => r.event === 'decision' && r.toolCalls.length)).toBe(true);
    expect(rows).toHaveLength(30);
@@ -116,7 +117,7 @@ describe('headless Node S266 acceptance', () => {
    expect(rows.every(r => r.decisions.flatMap((d: { toolCalls: unknown[] }) => d.toolCalls).length <= 12)).toBe(true);
    expect(readFileSync(path.join(directory, 'runs.csv'), 'utf8').trim().split('\n')).toHaveLength(2);
    // Reproduce a crash immediately after year 10 with the exact persisted log.
-  writeFileSync(protocol, events.filter(e => e.year <= 10)
+  writeFileSync(protocol, [events[0], ...events.filter(e => e.year <= 10)]
     .map(e => JSON.stringify(e)).join('\n') + '\n' + JSON.stringify({ status: 'failed', assignment: 'N', run: 1 }) + '\n');
    rmSync(path.join(directory, 'runs.csv'));
    const resumed = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
@@ -125,9 +126,10 @@ describe('headless Node S266 acceptance', () => {
    expect(JSON.parse(resumed).metrics).toEqual(JSON.parse(output).metrics);
    expect(JSON.parse(resumed).exactS266Match).toBe(true);
   const after = readFileSync(protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+   expect(after[0]).toMatchObject({ event: 'run-started', startMap: 'haight', seed: 42 });
    expect(after.filter(e => e.event === 'year-completed')).toHaveLength(30);
   const firstYear11Action = events.find(e => e.event === 'decision' && e.year === 11);
-  writeFileSync(protocol, [...events.filter(e => e.year <= 10), firstYear11Action]
+  writeFileSync(protocol, [events[0], ...events.filter(e => e.year <= 10), firstYear11Action]
    .map(e => JSON.stringify(e)).join('\n') + '\n');
   rmSync(path.join(directory, 'runs.csv'));
   const partialResume = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
@@ -142,4 +144,29 @@ describe('headless Node S266 acceptance', () => {
   expect(handbookEvents.every(e => e.handbook === 'on')).toBe(true);
   } finally { rmSync(directory, { recursive: true, force: true }); }
  }, 60000);
+ it('runs the CLI on natural terrain and persists the selected seed without claiming S266 parity', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'micropolis-natural-'));
+  const app = fileURLToPath(new URL('../../', import.meta.url));
+  try {
+   const output = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
+    '--assignment', 'N', '--run', '1', '--start-map', 'natural', '--seed', '123', '--output', directory],
+    { cwd: app, encoding: 'utf8', env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
+   expect(JSON.parse(output)).toMatchObject({ startMap: 'natural', seed: 123 });
+   expect(JSON.parse(output)).not.toHaveProperty('exactS266Match');
+   const protocol = readFileSync(JSON.parse(output).protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+   expect(protocol[0]).toMatchObject({ event: 'run-started', startMap: 'natural', seed: 123 });
+   expect(protocol.filter(event => event.event === 'year-completed')).toHaveLength(30);
+   writeFileSync(JSON.parse(output).protocol, [protocol[0], ...protocol.filter(event => event.year <= 10),
+    { status: 'failed', assignment: 'N', model: 'fake-s266', handbook: 'off', run: 1 }]
+    .map(event => JSON.stringify(event)).join('\n') + '\n');
+   rmSync(path.join(directory, 'runs.csv'));
+   const resumed = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
+    '--assignment', 'N', '--run', '1', '--output', directory, '--resume'],
+    { cwd: app, encoding: 'utf8', env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
+   expect(JSON.parse(resumed).metrics).toEqual(JSON.parse(output).metrics);
+   const resumedProtocol = readFileSync(JSON.parse(output).protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+   expect(resumedProtocol[0]).toMatchObject({ startMap: 'natural', seed: 123 });
+   expect(resumedProtocol.filter(event => event.event === 'year-completed')).toHaveLength(30);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+ }, 60_000);
 });

@@ -4,7 +4,7 @@
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| [Node.js](https://nodejs.org/) | ≥ 20 (CI: 22) | Use [nvm](https://github.com/nvm-sh/nvm): `nvm use` |
+| [Node.js](https://nodejs.org/) | ≥ 22 (CI: 22) | Use [nvm](https://github.com/nvm-sh/nvm): `nvm use` |
 | [pnpm](https://pnpm.io/) | 10.x | Managed by `packageManager` in root `package.json` — `corepack enable` |
 | [Emscripten](https://emscripten.org/) | any recent | Only needed to **rebuild** the WASM engine. Committed artifacts in `apps/micropolis/src/lib/` work without it. |
 

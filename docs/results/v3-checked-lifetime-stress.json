@@ -1,0 +1,48 @@
+{
+  "startedAt": "2026-10-11T20:26:12.153Z",
+  "finishedAt": "2026-10-11T20:26:41.491Z",
+  "elapsedMs": 29337,
+  "node": "v24.20.0",
+  "platform": "win32-arm64",
+  "engine": "packages\\micropolis-engine\\build\\diagnostics\\micropolisengine.js",
+  "engineSha256": "34b12ee9c1ac08e3c55f017e35282bb61b0db5ef13d2596227fe98e5e694a079",
+  "wasmSha256": "e78396a562ec059c19eb8d83ca8ebbd3dd1775220440d9c9823307086de3a32f",
+  "city": "haight.cty",
+  "citySha256": "510fcdbd90d1ab86f3d266b6cbdcd7529d89deb972fe51feac2f876d75ef4cca",
+  "profile": "v3-pods",
+  "unrestStress": true,
+  "disasters": true,
+  "speed": 3,
+  "passes": 1,
+  "ticksPerRun": 12000,
+  "requestedRuns": 2,
+  "completedRuns": 2,
+  "passedRuns": 2,
+  "completedTicks": 24000,
+  "results": [
+    {
+      "seed": 0,
+      "completedTicks": 12000,
+      "status": "passed",
+      "cityTime": 5589,
+      "cityPop": 0,
+      "totalFunds": 487901,
+      "mapSha1": "d2acad15d6f7789a93613af73634f65d2cb55455",
+      "exitCode": 0,
+      "elapsedMs": 14340,
+      "diagnostics": "(node:25568) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/build/diagnostics/micropolisengine.js is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\oliverdzaeck\\repos\\Dipolis\\packages\\micropolis-engine\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nHeap resize call from 328794112 to 394592256 took 1.1019000000000005 msecs. Success: true\nHeap resize call from 394592256 to 473563136 took 1.6062000000001717 msecs. Success: true\n"
+    },
+    {
+      "seed": 1,
+      "completedTicks": 12000,
+      "status": "passed",
+      "cityTime": 5589,
+      "cityPop": 0,
+      "totalFunds": 485989,
+      "mapSha1": "90bf49a3d87c1f6d1ffd5bdcf1ab19500830294a",
+      "exitCode": 0,
+      "elapsedMs": 14963,
+      "diagnostics": "(node:40900) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/build/diagnostics/micropolisengine.js is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\oliverdzaeck\\repos\\Dipolis\\packages\\micropolis-engine\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nHeap resize call from 328794112 to 394592256 took 0.6398000000000081 msecs. Success: true\nHeap resize call from 394592256 to 473563136 took 1.4817000000002736 msecs. Success: true\n"
+    }
+  ]
+}

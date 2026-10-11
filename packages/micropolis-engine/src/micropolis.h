@@ -956,6 +956,34 @@ struct MicropolisParams {
     float jobsPerAiPop = 0.0f;
     float welfareLevel = 0.0f;
     float welfareCostPerPop = 0.0f;
+    bool unrestEnabled = false;
+    bool podsEnabled = false;
+    int podsPerPlant = 357;
+    double podPowerPerHuman = 1.96078431372549;
+    double podFoodPerHuman = 1.0;
+    double recycledFoodPerHuman = 40.0;
+    double podBirthRate = 1.0 / 144.0;
+    double podLifetimeMonths = 120.0;
+    double podMaturityMonths = 24.0;
+    double podStarvationAging = 1.0;
+    float unrestBoundWeight = 30.0f;
+    float unrestDeathsWeight = 50.0f;
+    float unrestBirthsWeight = 20.0f;
+    float automationLimit = 0.9f;
+    float automationYieldPerJob = 0.0f;
+    float unrestInertia = 0.2f;
+    float unrestUnemploymentWeight = 90.0f;
+    float unrestHungerWeight = 50.0f;
+    float unrestPowerWeight = 30.0f;
+    float unrestWelfareWeight = 35.0f;
+    float unrestPoliceWeight = 20.0f;
+    float unrestProtestThreshold = 30.0f;
+    float unrestSabotageThreshold = 60.0f;
+    float unrestUprisingThreshold = 85.0f;
+    float unrestProtestTaxReduction = 0.2f;
+    float unrestSabotageProbability = 0.12f;
+    float unrestUprisingProbability = 0.6f;
+    float unrestUprisingOutmigration = 0.25f;
 };
 
 class Micropolis {
@@ -1118,6 +1146,53 @@ public:
     /** Fraction of AI residential demand covered by the latest power scan. */
     float aiCoverage = 1.0f;
     float automationShare = 0.0f;
+    Quad automationTaxFund = 0;
+    float automatedJobs = 0.0f;
+    float unrest = 0.0f;
+    short unrestStage = 0;
+    Quad sabotageFires = 0;
+    Quad damagedAiZones = 0;
+    Quad damagedPowerPlants = 0;
+    Quad protestMonths = 0;
+    Quad sabotageMonths = 0;
+    Quad uprisingMonths = 0;
+    Quad pendingSabotageFires = 0;
+    Quad pendingDamagedAiZones = 0;
+    Quad pendingDamagedPowerPlants = 0;
+    Quad pendingStageMonths[3] = {0, 0, 0};
+    void updateUnrest();
+    struct PodCohort {
+        int admissionMonth;
+        int count;
+        bool born;
+        double age;
+    };
+    struct BioPlant {
+        int x, y;
+        double birthCarry = 0.0;
+        double foodStock = 0.0;
+        std::vector<PodCohort> cohorts;
+    };
+    std::vector<BioPlant> bioPlants;
+    bool podBreeding = false;
+    short podIntake = 0;
+    double aiThrottle = 0.0;
+    double powerPlantCostMultiplier = 1.0;
+    int podMonth = 0;
+    Quad boundHumans = 0, admissions = 0, admissionsCumulative = 0;
+    Quad diedInPods = 0, diedInPodsCumulative = 0;
+    Quad bornInPods = 0, bornInPodsCumulative = 0, immatureBornInPods = 0, bornPodOccupants = 0;
+    Quad pendingAdmissions = 0, pendingPodDeaths = 0, pendingPodBirths = 0;
+    double plantPower = 0.0, plantFoodDemand = 0.0, podFoodStock = 0.0;
+    double podRecycledFoodFraction = 0.0, podCityFoodFraction = 0.0, bornInPodsFraction = 0.0;
+    double podCityFoodDemand = 0.0, suspendedAi = 0.0;
+    double pendingPodCityFood = 0.0;
+    void updatePods();
+    void refreshPods();
+    void setHumanZonePopulation(const Position &pos, int population);
+    bool occupiedBioTile(int x, int y) const;
+    int getBioPlantCount() const;
+    bool igniteUnrestFire(bool uprising);
     float unemploymentRate = 0.0f;
     /** Test-only switch to execute the first-fork power scan implementation. */
     bool useOriginalPowerScanForTests = false;
@@ -1377,6 +1452,7 @@ public:
     MapByte1 aiHouseMap;
     /** Last human population observed per residential zone, for diagnostic deltas. */
     MapByte1 previousHumanResPopMap;
+    MapByte1 humanPodOffsetMap;
     /** Cause latched when a human zone is downgraded; consumed on next census delta. */
     MapByte1 humanLossCauseMap;
     /** Last scan result per zone center: bit 0 unpowered, bit 1 hungry. Display only. */

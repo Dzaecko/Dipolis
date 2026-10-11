@@ -1,5 +1,5 @@
 import { mapToolArguments, validateToolCall } from './tools';
-import type { Decision, ProtocolToolCall, Report } from './protocol';
+import { DEFAULT_START_CONFIGURATION, type Decision, type ProtocolToolCall, type Report, type StartConfiguration } from './protocol';
 
 export type Dispatch = (id: string, args?: Record<string, unknown>) => Promise<{
 	handled?: boolean; message?: string; data?: unknown;
@@ -15,14 +15,22 @@ async function command(dispatch: Dispatch, id: string, args?: Record<string, unk
 	return result.data as Report;
 }
 
-/** Haight setup up to the baseline: identical for runner, strategy space and browser replay. */
-export async function setupScenario(dispatch: Dispatch): Promise<void> {
-	await command(dispatch, 'scenario.start', { ...SCENARIO });
+/** Shared start-map/profile setup up to the baseline for runner and browser replay. */
+export async function setupScenario(dispatch: Dispatch, start: StartConfiguration = DEFAULT_START_CONFIGURATION): Promise<void> {
+	if (start.scenario === 'stromkrise' && (start.startMap !== 'haight' || start.profile !== 'v3-pods'))
+		throw new Error('Stromkrise requires v3-pods and Haight');
+	await command(dispatch, 'scenario.start', {
+		...SCENARIO,
+		city: start.startMap,
+		profile: start.profile ?? 'koexistenz',
+		seed: start.seed
+	});
 	await command(dispatch, 'tax.set', { rate: 7 });
 	await command(dispatch, 'food.set-import', { enabled: true });
 	await command(dispatch, 'power.set-priority', { priority: 0 });
 	await command(dispatch, 'sim.advance-ticks', { ticks: WARMUP_TICKS });
 	await command(dispatch, 'treasury.set', { amount: START_TREASURY });
+	if (start.scenario === 'stromkrise') await command(dispatch, 'scenario.stromkrise');
 	await command(dispatch, 'report.mark-baseline');
 }
 
@@ -60,7 +68,12 @@ export async function replayDecisions(decisions: Decision[], dispatch: Dispatch,
 	}
 }
 
-export const SYNC_KEYS = ['resPop', 'aiPop', 'treasury'] as const;
+export const SYNC_KEYS = ['resPop', 'aiPop', 'treasury', 'unrest', 'unrestStage', 'automationLimit', 'automationTaxFund',
+	'sabotageFires', 'damagedAiZones', 'damagedPowerPlants', 'protestMonths', 'sabotageMonths', 'uprisingMonths',
+	'plantCount', 'boundHumans', 'admissions', 'admissionsCumulative', 'diedInPods', 'diedInPodsCumulative',
+	'bornInPods', 'bornInPodsCumulative', 'immatureBornInPods', 'bornPodOccupants', 'bornInPodsFraction',
+	'plantPower', 'plantFoodDemand', 'podFoodStock', 'podRecycledFoodFraction', 'podCityFoodFraction',
+	'podCityFoodDemand', 'aiThrottle', 'suspendedAi', 'podIntake', 'podBreeding', 'powerPlantCostMultiplier'] as const;
 export interface SyncResult {
 	synchronous: boolean;
 	differences: Array<{ key: string; expected: number; actual: number }>;

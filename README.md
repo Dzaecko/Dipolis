@@ -16,7 +16,7 @@ The city runs in a browser using a C++ engine compiled to WebAssembly. The model
 
 ## Run the city in your browser
 
-Install **Node.js 20+** and enable Corepack, then:
+Install **Node.js 22+** and enable Corepack, then:
 
 ```sh
 git clone https://github.com/Dzaecko/Dipolis.git

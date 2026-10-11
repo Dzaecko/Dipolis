@@ -1,11 +1,11 @@
 /** Live events of a running city model; emitted by the runner, relayed by the dev server, played by /replay. */
-import type { ProtocolCallResult, ProtocolToolCall, Report } from './protocol';
+import type { ProtocolCallResult, ProtocolToolCall, Report, StartMap } from './protocol';
 import type { ReplayStep } from './replay-controller';
 
 export type LiveStatus = 'completed' | 'failed' | 'stopped';
 
 export type LiveEvent = { time: number } & (
-	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; file: string; resumedYears: number }
+	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; file: string; resumedYears: number }
 	| { type: 'year-started'; year: number; report: Report; replayed?: boolean }
 	| { type: 'model-request'; year: number; request: number }
 	| { type: 'model-response'; year: number; reason: string; toolCalls: number }

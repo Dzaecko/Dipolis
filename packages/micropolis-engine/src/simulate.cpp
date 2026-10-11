@@ -197,6 +197,8 @@ void Micropolis::simulate()
             break;
 
         case 9:
+            if (params.podsEnabled && cityTime % 4 == 0) updatePods();
+            if (params.unrestEnabled && cityTime % 4 == 0) updateUnrest();
             if (cityTime % CENSUS_FREQUENCY_10 == 0) {
                 take10Census();
             }
@@ -566,6 +568,160 @@ void Micropolis::setCommonInits()
 }
 
 
+void Micropolis::setHumanZonePopulation(const Position &pos, int population)
+{
+    humanPodOffsetMap.worldSet(pos.posX, pos.posY, 0);
+    if (population > 8) {
+        const int represented = max(16, ((population + 7) / 8) * 8);
+        resPlop(pos, (represented - 16) / 8, 0);
+        humanPodOffsetMap.worldSet(pos.posX, pos.posY, (Byte)(represented - population));
+    } else {
+        zonePlop(pos, RESBASE);
+        int remaining = population;
+        for (int x = pos.posX - 1; x <= pos.posX + 1; ++x)
+            for (int y = pos.posY - 1; y <= pos.posY + 1; ++y)
+                if ((x != pos.posX || y != pos.posY) && testBounds(x, y) && remaining > 0) {
+                    map[x][y] = LHTHR | BLBNCNBIT;
+                    --remaining;
+                }
+    }
+}
+
+bool Micropolis::occupiedBioTile(int x, int y) const
+{
+    for (const auto &plant : bioPlants) {
+        if (abs(x - plant.x) > 1 || abs(y - plant.y) > 1) continue;
+        for (const auto &cohort : plant.cohorts) if (cohort.count > 0) return true;
+    }
+    return false;
+}
+
+int Micropolis::getBioPlantCount() const
+{
+    int count = 0;
+    for (const auto &plant : bioPlants)
+        if ((map[plant.x][plant.y] & ZONEBIT) && ownerMap.worldGet(plant.x, plant.y) == 4) ++count;
+    return count;
+}
+
+void Micropolis::refreshPods()
+{
+    boundHumans = immatureBornInPods = bornPodOccupants = 0;
+    plantPower = plantFoodDemand = podFoodStock = 0.0;
+    for (const auto &plant : bioPlants) {
+        podFoodStock += plant.foodStock;
+        for (const auto &cohort : plant.cohorts) {
+            boundHumans += cohort.count;
+            if (cohort.born) {
+                bornPodOccupants += cohort.count;
+                if (cohort.age < params.podMaturityMonths) immatureBornInPods += cohort.count;
+            }
+            const double adultAge = cohort.age - (cohort.born ? params.podMaturityMonths : 0.0);
+            if (adultAge >= 0.0)
+                plantPower += cohort.count * params.podPowerPerHuman *
+                    max(0.0, 1.0 - adultAge / params.podLifetimeMonths);
+        }
+    }
+    plantFoodDemand = boundHumans * params.podFoodPerHuman;
+    bornInPodsFraction = boundHumans ? (double)bornPodOccupants / boundHumans : 0.0;
+    suspendedAi = aiPop * aiThrottle;
+}
+
+void Micropolis::updatePods()
+{
+    ++podMonth;
+    // Empty demolished plants disappear; occupied plants cannot be demolished.
+    for (auto it = bioPlants.begin(); it != bioPlants.end();) {
+        if (it->cohorts.empty() && (!(map[it->x][it->y] & ZONEBIT) || ownerMap.worldGet(it->x, it->y) != 4))
+            it = bioPlants.erase(it);
+        else ++it;
+    }
+    int unemployedAvailable = (int)floor(resPop * unemploymentRate);
+    double consumedRecycled = 0.0;
+    podCityFoodDemand = 0.0;
+    double totalCityNeed = 0.0;
+    for (const auto &plant : bioPlants) {
+        int count = 0;
+        for (const auto &cohort : plant.cohorts) count += cohort.count;
+        totalCityNeed += max(0.0, count * params.podFoodPerHuman - plant.foodStock);
+    }
+    const double required = resPop * params.foodPerHumanPop + totalCityNeed * 12.0;
+    const double produced = farmPop * params.foodPerFarmPop;
+    const bool canImport = params.foodImportEnabled && (params.foodImportPrice <= 0.0 ||
+        totalFunds >= ceil(max(0.0, required - produced) * params.foodImportPrice));
+    const double cityCoverage = canImport || required <= 0.0 ? 1.0 : min(1.0, produced / required);
+    for (auto &plant : bioPlants) {
+        int occupants = 0;
+        for (const auto &cohort : plant.cohorts) occupants += cohort.count;
+        const double foodNeed = occupants * params.podFoodPerHuman;
+        const double cityNeed = max(0.0, foodNeed - plant.foodStock);
+        const double coverage = foodNeed > 0.0
+            ? min(1.0, (min(foodNeed, plant.foodStock) + cityNeed * cityCoverage) / foodNeed) : 1.0;
+        for (auto it = plant.cohorts.begin(); it != plant.cohorts.end();) {
+            const bool immature = it->born && it->age < params.podMaturityMonths;
+            it->age += immature ? 1.0 : 1.0 + params.podStarvationAging * (1.0 - coverage);
+            const double lifetime = params.podLifetimeMonths + (it->born ? params.podMaturityMonths : 0.0);
+            if (it->age >= lifetime) {
+                pendingPodDeaths += it->count;
+                diedInPodsCumulative += it->count;
+                plant.foodStock += it->count * params.recycledFoodPerHuman;
+                occupants -= it->count;
+                it = plant.cohorts.erase(it);
+            } else ++it;
+        }
+        int admitted = 0;
+        int free = max(0, params.podsPerPlant - occupants);
+        int intakeBudget = podIntake == 1 ? min(free, unemployedAvailable) : podIntake == 2 ? free : 0;
+        for (int x = 1; x < WORLD_W - 1 && intakeBudget > 0; ++x)
+            for (int y = 1; y < WORLD_H - 1 && intakeBudget > 0; ++y) {
+                const MapValue tile = map[x][y];
+                if (!(tile & ZONEBIT) || (tile & LOMASK) < RESBASE || (tile & LOMASK) >= HOSPITAL ||
+                    ownerMap.worldGet(x, y) == 2) continue;
+                const Position pos(x, y);
+                const int population = max(0, ((tile & LOMASK) == FREEZ ? doFreePop(pos) : getResZonePop(tile & LOMASK)) -
+                    (int)humanPodOffsetMap.worldGet(x, y));
+                const int taken = min(population, intakeBudget);
+                if (!taken) continue;
+                setHumanZonePopulation(pos, population - taken);
+                previousHumanResPopMap.worldSet(x, y, (Byte)(population - taken));
+                admitted += taken;
+                intakeBudget -= taken;
+            }
+        if (admitted) {
+            plant.cohorts.push_back({podMonth, admitted, false, 0.0});
+            occupants += admitted;
+            resPop = max(0, (int)resPop - admitted);
+            totalPop = (short)((float)resPop / 8.0f + comPop + indPop);
+            // Historical employment/tax census counts human population divided by eight.
+            resHist[1] = max(0, (int)resHist[1] - (admitted + 7) / 8);
+            unemployedAvailable = max(0, unemployedAvailable - admitted);
+            pendingAdmissions += admitted;
+            admissionsCumulative += admitted;
+        }
+        if (podBreeding) {
+            plant.birthCarry += occupants * params.podBirthRate;
+            const int requested = (int)floor(plant.birthCarry + 1e-12);
+            plant.birthCarry -= requested;
+            const int births = min(requested, max(0, params.podsPerPlant - occupants));
+            if (births) {
+                plant.cohorts.push_back({podMonth, births, true, 0.0});
+                occupants += births;
+                pendingPodBirths += births;
+                bornInPodsCumulative += births;
+            }
+        }
+        const double demand = occupants * params.podFoodPerHuman;
+        const double recycled = min(demand, plant.foodStock);
+        plant.foodStock -= recycled;
+        consumedRecycled += recycled;
+        podCityFoodDemand += demand - recycled;
+    }
+    pendingPodCityFood += podCityFoodDemand;
+    refreshPods();
+    podRecycledFoodFraction = plantFoodDemand ? consumedRecycled / plantFoodDemand : 0.0;
+    podCityFoodFraction = plantFoodDemand ? podCityFoodDemand / plantFoodDemand : 0.0;
+}
+
 /* comefrom: simulate doSimInit */
 void Micropolis::setValves()
 {
@@ -619,9 +775,9 @@ void Micropolis::setValves()
     totalPop = (short)(normalizedResPop + comPop + indPop);
 
     const float jobs = max(0.0f, (float)comHist[1] + (float)indHist[1]);
-    const float aiJobSupply = (float)aiPop * params.jobsPerAiPop;
+    const float aiJobSupply = (float)(aiPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0)) * params.jobsPerAiPop;
     const float automationJobs = jobs > 0.0f
-        ? min(aiJobSupply, params.maxAutomation * jobs)
+        ? min(aiJobSupply, (params.unrestEnabled ? min(params.maxAutomation, params.automationLimit) : params.maxAutomation) * jobs)
         : 0.0f;
     automationShare = jobs > 0.0f ? automationJobs / jobs : 0.0f;
     const float humanJobs = max(0.0f, jobs - automationJobs);
@@ -685,7 +841,7 @@ void Micropolis::setValves()
 
     // Ratios are velocity changes to valves.
     if (!aiValveOverride) {
-        const Quad aiDemand = (Quad)aiPop * params.aiPowerPerPop;
+        const Quad aiDemand = (Quad)(aiPop * params.aiPowerPerPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0));
         const bool classicPowerRules = aiPop == 0 && params.foodPerHumanPop == 0.0f && !params.foodImportEnabled;
         const Quad networkDemand = classicPowerRules ? powerNetworkSteps : powerNetworkReachableTiles;
         const Quad totalDemand = networkDemand + aiDemand;
@@ -705,6 +861,7 @@ void Micropolis::setValves()
 
     foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
     foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+    if (params.podsEnabled) foodDemand += (Quad)ceil(podCityFoodDemand * 12.0);
     foodImported = 0;
     // Coverage is refreshed between tax bookings; the reported cost remains
     // the amount actually booked by collectTax, not a new purchase estimate.
@@ -745,6 +902,75 @@ void Micropolis::setValves()
 
 
 /* comefrom: simulate doSimInit */
+// Monthly target uses human residential lots (not commercial/industrial outages).
+// U' = clamp(U + inertia * (clamp(wU*unemployment + wH*hungryShare
+//      + wP*humanOutageShare*aiPoweredShare - wW*welfare - wL*policeEffect/1000,0,100)-U),0,100).
+void Micropolis::updateUnrest()
+{
+    int humans = 0, humanOutages = 0, ais = 0, aiPowered = 0;
+    for (int x = 0; x < WORLD_W; ++x) for (int y = 0; y < WORLD_H; ++y) {
+        const MapValue tile = map[x][y];
+        if (!(tile & ZONEBIT) || (tile & LOMASK) < RESBASE || (tile & LOMASK) >= HOSPITAL) continue;
+        if (ownerMap.worldGet(x, y) == 2) {
+            ++ais;
+            if (tile & PWRBIT) ++aiPowered;
+        } else {
+            ++humans;
+            if (!(tile & PWRBIT)) ++humanOutages;
+        }
+    }
+    const float hungry = humans ? min(1.0f, (float)hungryZoneCount / humans) : 0.0f;
+    const float inequality = humans && ais ? (float)humanOutages / humans * aiPowered / ais : 0.0f;
+    const double podDenominator = max(1.0, (double)resPop + boundHumans);
+    const float podTarget = params.podsEnabled ? (float)(
+        params.unrestBoundWeight * boundHumans / podDenominator +
+        params.unrestDeathsWeight * diedInPods / podDenominator +
+        params.unrestBirthsWeight * bornInPods / podDenominator) : 0.0f;
+    const float target = humans || (params.podsEnabled && boundHumans) ? clamp(params.unrestUnemploymentWeight * unemploymentRate +
+        params.unrestHungerWeight * hungry + params.unrestPowerWeight * inequality -
+        params.unrestWelfareWeight * params.welfareLevel -
+        params.unrestPoliceWeight * clamp((float)policeEffect / MAX_POLICE_STATION_EFFECT, 0.0f, 1.0f) + podTarget,
+        0.0f, 100.0f) : 0.0f;
+    unrest = clamp(unrest + params.unrestInertia * (target - unrest), 0.0f, 100.0f);
+    unrestStage = unrest >= params.unrestUprisingThreshold ? 3 :
+        unrest >= params.unrestSabotageThreshold ? 2 : unrest >= params.unrestProtestThreshold ? 1 : 0;
+    if (unrestStage) ++pendingStageMonths[unrestStage - 1];
+    if (unrestStage >= 2) {
+        const bool uprising = unrestStage == 3;
+        const int attempts = uprising ? 3 : 1;
+        const float probability = uprising ? params.unrestUprisingProbability : params.unrestSabotageProbability;
+        for (int i = 0; i < attempts; ++i) {
+            if (getRandom16() / 65536.0f < probability && igniteUnrestFire(uprising)) ++pendingSabotageFires;
+        }
+    }
+}
+
+bool Micropolis::igniteUnrestFire(bool uprising)
+{
+    int count = 0;
+    for (int x = 0; x < WORLD_W; ++x) for (int y = 0; y < WORLD_H; ++y) {
+        const MapValue value = map[x][y];
+        const int tile = value & LOMASK;
+        if ((value & ZONEBIT) && ownerMap.worldGet(x, y) != 4 && (ownerMap.worldGet(x, y) == 2 || tile == POWERPLANT ||
+            tile == NUCLEAR || (uprising && tile >= COMBASE && tile < PORTBASE))) ++count;
+    }
+    if (!count) return false;
+    int selected = getRandom(count - 1);
+    for (int x = 0; x < WORLD_W; ++x) for (int y = 0; y < WORLD_H; ++y) {
+        const MapValue value = map[x][y];
+        const int tile = value & LOMASK;
+        if ((value & ZONEBIT) && ownerMap.worldGet(x, y) != 4 && (ownerMap.worldGet(x, y) == 2 || tile == POWERPLANT ||
+            tile == NUCLEAR || (uprising && tile >= COMBASE && tile < PORTBASE))) {
+            if (selected-- == 0) {
+                fireZone(Position(x, y), value);
+                map[x][y] = randomFire();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void Micropolis::clearCensus()
 {
     poweredZoneCount = 0;
@@ -947,7 +1173,28 @@ void Micropolis::collectTax()
         fireFund = (long)fireStationPop * 100;
         roadFund = (long)((roadTotal + (railTotal * 2)) * RLevels[gameLevel]);
         humanTaxFund = (long)((((Quad)totalPop * landValueAverage) / 120) * cityTax * FLevels[gameLevel]);
-        const long double aiTaxAmount = (long double)aiPop * params.aiYieldPerPop * cityTax;
+        if (params.unrestEnabled && unrestStage >= 1) {
+            humanTaxFund = (Quad)(humanTaxFund * (1.0f - params.unrestProtestTaxReduction));
+        }
+        automationTaxFund = 0;
+        automatedJobs = 0.0f;
+        if (params.unrestEnabled) {
+            const float jobs = max(0.0f, (float)comHist[1] + (float)indHist[1]);
+            automatedJobs = min((float)(aiPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0)) * params.jobsPerAiPop,
+                min(params.maxAutomation, params.automationLimit) * jobs);
+            automationTaxFund = (Quad)min((long double)std::numeric_limits<Quad>::max(),
+                (long double)automatedJobs * params.automationYieldPerJob * cityTax);
+            sabotageFires = pendingSabotageFires;
+            damagedAiZones = pendingDamagedAiZones;
+            damagedPowerPlants = pendingDamagedPowerPlants;
+            protestMonths = pendingStageMonths[0];
+            sabotageMonths = pendingStageMonths[1];
+            uprisingMonths = pendingStageMonths[2];
+            pendingSabotageFires = pendingDamagedAiZones = pendingDamagedPowerPlants = 0;
+            for (int i = 0; i < 3; ++i) pendingStageMonths[i] = 0;
+        }
+        const long double aiTaxAmount = (long double)aiPop * params.aiYieldPerPop * cityTax *
+            (params.podsEnabled ? 1.0 - aiThrottle : 1.0);
         if (aiTaxAmount > (long double)std::numeric_limits<Quad>::max()) {
             aiTaxFund = std::numeric_limits<Quad>::max();
         } else if (aiTaxAmount < (long double)std::numeric_limits<Quad>::min()) {
@@ -956,7 +1203,7 @@ void Micropolis::collectTax()
             aiTaxFund = (Quad)aiTaxAmount;
         }
         taxFund = humanTaxFund;
-        const long long combinedTaxFund = (long long)humanTaxFund + (long long)aiTaxFund;
+        const long long combinedTaxFund = (long long)humanTaxFund + (long long)aiTaxFund + (long long)automationTaxFund;
         if (combinedTaxFund > (long long)std::numeric_limits<Quad>::max()) {
             taxFund = std::numeric_limits<Quad>::max();
         } else if (combinedTaxFund < (long long)std::numeric_limits<Quad>::min()) {
@@ -972,6 +1219,14 @@ void Micropolis::collectTax()
         // balance here so imports cover demand first observed in this census.
         foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
         foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
+        if (params.podsEnabled) {
+            foodDemand += (Quad)ceil(pendingPodCityFood);
+            pendingPodCityFood = 0.0;
+            admissions = pendingAdmissions;
+            diedInPods = pendingPodDeaths;
+            bornInPods = pendingPodBirths;
+            pendingAdmissions = pendingPodDeaths = pendingPodBirths = 0;
+        }
 
         const long double requestedWelfareCost = (long double)resPop * unemploymentRate *
             params.welfareCostPerPop * params.welfareLevel;
@@ -1099,6 +1354,7 @@ void Micropolis::mapScan(int x1, int x2)
             // doResidential as a human zone again. Retire their actual snapshot,
             // rather than forcing the city-wide population identity to balance.
             if (!residentialCenter || owner == 2) {
+                humanPodOffsetMap.worldSet(x, y, 0);
                 const Byte previousPop = previousHumanResPopMap.worldGet(x, y);
                 lostToDemand += previousPop;
                 previousHumanResPopMap.worldSet(x, y, 0);
@@ -1107,7 +1363,7 @@ void Micropolis::mapScan(int x1, int x2)
             const bool farmCenter = (mapVal & ZONEBIT) &&
                 (tile == INDCLR || (tile >= IZB && tile <= IZB + 7 * 9 && ((tile - IZB) % 9) == 0));
             if ((owner == 1 || owner == 2) && !residentialCenter) ownerMap.worldSet(x, y, 0);
-            if (owner == 3 && !farmCenter) ownerMap.worldSet(x, y, 0);
+            if ((owner == 3 || owner == 4) && !farmCenter) ownerMap.worldSet(x, y, 0);
 
             if (tile == DIRT) {
                 continue;
@@ -1515,6 +1771,10 @@ void Micropolis::doFire(const Position &pos)
  */
 void Micropolis::fireZone(const Position &pos, MapValue ch)
 {
+    if (params.unrestEnabled) {
+        if (ownerMap.worldGet(pos.posX, pos.posY) == 2) ++pendingDamagedAiZones;
+        if ((ch & LOMASK) == POWERPLANT || (ch & LOMASK) == NUCLEAR) ++pendingDamagedPowerPlants;
+    }
     short XYmax;
 
     int value = rateOfGrowthMap.worldGet(pos.posX, pos.posY);

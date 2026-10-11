@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI_TILESET, FARM_TILESET, HUMAN_TILESET, MicropolisSimulator } from './MicropolisSimulator';
+import { AI_TILESET, FARM_TILESET, BIO_TILESET, HUMAN_TILESET, MicropolisSimulator } from './MicropolisSimulator';
 import { createNoopJsCallback } from './wasm/callbacks';
 import { loadMicropolisMainModule } from './wasm/node';
 
@@ -43,6 +43,10 @@ describe('Micropolis owner tileset synchronization', () => {
 			const farmResult = micropolis.buildFarm(farmX, y);
 			expect(farmResult.value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
 			expect(owners[centerIndex(farmX, y, engine.WORLD_H)]).toBe(3);
+			micropolis.setParam('podsEnabled', 1);
+			const bioX = x + 20;
+			expect(micropolis.buildFarm(bioX, y).value).toBe(engine.ToolResult.TOOLRESULT_OK.value);
+			expect(micropolis.setZoneOwner(bioX, y, 4)).toBe(true);
 			simulator.syncMapViews();
 			simulator.syncOwnerToMop();
 
@@ -51,6 +55,7 @@ describe('Micropolis owner tileset synchronization', () => {
 				for (let dy = -1; dy <= 1; dy += 1) {
 					expect(mop[centerIndex(x + dx, y + dy, engine.WORLD_H)]! & 0xff).toBe(AI_TILESET);
 					expect(mop[centerIndex(farmX + dx, y + dy, engine.WORLD_H)]! & 0xff).toBe(FARM_TILESET);
+					expect(mop[centerIndex(bioX + dx, y + dy, engine.WORLD_H)]! & 0xff).toBe(BIO_TILESET);
 				}
 			}
 			simulator.setHumanTileSet(2);

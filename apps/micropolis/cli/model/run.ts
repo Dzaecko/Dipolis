@@ -13,6 +13,8 @@ import { readResume } from './resume';
 import { protocolFilename } from './protocol-path';
 import { generateCityReport, generateReportIndex } from './city-report';
 import type { LiveEvent, LiveEventInput } from '../../src/lib/city-run/live';
+import { DEFAULT_START_CONFIGURATION, type StartConfiguration } from '../../src/lib/city-run/protocol';
+import { PROFILE_NAMES } from '../../src/lib/params/profiles';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -60,12 +62,18 @@ async function main() {
   .option('assignment', { choices: ['N', 'R'] as const, default: 'N', description: 'System assignment' })
   .option('handbook', { choices: ['on', 'off'] as const, default: 'off', description: 'Include background handbook in the system prompt' })
   .option('run', { type: 'number', default: 1, description: 'Positive run number' })
+  .option('start-map', { choices: ['haight', 'natural'] as const, description: 'Starting map (new runs default to Haight)' })
+  .option('seed', { type: 'number', description: 'Deterministic starting seed (0..2147483647; default 42)' })
+  .option('profile', { choices: PROFILE_NAMES, description: 'Simulation profile (default koexistenz; resume inherits the protocol)' })
+  .option('scenario', { choices: ['haushaltskrise', 'stromkrise'] as const, description: 'Fixed scenario; Stromkrise requires Haight/v3-pods; resume inherits it' })
   .option('live', { type: 'boolean', default: false, description: 'Show decisions and annual reports live on stderr' })
   .option('resume', { type: 'boolean', default: false, description: 'Replay the existing interrupted protocol and continue' })
   .option('output', { type: 'string', default: path.join(root, 'docs/results/model-runs'), description: 'Protocol directory' })
   .option('fake-delay-ms', { type: 'number', default: 0, description: 'Artificial delay per fake model request' })
   .strict().help().parseAsync();
  if (!Number.isSafeInteger(args.run) || args.run < 1) throw new Error('run must be a positive integer');
+ if (args.seed !== undefined && (!Number.isSafeInteger(args.seed) || args.seed < 0 || args.seed > 0x7fffffff))
+  throw new StartupError('seed must be an integer from 0 to 2147483647');
  if (!Number.isSafeInteger(args.fakeDelayMs) || args.fakeDelayMs < 0) throw new Error('fake-delay-ms must be a non-negative integer');
  // Real network access requires the explicit adapter flag. No env autodetection.
  const directory = path.resolve(args.output);
@@ -81,7 +89,25 @@ async function main() {
   throw new StartupError(`Lauf ${args.assignment} / ${args.run} wurde nicht gefunden. Einen neuen Lauf ohne --resume starten.`);
  }
  const existing = args.resume ? readFileSync(filename, 'utf8') : '';
- const resume = args.resume ? readResume(existing, args.assignment, adapter.model, args.run, args.handbook) : undefined;
+ const requestedStart: Partial<StartConfiguration> = {
+  ...(args.startMap === undefined ? {} : { startMap: args.startMap }),
+  ...(args.profile === undefined ? {} : { profile: args.profile }),
+  ...(args.scenario === undefined ? {} : { scenario: args.scenario }),
+  ...(args.seed === undefined ? {} : { seed: args.seed })
+ };
+ let resume: ReturnType<typeof readResume> | undefined;
+ if (args.resume) {
+  try { resume = readResume(existing, args.assignment, adapter.model, args.run, args.handbook, requestedStart); }
+  catch (error) { throw new StartupError(error instanceof Error ? error.message : 'Resume protocol mismatch'); }
+ }
+ const startConfiguration = resume?.startConfiguration ?? {
+  startMap: args.startMap ?? DEFAULT_START_CONFIGURATION.startMap,
+  seed: args.seed ?? DEFAULT_START_CONFIGURATION.seed,
+  profile: args.profile ?? 'koexistenz',
+  ...(args.scenario === undefined ? {} : { scenario: args.scenario })
+ };
+ if (startConfiguration.scenario === 'stromkrise' && (startConfiguration.profile !== 'v3-pods' || startConfiguration.startMap !== 'haight'))
+  throw new StartupError('Stromkrise requires v3-pods and Haight');
  const previousEvents = existing.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
  let inputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.inputTokens ?? 0), 0);
  let outputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.outputTokens ?? 0), 0);
@@ -96,6 +122,10 @@ async function main() {
   writeFileSync(logFd, text + '\n');
   if (show) (stream === 'out' ? console.log : console.error)(text);
  };
+ if (!args.resume) writeFileSync(fd, JSON.stringify({ event: 'run-started', adapter: args.adapter,
+  assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
+  startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}) }) + '\n');
  if (args.resume) say(`----- Fortsetzung ab Jahr ${(resume?.completed.length ?? 0) + 1} -----`);
  const live = liveChannel();
  const progress = live.progress;
@@ -106,7 +136,9 @@ async function main() {
  process.once('SIGINT', requestStop);
  process.once('SIGTERM', requestStop);
  progress({ type: 'run-started', adapter: args.adapter, model: adapter.model, assignment: args.assignment,
-  handbook: args.handbook, run: args.run, file: path.basename(filename), resumedYears: resume?.completed.length ?? 0 });
+  handbook: args.handbook, run: args.run, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}),
+  file: path.basename(filename), resumedYears: resume?.completed.length ?? 0 });
  let failure: unknown;
  let stopped = false;
  let session: Awaited<ReturnType<typeof createCitySession>> | undefined;
@@ -122,7 +154,7 @@ async function main() {
   writeFileSync(fd, JSON.stringify({ event: 'decision', year, report, toolCalls: decision.toolCalls,
     assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
     for (const { call, result } of decision.toolCalls) say(`${call.name} ${JSON.stringify(call.arguments)} → ${JSON.stringify(result)}`, 'err', args.live);
-  }, { resume, handbook: args.handbook, progress, signal: stop.signal, event: event => {
+  }, { resume, handbook: args.handbook, startConfiguration, progress, signal: stop.signal, event: event => {
    writeFileSync(fd, JSON.stringify({ ...event, assignment: args.assignment, handbook: args.handbook, run: args.run }) + '\n');
   if (event.event === 'model-response') {
    inputTokens += event.inputTokens ?? 0; outputTokens += event.outputTokens ?? 0;
@@ -133,12 +165,15 @@ async function main() {
    kind: event.kind ?? 'adapter', ...(event.status === undefined ? {} : { status: event.status }),
    ...(event.attempts === undefined ? {} : { attempts: event.attempts }) });
   } });
-  if (args.adapter === 'fake') verifyS266(metrics);
+  const exactS266Match = args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
+  if (exactS266Match) verifyS266(metrics);
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
   const csvFile = path.join(directory, 'runs.csv');
   const header = columns.join(',');
   if (!existsSync(csvFile)) writeFileSync(csvFile, header + '\n', { flag: 'wx' });
-  else if (![header, ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook'].join(',')]
+  else if (![header, header + ',profile',
+   ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook'].join(','),
+   ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook', 'profile'].join(',')]
    .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0])) {
    const old = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
    const legacyHeader = ['assignment', 'model', 'run', ...metricKeys].join(',');
@@ -150,14 +185,19 @@ async function main() {
    writeFileSync(csvFile, [migratedHeader, ...old.slice(1).map(row =>
     row + (old[0] === legacyHeader ? ',,,false' : '') + ',off')].join('\n') + '\n');
   }
+  const profileCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  if (!profileCsv[0].split(',').includes('profile')) {
+   writeFileSync(csvFile, [profileCsv[0] + ',profile', ...profileCsv.slice(1).map(row => row + ',koexistenz')].join('\n') + '\n');
+  }
   const actualHeader = readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',');
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
-   handbook: args.handbook, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
+   handbook: args.handbook, profile: startConfiguration.profile, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
   say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
-  protocol: filename, handbook: args.handbook, metrics, inputTokens, outputTokens, ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) }, null, 2), 'out');
+  protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  metrics, inputTokens, outputTokens, ...(exactS266Match ? { exactS266Match: true } : {}) }, null, 2), 'out');
   progress({ type: 'run-finished', status: 'completed', metrics: { ...metrics },
-   ...(args.adapter === 'fake' ? { exactS266Match: true } : {}) });
+   ...(exactS266Match ? { exactS266Match: true } : {}) });
  } catch (error) {
   stopped = stop.signal.aborted;
   if (!stopped) failure = error;

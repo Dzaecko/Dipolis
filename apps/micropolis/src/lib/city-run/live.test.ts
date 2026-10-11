@@ -36,12 +36,19 @@ describe('live protocol events', () => {
 	it('validates live start parameters and reads model config without echoing secrets', () => {
 		expect(parseStartRequest({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, fakeDelayMs: 3000 }))
 			.toEqual({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, resume: false, fakeDelayMs: 3000 });
+		expect(parseStartRequest({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, startMap: 'natural', seed: 42 }))
+			.toMatchObject({ startMap: 'natural', seed: 42 });
 		expect(() => parseStartRequest({ adapter: 'openai', assignment: 'N', handbook: 'off', run: 0 })).toThrow('Ungültige Laufparameter');
+		expect(() => parseStartRequest({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, seed: -1 }))
+			.toThrow('Startwert');
 		const folder = mkdtempSync(path.join(os.tmpdir(), 'city-live-config-'));
 		const file = path.join(folder, '.env.city-model');
 		try {
-			writeFileSync(file, 'CITY_MODEL_ENDPOINT=https://example.test/openai/v1\nCITY_MODEL_NAME=demo\nCITY_MODEL_KEY=not-to-display\n');
-			expect(readModelConfig(file)).toEqual({ CITY_MODEL_ENDPOINT: 'https://example.test/openai/v1/chat/completions', CITY_MODEL_NAME: 'demo', CITY_MODEL_KEY: 'not-to-display' });
+			writeFileSync(file, 'CITY_MODEL_ENDPOINT=https://example.test/openai/v1\nCITY_MODEL_NAME=demo\nCITY_MODEL_KEY=not-to-display\nCITY_MODEL_START_MAP=natural\nCITY_MODEL_SEED=123\n');
+			expect(readModelConfig(file)).toEqual({
+				CITY_MODEL_ENDPOINT: 'https://example.test/openai/v1/chat/completions', CITY_MODEL_NAME: 'demo',
+				CITY_MODEL_KEY: 'not-to-display', CITY_MODEL_START_MAP: 'natural', CITY_MODEL_SEED: '123'
+			});
 		} finally { rmSync(folder, { recursive: true, force: true }); }
 	});
 });

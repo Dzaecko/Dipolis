@@ -137,7 +137,8 @@ void Micropolis::doPowerScan()
                     nuclearPowerPop * NUCLEAR_POWER_STRENGTH +
                     solarPowerPop * SOLAR_POWER_STRENGTH;
 
-    const Quad aiDemand = (Quad)aiPop * params.aiPowerPerPop;
+    if (params.podsEnabled) maxPower += (Quad)plantPower;
+    const Quad aiDemand = (Quad)(aiPop * params.aiPowerPerPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0));
     const int stackLimit = POWER_STACK_SIZE - 2;
 
     // Count the complete network without changing powerGridMap. Preserve the

@@ -1,0 +1,14 @@
+{
+  "podsEnabled": 1,
+  "podsPerPlant": 357,
+  "podPowerPerHuman": 1.96078431372549,
+  "podFoodPerHuman": 1,
+  "recycledFoodPerHuman": 40,
+  "podBirthRate": 0.006944444444444444,
+  "podLifetimeMonths": 120,
+  "podMaturityMonths": 24,
+  "podStarvationAging": 1,
+  "unrestBoundWeight": 30,
+  "unrestDeathsWeight": 50,
+  "unrestBirthsWeight": 20
+}

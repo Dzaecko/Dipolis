@@ -1,0 +1,18 @@
+{
+  "unrestEnabled": 1,
+  "automationLimit": 0.9,
+  "automationYieldPerJob": 1.74897959,
+  "unrestInertia": 0.2,
+  "unrestUnemploymentWeight": 90,
+  "unrestHungerWeight": 50,
+  "unrestPowerWeight": 30,
+  "unrestWelfareWeight": 35,
+  "unrestPoliceWeight": 20,
+  "unrestProtestThreshold": 30,
+  "unrestSabotageThreshold": 60,
+  "unrestUprisingThreshold": 85,
+  "unrestProtestTaxReduction": 0.2,
+  "unrestSabotageProbability": 0.12,
+  "unrestUprisingProbability": 0.6,
+  "unrestUprisingOutmigration": 0.25
+}
