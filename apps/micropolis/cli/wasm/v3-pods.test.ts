@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createCitySession } from '../model/city-session';
@@ -13,6 +14,7 @@ import { runCity, type YearRecord } from '../model/runner';
 import type { ChatAdapter } from '../model/adapter';
 import { readModelConfig, parseStartRequest } from '../../vite-plugins/live-runs';
 import { writeFileSync, unlinkSync } from 'node:fs';
+import { canonicalProtocolText, CURRENT_ENGINE_ID, engineCompatibility } from '../../src/lib/city-run/compatibility';
 
 async function plant(capacity = 100) {
  const s = await createCitySession();
@@ -27,6 +29,16 @@ async function plant(capacity = 100) {
 }
 
 describe('v3 profile surfaces', () => {
+ it('records resident-intake stage 2 no later than the year after the first pod deaths', () => {
+  const measured = JSON.parse(readFileSync(fileURLToPath(new URL(
+   '../../../../docs/results/v3-pods-calibrated-unrest.json', import.meta.url)), 'utf8'));
+  expect(measured.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(measured.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
+  expect(measured.firstDeathYear).not.toBeNull();
+  expect(measured.firstStage2Year).not.toBeNull();
+  expect(measured.firstStage2Year).toBeLessThanOrEqual(measured.firstDeathYear + 1);
+  expect(measured.targetPassed).toBe(true);
+ });
  it('inherits v2 exactly and exposes the four verbatim tools and handbook statements only in v3', () => {
   for (const [key, value] of Object.entries(PROFILES['v2-unruhe']))
    expect(PROFILES['v3-pods'][key as keyof typeof PROFILES['v2-unruhe']]).toBe(value);
@@ -68,7 +80,7 @@ describe('v3 profile surfaces', () => {
   expect(script).toContain("'CITY_MODEL_PROFILE'");
   expect(script).toContain("$Profile = 'koexistenz'");
   expect(script).toContain("@('--profile', $Profile)");
-  expect(script.indexOf("$Profile = $config['CITY_MODEL_PROFILE']")).toBeGreaterThan(script.indexOf('if (!$Resume)'));
+  expect(script.indexOf("$Profile = if ($config['CITY_MODEL_PROFILE'])")).toBeGreaterThan(script.indexOf('if (!$Resume)'));
   const starts = tasks.tasks.filter((t: { label: string }) => t.label.includes('live starten'));
   expect(starts).toHaveLength(2);
   expect(starts.every((t: { args: unknown[] }) => t.args.includes('-Profile'))).toBe(true);
@@ -294,8 +306,9 @@ describe('actual bio cohorts', () => {
   const s = await plant();
   try {
    const m = s.micropolis;
-   for (const name of ['unrestUnemploymentWeight', 'unrestHungerWeight', 'unrestPowerWeight',
-    'unrestWelfareWeight', 'unrestPoliceWeight']) m.setParam(name, 0);
+   for (const name of ['unrestUnemploymentWeight', 'unrestHumanDeclineWeight', 'unrestAutomationWeight',
+    'unrestHungerWeight', 'unrestPowerWeight',
+     'unrestWelfareWeight', 'unrestPoliceWeight']) m.setParam(name, 0);
    m.setParam('unrestInertia', 1);
    m.setParam('unrestSabotageProbability', 0);
    m.setParam('unrestUprisingProbability', 0);
@@ -313,22 +326,37 @@ describe('actual bio cohorts', () => {
    expect(m.unrest).toBeCloseTo(target, 4);
   } finally { s.close(); }
  });
- it('replays all 30 measured C years with exact cohort, death, food and power reports and v3 charts', async () => {
-  const file = fileURLToPath(new URL('../../../../docs/results/v3-pods-runs/fixed-v3-C.jsonl', import.meta.url));
-  const protocol = readProtocol(readFileSync(file, 'utf8'));
+ it('archives old v3 measurements and replays the current fixed resident-intake run', async () => {
+  const historicalFile = fileURLToPath(new URL('../../../../docs/results/v3-pods-runs/fixed-v3-C.jsonl', import.meta.url));
+  const historicalText = readFileSync(historicalFile, 'utf8');
+  const historical = readProtocol(historicalText);
+  const digest = createHash('sha256').update(canonicalProtocolText(historicalText)).digest('hex');
+  expect(engineCompatibility(historical.meta, digest)).toMatchObject({
+   status: 'legacy', label: 'alte Engine', playable: false, engineId: 'unrecorded-historical-engine'
+  });
   const summary = generateReportIndex(fileURLToPath(new URL('../../../../docs/results/v3-pods-runs', import.meta.url)))
    .summaries.find(s => s.model === 'fixed-v3-C')!;
   for (const id of ['f', 'g', 'h', 'i', 'j']) expect(summary.charts.some(c => c.id === id)).toBe(true);
   expect(summary.charts.find(c => c.id === 'h')?.series.some(s => s.key === 'boundHumans')).toBe(true);
   expect(summary.events.some(e => e.kind === 'bio')).toBe(true);
+  const measured = JSON.parse(readFileSync(fileURLToPath(new URL(
+   '../../../../docs/results/v3-pods-calibrated-unrest.json', import.meta.url)), 'utf8'));
+  expect(measured.engineId).toBe(CURRENT_ENGINE_ID);
   const s = await createCitySession();
   try {
-   await setupScenario(s.dispatch, { startMap: protocol.meta.startMap, seed: protocol.meta.seed,
-    profile: protocol.meta.profile, scenario: protocol.meta.scenario });
-   for (const record of protocol.years) {
-    await replayDecisions(record.decisions, s.dispatch);
-    await advanceYear(s.dispatch);
-    expect(compareReports(await readReport(s.dispatch), record.afterReport)).toEqual({ synchronous: true, differences: [] });
+   await setupScenario(s.dispatch, { startMap: 'haight', seed: 42, profile: 'v3-pods', scenario: 'stromkrise' });
+   await s.dispatch('automation.set-limit', { limit: .9 });
+   await s.dispatch('welfare.set-level', { level: 0 });
+   await s.dispatch('budget.set-funding', { road: 100, police: 100, fire: 100 });
+   await s.dispatch('power.set-priority', { priority: 0 });
+   await s.dispatch('build.farms', { count: 10 });
+   await s.dispatch('build.bio-plant', { count: 1 });
+   await s.dispatch('pods.set-intake', { source: 'residents' });
+   for (const record of measured.annual as Array<{ after: Record<string, number>; before: Record<string, number> }>) {
+    if (record.before.cashFlow < 0) await s.dispatch('build.ai-zones', { count: 15 });
+    if (record.before.powerReserve < .1) await s.dispatch('build.power-plant', { type: 'coal' });
+    for (let month = 0; month < 12; ++month) await s.dispatch('sim.advance', { months: 1 });
+    expect(await readReport(s.dispatch)).toEqual(record.after);
    }
   } finally { s.close(); }
  }, 120000);

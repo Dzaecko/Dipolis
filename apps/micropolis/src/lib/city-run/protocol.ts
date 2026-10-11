@@ -17,6 +17,7 @@ export interface YearRecord {
 	reason?: string;
 }
 export interface ProtocolMeta {
+	engineId?: string;
 	assignment?: 'N' | 'R';
 	model?: string;
 	handbook: 'on' | 'off';
@@ -25,10 +26,11 @@ export interface ProtocolMeta {
 	seed: number;
 	profile: SimulationProfile;
 	scenario?: ScenarioName;
+	autoBuildRules?: 0 | 1;
 }
 export type StartMap = 'haight' | 'natural';
 export type ScenarioName = 'haushaltskrise' | 'stromkrise';
-export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; }
+export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; autoBuildRules?: 0 | 1; }
 export const DEFAULT_START_CONFIGURATION: StartConfiguration = { startMap: 'haight', seed: 42, profile: 'koexistenz' };
 export interface Protocol {
 	meta: ProtocolMeta;
@@ -70,9 +72,13 @@ export function readProtocol(text: string): Protocol {
 	const events = parseProtocolLines(text);
 	const first = events.find((e) => e.event === 'run-started') ??
 		events.find((e) => e.assignment !== undefined || e.model !== undefined) ?? {};
+	if (first.engineId !== undefined && (typeof first.engineId !== 'string' || !first.engineId))
+		throw new Error('Protocol engine identifier is invalid');
 	const startMap = first.startMap === undefined ? DEFAULT_START_CONFIGURATION.startMap : first.startMap;
 	const seed = first.seed === undefined ? DEFAULT_START_CONFIGURATION.seed : first.seed;
 	const profile = first.profile ?? 'koexistenz';
+	const autoBuildRules = first.autoBuildRules === undefined ? 0 : first.autoBuildRules;
+	if (autoBuildRules !== 0 && autoBuildRules !== 1) throw new Error('Unsupported protocol autoBuildRules');
 	const scenario = first.scenario ?? 'haushaltskrise';
 	if (scenario !== 'haushaltskrise' && scenario !== 'stromkrise') throw new Error('Protocol scenario is invalid');
 	if (scenario === 'stromkrise' && (profile !== 'v3-pods' || startMap !== 'haight'))
@@ -82,6 +88,7 @@ export function readProtocol(text: string): Protocol {
 	if (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff)
 		throw new Error('Protocol seed is invalid');
 	const meta: ProtocolMeta = {
+		...(typeof first.engineId === 'string' ? { engineId: first.engineId } : {}),
 		assignment: first.assignment as ProtocolMeta['assignment'],
 		model: (events.find((e) => typeof e.model === 'string')?.model as string | undefined),
 		handbook: (first.handbook as 'on' | 'off' | undefined) ?? 'off',
@@ -89,7 +96,8 @@ export function readProtocol(text: string): Protocol {
 		startMap,
 		seed,
 		profile,
-		scenario
+		scenario,
+		...(startMap === 'natural' ? { autoBuildRules } : {})
 	};
 	const years = events.filter((e) => e.event === 'year-completed') as unknown as YearRecord[];
 	if (years.some((record, index) => record.year !== index + 1)) throw new Error('Protocol years are not consecutive');

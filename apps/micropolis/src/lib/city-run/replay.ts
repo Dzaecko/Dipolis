@@ -23,7 +23,8 @@ export async function setupScenario(dispatch: Dispatch, start: StartConfiguratio
 		...SCENARIO,
 		city: start.startMap,
 		profile: start.profile ?? 'koexistenz',
-		seed: start.seed
+		seed: start.seed,
+		...(start.startMap === 'natural' ? { autoBuildRules: start.autoBuildRules ?? 0 } : {})
 	});
 	await command(dispatch, 'tax.set', { rate: 7 });
 	await command(dispatch, 'food.set-import', { enabled: true });

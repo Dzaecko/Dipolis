@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createCitySession } from '../model/city-session';
@@ -12,6 +13,7 @@ import { readResume } from '../model/resume';
 import { PROFILES } from '../../src/lib/params/profiles';
 import { profileTools, validateToolCall } from '../../src/lib/city-run/tools';
 import { HANDBOOK, UNREST_HANDBOOK, systemPrompt } from '../model/prompts';
+import { canonicalProtocolText, CURRENT_ENGINE_ID, engineCompatibility } from '../../src/lib/city-run/compatibility';
 
 const data = (name: string) => JSON.parse(readFileSync(fileURLToPath(new URL(`../../../../docs/results/${name}`, import.meta.url)), 'utf8'));
 
@@ -34,14 +36,49 @@ describe('v2-unruhe profile boundaries', () => {
   expect(readResume(old, 'N', 'x', 1).startConfiguration.profile).toBe('koexistenz');
   expect(() => readResume(old, 'N', 'x', 1, 'off', { profile: 'v2-unruhe' })).toThrow('profile mismatch');
   expect(() => readProtocol(JSON.stringify({ event: 'run-started', profile: 'v3' }))).toThrow('profile');
+  const historical = readFileSync(fileURLToPath(new URL(
+   '../../../../docs/results/v2-runs/fake-N-fake-s266-632fcfa1bb54-handbook-on-1.jsonl', import.meta.url)), 'utf8');
+  const digest = createHash('sha256').update(canonicalProtocolText(historical)).digest('hex');
+  expect(engineCompatibility(readProtocol(historical).meta, digest)).toMatchObject({
+   status: 'legacy', label: 'alte Engine', playable: false, engineId: 'unrecorded-historical-engine'
+  });
  });
 });
 
 describe('actual v2 engine mechanics', () => {
+ it('applies welfare as an exact fifty-percent reduction of the unemployment drive', async () => {
+  async function measured(welfare: 0 | 1) {
+   const s = await createCitySession();
+   try {
+    await setupScenario(s.dispatch, { startMap: 'haight', seed: 42, profile: 'v2-unruhe' });
+    for (const name of ['unrestHumanDeclineWeight', 'unrestAutomationWeight', 'unrestHungerWeight',
+     'unrestPowerWeight', 'unrestWelfareWeight', 'unrestPoliceWeight']) s.micropolis.setParam(name, 0);
+    s.micropolis.setParam('unrestUnemploymentWeight', 100);
+    s.micropolis.setParam('unrestInertia', 1);
+    s.micropolis.setParam('unrestSabotageProbability', 0);
+    s.micropolis.setParam('unrestUprisingProbability', 0);
+    await s.dispatch('welfare.set-level', { level: welfare });
+    s.micropolis.unrest = 0;
+    await s.dispatch('sim.advance', { months: 12 });
+    const report = await readReport(s.dispatch);
+    return { report, welfare };
+   } finally { s.close(); }
+  }
+  for (const { report, welfare } of [await measured(0), await measured(1)]) {
+   expect(report.unrest).toBeCloseTo(
+    Math.min(100, 100 * report.unemploymentRate * (1 - 0.5 * welfare)), 4);
+  }
+ }, 120000);
  it('uses inclusive thresholds, bounds inertia, and leaves original profiles neutral', async () => {
   const s = await createCitySession();
   try {
    await setupScenario(s.dispatch, { startMap: 'haight', seed: 42, profile: 'v2-unruhe' });
+   for (const [name, value] of [['unrestHumanDeclineWeight', 150], ['unrestAutomationWeight', 55]] as const) {
+    expect(s.micropolis.getParam(name)).toBe(value);
+    expect(s.micropolis.setParam(name, value)).toBe(true);
+    expect(s.micropolis.getParam(name)).toBe(value);
+    expect(s.micropolis.setParam(name, -1)).toBe(false);
+   }
    expect(s.micropolis.setParam('unrestInertia', -1)).toBe(false);
    expect(s.micropolis.setParam('unrestInertia', 1.01)).toBe(false);
    s.micropolis.setParam('unrestInertia', 0);
@@ -134,6 +171,28 @@ describe('actual v2 engine mechanics', () => {
  }, 120000);
 });
 
+describe('recalibrated v2 household measurements', () => {
+ it('records all authorized outcomes under the current formula and engine', () => {
+  const result = data('v2-unruhe-calibrated-household-crisis.json');
+  expect(result.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
+  expect(result.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(result.formulaParameters).toMatchObject({
+   unrestHumanDeclineWeight: 150,
+   unrestAutomationWeight: 55,
+   unrestUnemploymentWeight: 120,
+   unrestWelfareWeight: 5,
+   welfareUnemploymentMultiplier: '1 - 0.5*welfareLevel'
+  });
+  expect(result.targetsPassed).toBe(true);
+  expect(result.targetChecks).toEqual({ A: true, B: true, C: true, D: true });
+  expect(result.measured.A.maxStage).toBeGreaterThanOrEqual(2);
+  expect(result.measured.A.fires).toBeGreaterThan(0);
+  expect(result.measured.B.maxStage).toBe(1);
+  expect(result.measured.C.meanMonthlyUnrest).toBeGreaterThan(result.measured.A.meanMonthlyUnrest);
+  expect(result.measured.D.maxStage).toBe(0);
+ });
+});
+
 describe('measured safe-engine S266 and deterministic replay', () => {
  it('resumes persisted v2 automation decisions without changing outcomes', async () => {
   const s = await createCitySession();
@@ -155,9 +214,13 @@ describe('measured safe-engine S266 and deterministic replay', () => {
    expect((await readReport(s.dispatch)).automationLimit).toBeCloseTo(.3);
   } finally { s.close(); }
  }, 120000);
- for (const [profile, filename] of [['koexistenz', 's266-safe-engine.json'], ['v2-unruhe', 's266-v2-unruhe.json']] as const) {
+ for (const [profile, filename] of [['koexistenz', 's266-safe-engine.json'], ['v2-unruhe', 's266-v2-unruhe-calibrated.json']] as const) {
   it(`matches measured ${profile} S266 reference and exact replay`, async () => {
    const reference = data(filename);
+   if (profile === 'v2-unruhe') {
+    expect(reference.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
+    expect(reference.engineId).toBe(CURRENT_ENGINE_ID);
+   }
    const s = await createCitySession();
    try {
     const config = { startMap: 'haight' as const, seed: 42, profile };

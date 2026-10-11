@@ -85,4 +85,58 @@ Focused legacy/new-profile suites: `v2-targeted-tests.log` **76 passed**; surfac
 
 Final post-CSV/profile-switch validation: `v2-final-tests.log` **27 passed** (runner, v2, deterministic classic CLI and handbook), plus focused handbook **4 passed**. Existing three packaged-city classic baselines remain exact. Final `git diff --check` for engine/artifacts/baseline changes passed.
 
-Commit is intentionally deferred to the parent coordinator: runner, protocol, replay, prompts, command registration and replay UI overlap pre-existing uncommitted terrain/live/Entra work. Whole-file staging would include unrelated user changes. All v2 code, measured results and prerequisites remain persisted; no secrets/provider configuration were staged or modified.
+Implementation and measured evidence are committed together. Local provider
+configuration, private model runs and unrelated environment-template changes
+are excluded.
+
+## Recalibrated unrest formula and remeasurement
+
+Formula version `v2-unruhe-2026.10-human-decline-automation-v1` adds human
+population decline and automation share, while welfare halves (rather than
+removes) the unemployment contribution:
+
+```text
+humanDecline = max(0, baselineResPop - resPop) / max(1, baselineResPop)
+unemploymentDrive = unrestUnemploymentWeight * unemploymentRate
+                    * (1 - 0.5 * welfareLevel)
+target = clamp(
+  unrestHumanDeclineWeight * humanDecline
+  + unrestAutomationWeight * automationShare
+  + unemploymentDrive
+  + unrestHungerWeight * hungryHumanShare
+  + unrestPowerWeight * humanOutageShare * poweredAiShare
+  - unrestWelfareWeight * welfareLevel
+  - unrestPoliceWeight * actualPoliceCoverage
+  + v3PodTerms,
+  0, 100)
+unrest = clamp(unrest + unrestInertia * (target - unrest), 0, 100)
+```
+
+The fixed v2 weights are respectively `150, 55, 120, 50, 30, 5, 50`,
+with inertia `0.2`; all live in `params/v2-unruhe.json` and are validated
+through the engine parameter interface. `baselineResPop` is captured once at
+the first unrest month for that simulation. Stage thresholds, random event
+probabilities and all scenario controls were not tuned.
+
+`v2-unruhe-calibrated-household-crisis.csv/.json` are new, non-destructive
+remeasurements of the same four fixed household strategies. The JSON records
+engine identity, formula version, all monthly snapshots, annual stage counters,
+maximum unrest/stage, yearly and cumulative sabotage fires, target assertions,
+and exact mean/max comparisons. Its five-year table adds monthly maximum
+unrest, maximum stage, sabotage months and yearly fires to the previous columns.
+`s266-v2-unruhe-calibrated.json` is the separately versioned current-engine
+reference. The previous household and S266 v2 measurements remain untouched;
+the S266 koexistenz reference and safe-engine exact regression remain unchanged.
+The historical v2 model-run protocol is also content-fingerprinted as `alte
+Engine`; its record is unchanged and it cannot be replayed as this calibration.
+
+| Strategy | Mean monthly unrest | Maximum monthly unrest | Maximum stage | Sabotage fires (30y) | First stage 2 year |
+|---|---:|---:|---:|---:|---:|
+| A | 59.03288845 | 87.95692444 | 3 | 37 | 10 |
+| B | 35.13882506 | 51.17382050 | 1 | 0 | never |
+| C | 68.78778517 | 83.26748657 | 2 | 35 | 6 |
+| D | 19.84408824 | 26.21875191 | 0 | 0 | never |
+
+The explicit C>A criterion is mean monthly unrest across all360 monthly
+snapshots: C exceeds A by9.75489672. The maximum comparison is also reported
+but is not used for that criterion.

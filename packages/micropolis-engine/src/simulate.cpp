@@ -902,9 +902,8 @@ void Micropolis::setValves()
 
 
 /* comefrom: simulate doSimInit */
-// Monthly target uses human residential lots (not commercial/industrial outages).
-// U' = clamp(U + inertia * (clamp(wU*unemployment + wH*hungryShare
-//      + wP*humanOutageShare*aiPoweredShare - wW*welfare - wL*policeEffect/1000,0,100)-U),0,100).
+// Human-population loss is relative to the first unrest month; welfare halves
+// unemployment's contribution instead of cancelling it.
 void Micropolis::updateUnrest()
 {
     int humans = 0, humanOutages = 0, ais = 0, aiPowered = 0;
@@ -921,12 +920,19 @@ void Micropolis::updateUnrest()
     }
     const float hungry = humans ? min(1.0f, (float)hungryZoneCount / humans) : 0.0f;
     const float inequality = humans && ais ? (float)humanOutages / humans * aiPowered / ais : 0.0f;
+    if (unrestBaselineResPop < 0.0f) unrestBaselineResPop = (float)max(1, (int)resPop);
+    const float humanDecline = max(0.0f, unrestBaselineResPop - (float)resPop) /
+        max(1.0f, unrestBaselineResPop);
     const double podDenominator = max(1.0, (double)resPop + boundHumans);
     const float podTarget = params.podsEnabled ? (float)(
         params.unrestBoundWeight * boundHumans / podDenominator +
         params.unrestDeathsWeight * diedInPods / podDenominator +
         params.unrestBirthsWeight * bornInPods / podDenominator) : 0.0f;
-    const float target = humans || (params.podsEnabled && boundHumans) ? clamp(params.unrestUnemploymentWeight * unemploymentRate +
+    const float unemploymentDrive = params.unrestUnemploymentWeight * unemploymentRate *
+        (1.0f - 0.5f * params.welfareLevel);
+    const float target = humans || (params.podsEnabled && boundHumans) ? clamp(unemploymentDrive +
+        params.unrestHumanDeclineWeight * humanDecline +
+        params.unrestAutomationWeight * automationShare +
         params.unrestHungerWeight * hungry + params.unrestPowerWeight * inequality -
         params.unrestWelfareWeight * params.welfareLevel -
         params.unrestPoliceWeight * clamp((float)policeEffect / MAX_POLICE_STATION_EFFECT, 0.0f, 1.0f) + podTarget,
@@ -1257,8 +1263,9 @@ void Micropolis::collectTax()
             ? min(1.0f, (float)((long long)foodProduction + (long long)foodImported) / (float)foodDemand)
             : 1.0f;
 
-        if (totalPop > 0 || aiPop > 0) {
-            /* Human or AI residents make the city inhabited for budgeting. */
+        if (totalPop > 0 || aiPop > 0 || welfareCost > 0) {
+            // totalPop rounds down small human populations; their mandatory
+            // welfare still has to be booked, including when treasury is in debt.
             const long long netCashFlow = (long long)taxFund -
                 ((long long)policeFund + (long long)fireFund + (long long)roadFund + (long long)foodImportCost + (long long)welfareCost);
             if (netCashFlow > std::numeric_limits<short>::max()) {

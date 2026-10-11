@@ -53,11 +53,13 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       enabled: (context) => context.source === 'script' && hasMicropolis(context),
       run: ({ simulator, args }) => {
         const m = simulator?.micropolis;
-        const seed = args?.seed ?? 42;
+        const seed = args?.seed === undefined ? 42 : args.seed;
         const city = args?.city ?? 'haight';
+        const autoBuildRules = args?.autoBuildRules === undefined ? (city === 'natural' ? 1 : 0) : args.autoBuildRules;
         // A closed preset prevents arbitrary paths, profiles, or implicit unsafe settings.
         if (!m || !args || Object.keys(args).some((key) =>
-          !['city', 'profile', 'seed', 'disasters', 'speed'].includes(key)) ||
+          !['city', 'profile', 'seed', 'disasters', 'speed', 'autoBuildRules'].includes(key)) ||
+          (autoBuildRules !== 0 && autoBuildRules !== 1) ||
           (city !== 'haight' && city !== 'natural') || !isSimulationProfile(args.profile) ||
           typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff ||
           args.disasters !== false || args.speed !== 3) {
@@ -73,6 +75,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         })) m.setParam(name, value);
         m.setParam('unrestEnabled', 0);
         m.setParam('podsEnabled', 0);
+        m.setParam('foundingEnabled', city === 'natural' ? autoBuildRules : 0);
         for (const [name, value] of Object.entries(PROFILES[args.profile])) {
           if (!m.setParam(name, value)) return { handled: false, message: `could not set scenario parameter ${name}` };
         }
@@ -727,7 +730,15 @@ function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: 
   if (!m?.autoBuild) return { handled: false, message: 'engine autoBuild binding is unavailable' };
   const fundsBefore = m.totalFunds;
   const built = m.autoBuild(kind, requested);
-  return { data: { requested, built, cost: fundsBefore - m.totalFunds, totalFunds: m.totalFunds } };
+  const failure = built < requested && m.getParam('foundingEnabled') === 1
+    ? m.getParam('autoBuildFailure') : 0;
+  return {
+    ...(failure ? { message: failure === 1
+      ? 'Insufficient funds for the building, clearing and access routes.'
+      : 'No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.' } : {}),
+    data: { requested, built, cost: fundsBefore - m.totalFunds, totalFunds: m.totalFunds,
+      ...(failure ? { failureReason: failure === 1 ? 'insufficient-funds' : 'no-connected-site' } : {}) }
+  };
 }
 
 function hasMicropolis(context: MicropolisCommandContext): boolean {

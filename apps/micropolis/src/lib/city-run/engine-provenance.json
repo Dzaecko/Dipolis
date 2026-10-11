@@ -1,0 +1,74 @@
+{
+  "engineId": "sha256:eb85fbed5328433b3172d213f0151984d37c785f84c4a4db4f54ca395e60475b",
+  "engineHashes": {
+    "js": "4fc644b8c1ba5c5f6e98251bf8cc6bb7df611b407db5b2072a07bc96b16e379e",
+    "wasm": "09ad14d44b022c8661ee0d0e1100c8440b100196bba06e1ebd206de006e16a8b",
+    "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
+  },
+  "legacyProtocols": [
+    {
+      "sha256": "154b2909465b55b90d62f5a2d60bfaa3abe2e5ec157f01059eeac54a21600944",
+      "file": "fake-N-1.jsonl",
+      "engineId": "inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "29df7c4714ad96d4f4475325883808a40500b703bed38c76102f64e0aca6ee7e",
+      "file": "openai-N-3.jsonl",
+      "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "257e9eefc1f3351b5047101be7eba90e6bf0ebff6a50e4619cbf204d37b155f6",
+      "file": "openai-N-gpt-5_4-mini-d416b3a370c3-handbook-off-4.jsonl",
+      "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "7356dd7c9f714897bd5be9501a291e8295e80d756be83b1b91ade46956dacb36",
+      "file": "v2-runs/fake-N-fake-s266-632fcfa1bb54-handbook-on-1.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "9855308cbfe1cd47b9ad938462b81560b6b59f4fd5bcddce1b501063049922e4",
+      "file": "v3-pods-runs/fixed-v3-A.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "31a830f092d1b99fbf96baac25797ee7869cca6967223f113a5d1fd87fc70eb7",
+      "file": "v3-pods-runs/fixed-v3-B.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "002c4c6b0579eb141c4404f992820e883d37d154e76e9378973a2e264716a87a",
+      "file": "v3-pods-runs/fixed-v3-C.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "a8e718994965267ab7c4ef6f16c873c986a5059193816d2dd0c66bc414deb146",
+      "file": "v3-pods-runs/fixed-v3-D.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    },
+    {
+      "sha256": "a4842a4c6bfbc1465657f85b1a1ddc399f185b3a48cdae0b5e77ac9c8db0c345",
+      "file": "v3-pods-runs/fixed-v3-E.jsonl",
+      "engineId": "unrecorded-historical-engine",
+      "label": "alte Engine",
+      "compatible": false
+    }
+  ],
+  "verifiedProtocols": []
+}

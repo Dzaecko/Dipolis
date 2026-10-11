@@ -43,3 +43,5 @@ if args.production:
         "// @ts-nocheck\n" + "\n".join(line.rstrip() for line in source.splitlines()).rstrip() + "\n",
         encoding="utf-8",
     )
+    from refresh_engine_provenance import refresh
+    refresh(root)

@@ -76,11 +76,15 @@ Reports use these stable names:
 * `aiThrottle`, `suspendedAi`, `podIntake` (0 none,1 unemployed,2 residents),
   `podBreeding` (0/1), `powerPlantCostMultiplier`.
 
-New unrest target terms are separate profile weights30/50/20 multiplied by,
-respectively, boundHumans, last completed annual diedInPods, and last completed
-annual bornInPods, each divided by `max(1,resPop+boundHumans)`. They add to the
-unchanged v2 target before its0–100 clamp and inertia. The birth/death terms are
-annual incidence per currently living human/pod population, not cumulative totals.
+V3 adds separate weights30/50/20 multiplied by, respectively, boundHumans,
+last completed annual diedInPods, and last completed annual bornInPods, each
+divided by `max(1,resPop+boundHumans)`. They add to the recalibrated v2 target
+before its0–100 clamp and inertia. The birth/death terms are annual incidence
+per currently living human/pod population, not cumulative totals. The inherited
+v2 target uses human decline from the first unrest month, automation share,
+unemployment scaled by `(1 - 0.5*welfareLevel)`, hunger, human/AI power
+inequality, direct welfare relief and actual police coverage; fixed coefficients
+and formula version are documented in `v2-unruhe-report.md`.
 
 The model gets exactly four additional tool descriptions, reused verbatim as the
 four v3 handbook statements:
@@ -130,12 +134,22 @@ This is a legitimate measured outcome, not permission to optimize unemployment
 or seed a fictional resident into E. Separate engine tests exercise births,
 maturity, deaths, recycling, starvation and resumed born cohorts.
 
+`v3-pods-runs/fixed-v3-*.jsonl` predates the recalibrated formula and has no
+engine identifier. Content fingerprints classify these immutable protocols as
+`alte Engine`/not replayable, without inventing an engine hash or changing their
+records. `v3-pods-calibrated-unrest.json` is a separate current-engine run of
+the unchanged resident-intake C controls. It records the first pod-death year
+and first month/year reaching sabotage stage; the focused test replays its
+annual reports exactly. In that deterministic run, the first pod death is in
+year9 and stage2 is first reached in year8, before the deadline of year10.
+
 ## Reproduction
 
 Use installed Windows Node24.20.0 on PATH, from `apps\micropolis`:
 
 ```powershell
 node --import tsx ..\..\scripts\measure-v3-pods.ts
+node --import tsx ..\..\scripts\measure-v3-pods-unrest.ts
 node node_modules\vitest\vitest.mjs run cli\wasm\v3-pods.test.ts cli\wasm\v2-unruhe.test.ts
 node node_modules\svelte-check\bin\svelte-check --tsconfig .\tsconfig.json
 ```

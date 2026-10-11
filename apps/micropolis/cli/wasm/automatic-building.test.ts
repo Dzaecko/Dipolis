@@ -257,7 +257,7 @@ describe('automatic building through the real WASM command bus', () => {
 			const preset = { city: 'haight', profile: 'koexistenz', seed: 42, disasters: false, speed: 3 };
 			const before = snapshot(city);
 			for (const patch of [
-				{ city: '../haight' }, { profile: 'classic' }, { seed: 43 }, { seed: null },
+				{ city: '../haight' }, { profile: 'unsupported' }, { seed: -1 }, { seed: null },
 				{ disasters: true }, { speed: 2 }, { path: '/cities/haight.cty' },
 			]) {
 				const result = await commandBus.dispatch('scenario.start', { source: 'script', simulator, args: { ...preset, ...patch } });

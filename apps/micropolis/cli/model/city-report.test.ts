@@ -45,6 +45,8 @@ describe('generateCityReport', () => {
    expect(result.metrics[key], key).toBe(Number(row[keys.indexOf(key)]));
   expect(result.complete).toBe(true); expect(result.years.filter(y => y.completed)).toHaveLength(30);
   expect(result.htmlPath).toBe(file.replace(/\.jsonl$/, '.html'));
+  expect(readFileSync(result.htmlPath, 'utf8')).toContain('alte Engine');
+  expect(readFileSync(result.htmlPath, 'utf8')).toContain('nicht kompatibel');
   expect(readFileSync(source, 'utf8')).toBe(sourceText);
   expect(readdirSync(dir).sort()).toEqual(['fake-N-1.html', 'fake-N-1.jsonl']);
  });

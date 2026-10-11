@@ -18,10 +18,12 @@
 		type ReplayState, type SeriesKey, type Timeline
 	} from '$lib/city-run/replay-controller';
 	import { emptyProgress, joinYear, LiveStepBuilder, updateProgress, type LiveEvent, type LiveProgress } from '$lib/city-run/live';
+	import { assertReplayCompatible, canonicalProtocolText, engineCompatibility, liveStartConfiguration, type EngineCompatibility } from '$lib/city-run/compatibility';
 
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
 		years: number; complete: boolean; modified: string; error?: string;
+		compatibility?: EngineCompatibility;
 	}
 	interface Rect { x: number; y: number; w: number; h: number; }
 	interface Highlight { rects: Rect[]; label: string; color: string; until: number; }
@@ -103,7 +105,7 @@
 
 	function runLabel(run: RunListing): string {
 		const handbook = run.handbook === 'on' ? 'an' : run.handbook === 'off' ? 'aus' : '?';
-		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${PROTOCOL_YEARS}${run.error ? ' · unlesbar' : ''}`;
+		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${PROTOCOL_YEARS} · ${run.compatibility?.label ?? 'Engine nicht dokumentiert'}${run.error ? ' · unlesbar' : ''}`;
 	}
 
 	function renderMap(): void {
@@ -246,10 +248,18 @@
 		loadError = null;
 		try {
 			await detachController();
+			loadedRun = null;
+			timeline = null;
+			view = null;
+			commandCounts = {};
 			const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(listing.file)}`);
 			if (!response.ok) throw new Error(`Protokoll konnte nicht geladen werden (HTTP ${response.status}).`);
-			const protocol = readProtocol(await response.text());
-			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario };
+			const text = await response.text();
+			const protocol = readProtocol(text);
+			const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalProtocolText(text)))),
+				byte => byte.toString(16).padStart(2, '0')).join('');
+			assertReplayCompatible(protocol.meta, digest);
+			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules };
 			const steps = stepsFromProtocol(protocol);
 			showSteps(steps);
 			loadedRun = listing;
@@ -324,7 +334,7 @@
 		if (seenLiveEvents.has(key)) return;
 		seenLiveEvents.add(key);
 		liveEvents = [...liveEvents, event];
-		if (event.type === 'run-started') replayStartConfiguration = { startMap: event.startMap, seed: event.seed, profile: event.profile ?? 'koexistenz', scenario: event.scenario };
+		if (event.type === 'run-started') replayStartConfiguration = liveStartConfiguration(event);
 		progress = updateProgress(progress, event);
 		const steps = liveBuilder.push(event);
 		liveSteps.push(...steps);
@@ -365,9 +375,19 @@
 		try {
 			await detachController();
 			const started = progress.started;
+			if (started) assertReplayCompatible(started);
+			if (started?.startMap === 'natural' && started.autoBuildRules === undefined) {
+				// Already-running producers may predate the IPC fix; consult their actual JSONL, never guess rules.
+				const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(started.file)}`);
+				if (!response.ok) throw new Error('Die aufgezeichneten Gründungsregeln konnten nicht geladen werden.');
+				const protocol = readProtocol(await response.text());
+				assertReplayCompatible(protocol.meta);
+				replayStartConfiguration = liveStartConfiguration(started, protocol.meta);
+			}
 			loadedRun = started ? {
 				file: started.file, model: started.model, assignment: started.assignment, handbook: started.handbook,
-				run: started.run, years: 0, complete: false, modified: ''
+				run: started.run, years: 0, complete: false, modified: '',
+				compatibility: engineCompatibility(started)
 			} : null;
 			const queue = new StepQueue();
 			queue.push(...liveSteps);
@@ -383,6 +403,8 @@
 			view = next.state;
 			void next.run();
 			next.play();
+		} catch (error) {
+			liveError = error instanceof Error ? error.message : String(error);
 		} finally {
 			attachingLive = false;
 		}

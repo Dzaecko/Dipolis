@@ -22,11 +22,38 @@ import rehypeStringify from 'rehype-stringify';
 
 // Markdown source lives in the SvelteKit app (no Jekyll build output anymore).
 const pagesDir = path.resolve(process.cwd(), './website/pages');
+const imagesDir = path.resolve(pagesDir, '../../../../images');
 
-const processor = unified()
+/** @param {string} sourceFile */
+function remarkSiteAssets(sourceFile) {
+	/** @param {any} tree */
+	return function (tree) {
+		/** @param {any} node */
+		function visit(node) {
+			if (typeof node.url === 'string' && !/^(?:[a-z][a-z\d+.-]*:|\/|#)/i.test(node.url)) {
+				const suffixIndex = node.url.search(/[?#]/);
+				const filename = suffixIndex < 0 ? node.url : node.url.slice(0, suffixIndex);
+				const suffix = suffixIndex < 0 ? '' : node.url.slice(suffixIndex);
+				const relative = path.relative(imagesDir, path.resolve(path.dirname(sourceFile), filename));
+				if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
+					const asset = relative.split(path.sep).join('/');
+					node.url = (asset === 'diagrams/SimCityReverseDiagrams.pdf'
+						? '/pdf/SimCityReverseDiagrams.pdf'
+						: `/images/${asset}`) + suffix;
+				}
+			}
+			for (const child of node.children ?? []) visit(child);
+		}
+		visit(tree);
+	};
+}
+
+/** @param {string} sourceFile */
+const processor = (sourceFile) => unified()
 	.use(remarkParse)
 	.use(remarkGfm)
 	.use(remarkHeadingId, { defaults: false }) // only explicit `## Heading {#custom-id}`
+	.use(remarkSiteAssets, sourceFile)
 	.use(remarkRehype, { allowDangerousHtml: true }) // keep inline HTML in content
 	.use(rehypeSlug) // auto-id the rest via github-slugger ("SimCity" -> "simcity")
 	.use(rehypeStringify, { allowDangerousHtml: true });
@@ -40,15 +67,10 @@ export function getContentFilePath(slug) {
 	return path.join(pagesDir, slug, 'README.md');
 }
 
-/** @param {string} raw @returns {Promise<string>} */
-async function renderMarkdown(raw) {
+/** @param {string} raw @param {string} sourceFile @returns {Promise<string>} */
+async function renderMarkdown(raw, sourceFile) {
 	const { content } = matter(raw); // strip YAML frontmatter
-	// Repo-root images/ paths render on GitHub; the site serves the same files from static/.
-	const withSitePaths = content.replace(
-		/\]\(\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/images\//g,
-		'](/images/'
-	);
-	const file = await processor.process(withSitePaths);
+	const file = await processor(sourceFile).process(content);
 	return String(file);
 }
 
@@ -73,7 +95,7 @@ export async function readContentFile(filePath, slug) {
 			error(500, 'Internal server error');
 		}
 		try {
-			return await renderMarkdown(raw);
+			return await renderMarkdown(raw, candidate);
 		} catch (err) {
 			console.error(`Error rendering markdown for slug '${slug}': ${candidate}`, err);
 			error(500, 'Internal server error');

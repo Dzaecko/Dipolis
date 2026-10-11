@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from '
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseProtocolRecords } from '../../src/lib/city-run/protocol';
+import { createHash } from 'node:crypto';
+import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../../src/lib/city-run/compatibility';
 
 /** Pure Node reporting: importing this module never loads the engine or a model. */
 export interface CityReportOptions {
@@ -34,6 +36,7 @@ export interface ReportSummary {
  observedYears: number; partialYears: number; years: ReportYear[]; warnings: string[];
  metrics: ReportMetrics; metricSamples: Record<string, number>; firstInsolvencyYear: number | null;
  charts: ReportChart[]; events: ReportEvent[]; logSource: 'original' | 'reconstructed';
+ compatibility: EngineCompatibility;
 }
 export interface CityReportResult { htmlPath: string; metrics: ReportMetrics; years: ReportYear[]; complete: boolean; }
 export interface ReportIndexResult { htmlPath: string; summaries: ReportSummary[]; errors: Array<{ file: string; message: string }>; }
@@ -85,7 +88,8 @@ function uniqueTools(tools: ReportTool[]): ReportTool[] {
 }
 const uniqueReasons = (values: unknown[]) => [...new Set(values.filter((v): v is string => typeof v === 'string' && !!v.trim()))];
 function parseProtocol(protocolPath: string): ReportSummary {
- const { records: parsedRecords, warnings } = parseProtocolRecords(readFileSync(protocolPath, 'utf8'));
+ const protocolText = readFileSync(protocolPath, 'utf8');
+ const { records: parsedRecords, warnings } = parseProtocolRecords(protocolText);
  const records = parsedRecords as JsonObject[];
  if (!records.length) throw new Error('Keine lesbaren JSONL-Datensätze.');
  const identity = (key: string) => text(records.find(r => text(r[key]))?.[key]);
@@ -138,6 +142,8 @@ function parseProtocol(protocolPath: string): ReportSummary {
   run: identity('run') || id.match(/-(\d+)$/)?.[1] || 'unbekannt',
   handbook: identity('handbook') || id.match(/handbook-(on|off)/)?.[1] || 'off',
   profile: identity('profile') || 'koexistenz',
+  compatibility: engineCompatibility({ engineId: identity('engineId') || undefined },
+   createHash('sha256').update(canonicalProtocolText(protocolText)).digest('hex')),
   date, dateSource: stamps.length ? 'timestamp' : 'file-mtime',
   partial: annual.length !== YEARS || annual.some((y, i) => y.year !== i + 1), observedYears: annual.length,
   partialYears: years.length - annual.length, years, warnings, metrics, metricSamples: samples, charts: [], events: [],
@@ -409,7 +415,7 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   y.tools.map(t => `<details class="tool"><summary>${show(t.call.name)} · ${obj(t.result).handled === false ? 'nicht ausgeführt' : 'gespeichertes Ergebnis'}</summary><h4>Aufruf</h4><pre>${escapeHtml(displayJson(t.call, options))}</pre><h4>Tatsächliches Ergebnis</h4><pre>${escapeHtml(displayJson(t.result, options))}</pre></details>`).join('') +
   `</details>${y.after ? `<details><summary>Alle gemessenen Jahreswerte</summary><pre>${escapeHtml(displayJson(y.after, options))}</pre></details>` : ''}</article>`).join('');
  const content = `<header><h1>Stadtbericht · ${show(summary.id)}</h1><p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/30 abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
-  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Lauf', summary.run],
+  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Engine', summary.compatibility.label], ['Engine-ID', summary.compatibility.engineId ?? 'nicht dokumentiert'], ['Kompatibilität', summary.compatibility.explanation], ['Lauf', summary.run],
    [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC']]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}</section>` +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
@@ -439,7 +445,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
  chart = chart.replace('klicken für Tagebuch', 'gemeinsame Jahreswerte');
  const rows = summaries.map((s, i) => {
   const sibling = s.id + '.html', available = existsSync(path.join(absolute, sibling));
-  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}</td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
+  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
    `<td>${s.warnings.map(show).join('<br>')}</td></tr>`;
  }).join('');

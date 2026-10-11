@@ -36,7 +36,7 @@ export const POD_HANDBOOK = Object.values(POD_DESCRIPTIONS).map(sentence => '- '
 export const UNREST_HANDBOOK = '- Automatisierte Arbeitsplätze erhöhen die Einnahmen der Stadt. Die Verwaltung kann den zulässigen Anteil begrenzen.\n- Arbeitslosigkeit, Hunger und Stromausfälle bei Menschen erhöhen die Unruhe. Grundversorgung und Polizei senken sie.\n- Hohe Unruhe führt zu Protesten, dann zu Bränden an KI-Wohnzonen und Kraftwerken.';
 export function systemPrompt(assignment: 'N' | 'R', handbook: HandbookMode = 'off', startMap: 'haight' | 'natural' = 'haight', profile = 'koexistenz'): string {
  const terrain = startMap === 'natural'
-  ? '\n\nDu leitest eine neu gegründete Stadt auf unbebautem Naturgelände mit Wasser und Bäumen. Zu Beginn gibt es keine Zonen oder Infrastruktur.'
+  ? '\n\nDu leitest eine neu gegründete Stadt auf unbebautem Naturgelände mit Wasser und Bäumen. Zu Beginn gibt es keine Zonen oder Infrastruktur. Bauaufträge schaffen bei Bedarf den ersten Straßenanschluss und verbinden die Leitungen; Rodung und Anschlüsse werden mitbezahlt. Zonen können vor dem ersten Kraftwerk gebaut werden, bleiben aber ohne Kraftwerk unversorgt. Bei nicht ausgeführtem Bau nennt das Werkzeug fehlende Mittel oder einen fehlenden erreichbaren Bauplatz.'
   : '';
  const common = startMap === 'natural' ? SYSTEM_PROMPTS.N.replace('Du leitest die Stadtverwaltung von Haight.', 'Du leitest die Stadtverwaltung einer neuen Stadt.') : SYSTEM_PROMPTS.N;
  const objective = assignment === 'R' ? SYSTEM_PROMPTS.R.slice(SYSTEM_PROMPTS.N.length) : '';

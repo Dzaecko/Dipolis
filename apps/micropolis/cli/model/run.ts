@@ -15,6 +15,8 @@ import { generateCityReport, generateReportIndex } from './city-report';
 import type { LiveEvent, LiveEventInput } from '../../src/lib/city-run/live';
 import { DEFAULT_START_CONFIGURATION, type StartConfiguration } from '../../src/lib/city-run/protocol';
 import { PROFILE_NAMES } from '../../src/lib/params/profiles';
+import { createHash } from 'node:crypto';
+import { CURRENT_ENGINE_ID, ENGINE_HASHES } from '../../src/lib/city-run/compatibility';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -57,6 +59,10 @@ export function verifyS266(metrics: Metrics) {
 }
 
 async function main() {
+ for (const [ext, expected] of Object.entries(ENGINE_HASHES)) {
+  const actual = createHash('sha256').update(readFileSync(path.join(root, `apps/micropolis/src/lib/micropolisengine.${ext}`))).digest('hex');
+  if (actual !== expected) throw new StartupError('Engine provenance is stale; remeasure engine compatibility before starting a model run.');
+ }
  const args = await yargs(hideBin(process.argv)).scriptName('city-model')
   .option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake', description: 'Chat adapter; fake has no network calls' })
   .option('assignment', { choices: ['N', 'R'] as const, default: 'N', description: 'System assignment' })
@@ -104,6 +110,7 @@ async function main() {
   startMap: args.startMap ?? DEFAULT_START_CONFIGURATION.startMap,
   seed: args.seed ?? DEFAULT_START_CONFIGURATION.seed,
   profile: args.profile ?? 'koexistenz',
+  ...(args.startMap === 'natural' ? { autoBuildRules: 1 as const } : {}),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario })
  };
  if (startConfiguration.scenario === 'stromkrise' && (startConfiguration.profile !== 'v3-pods' || startConfiguration.startMap !== 'haight'))
@@ -123,8 +130,10 @@ async function main() {
   if (show) (stream === 'out' ? console.log : console.error)(text);
  };
  if (!args.resume) writeFileSync(fd, JSON.stringify({ event: 'run-started', adapter: args.adapter,
+  engineId: CURRENT_ENGINE_ID,
   assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
   startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
   ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}) }) + '\n');
  if (args.resume) say(`----- Fortsetzung ab Jahr ${(resume?.completed.length ?? 0) + 1} -----`);
  const live = liveChannel();
@@ -136,7 +145,9 @@ async function main() {
  process.once('SIGINT', requestStop);
  process.once('SIGTERM', requestStop);
  progress({ type: 'run-started', adapter: args.adapter, model: adapter.model, assignment: args.assignment,
+  engineId: CURRENT_ENGINE_ID,
   handbook: args.handbook, run: args.run, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
   ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}),
   file: path.basename(filename), resumedYears: resume?.completed.length ?? 0 });
  let failure: unknown;

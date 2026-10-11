@@ -52,6 +52,19 @@ pnpm run build
 
 Preview the production build with **`pnpm run preview`**.
 
+If the current engine artifacts are already built (for example on Windows without
+Emscripten), build only the static frontend from the repository root:
+
+```bash
+corepack pnpm --filter micropolis exec vite build
+```
+
+Repository-relative Markdown image links are resolved from their source file,
+then mapped to public assets. Diagram PNGs use `/images/diagrams/`; the combined
+PDF uses the existing `/pdf/SimCityReverseDiagrams.pdf` static copy. The original
+`images/diagrams/README.md` is prerendered as a Markdown download at
+`/images/diagrams/README.md`, so no symlinks or duplicate source documents are needed.
+
 ## Publishing (micropolisweb.com)
 
 The public demo at [micropolisweb.com](https://micropolisweb.com/) is **not** updated by pushes to `main`.
@@ -171,3 +184,18 @@ model.)
     1.  Add metadata (e.g., `injectComponents: true`) to the page's node in `navigationTree.js`.
     2.  Modify the `load` function in `src/routes/pages/[...path]/+page.server.js` to check this metadata and call `readAndParseContentFile` instead of `readContentFile`, returning `isParsed: true`.
     3.  Ensure the required Svelte components are registered in `injectableRegistry` in `src/routes/pages/[...path]/+page.svelte`.
+# Natural city founding
+
+New `city-model --start-map natural` runs record `autoBuildRules: 1`.
+Automatic construction pays for non-destructive clearing, roads, wires and
+buildings in one funded transaction. With no roads, the first lot seeds a road;
+before the first generator, lots join an unpowered conductive network. A coal or
+nuclear plant can start that grid, including before the next simulation scan.
+No power is granted to off-grid zones. Failed placement returns
+`failureReason: insufficient-funds` or `no-connected-site`.
+
+Historical protocols without this field retain rules 0 during replay and resume,
+including their original zero-build outcomes. Unsupported rule versions are
+rejected. To use founding behavior for an existing blocked run, start a new free
+run number rather than overwriting or resuming the historical protocol. Haight
+and simulation profiles retain their existing placement and simulation rules.

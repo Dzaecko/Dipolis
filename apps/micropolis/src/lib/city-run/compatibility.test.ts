@@ -1,0 +1,42 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { assertReplayCompatible, canonicalProtocolText, CURRENT_ENGINE_ID, ENGINE_HASHES, engineCompatibility, liveStartConfiguration } from './compatibility';
+import { readProtocol } from './protocol';
+import { listCityRuns } from '../../../vite-plugins/city-runs';
+import { fileURLToPath } from 'node:url';
+
+describe('engine provenance and founding-rule propagation', () => {
+ it('identifies the actual packaged artifacts, not just a release name', () => {
+  expect(CURRENT_ENGINE_ID).toBe(`sha256:${createHash('sha256').update(JSON.stringify(ENGINE_HASHES)).digest('hex')}`);
+  for (const [ext, hash] of Object.entries(ENGINE_HASHES))
+   expect(createHash('sha256').update(readFileSync(new URL(`../micropolisengine.${ext}`, import.meta.url))).digest('hex')).toBe(hash);
+ });
+ it('accepts the exact engine and gates differing explicit engine identifiers', () => {
+  const meta = readProtocol(JSON.stringify({ event: 'run-started', engineId: CURRENT_ENGINE_ID })).meta;
+  expect(engineCompatibility(meta)).toMatchObject({ status: 'current', playable: true });
+  expect(() => assertReplayCompatible({ engineId: 'different' })).toThrow('Alte Engine');
+  expect(engineCompatibility({})).toMatchObject({ status: 'unverified', label: 'Engine nicht dokumentiert' });
+  expect(() => readProtocol(JSON.stringify({ event: 'run-started', engineId: 42 }))).toThrow('engine identifier');
+ });
+ it('recognizes archived logs across checkout line endings, not just their filenames', () => {
+  const text = readFileSync(new URL('../../../../../docs/results/model-runs/fake-N-1.jsonl', import.meta.url), 'utf8');
+  const digest = (value: string) => createHash('sha256').update(canonicalProtocolText(value)).digest('hex');
+  expect(engineCompatibility({}, digest(text))).toMatchObject({ status: 'legacy', playable: false });
+  expect(engineCompatibility({}, digest(text.replace(/\r?\n/g, '\r\n')))).toMatchObject({ status: 'legacy', playable: false });
+  expect(engineCompatibility({}, digest(text.replace('3639', '3640'))).status).toBe('unverified');
+  const listing = listCityRuns(fileURLToPath(new URL('../../../../../docs/results/model-runs/', import.meta.url)));
+  for (const file of ['fake-N-1.jsonl', 'openai-N-3.jsonl', 'openai-N-gpt-5_4-mini-d416b3a370c3-handbook-off-4.jsonl'])
+   expect(listing.find(run => run.file === file)?.compatibility).toMatchObject({ label: 'alte Engine', playable: false });
+ });
+ it('preserves current natural rules through the live event and keeps old missing rules at zero', () => {
+  expect(liveStartConfiguration({ startMap: 'natural', seed: 42, autoBuildRules: 1 }))
+   .toMatchObject({ startMap: 'natural', seed: 42, autoBuildRules: 1 });
+  expect(liveStartConfiguration({ startMap: 'natural', seed: 42 }).autoBuildRules).toBe(0);
+  expect(liveStartConfiguration({ startMap: 'natural', seed: 42 },
+   { startMap: 'natural', seed: 42, autoBuildRules: 1 }).autoBuildRules).toBe(1);
+  expect(() => liveStartConfiguration({ startMap: 'natural', seed: 42 },
+   { startMap: 'natural', seed: 43, autoBuildRules: 1 })).toThrow('recorded start configuration');
+  expect(liveStartConfiguration({ startMap: 'haight', seed: 42, autoBuildRules: 1 }).autoBuildRules).toBeUndefined();
+ });
+});

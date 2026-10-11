@@ -13,7 +13,9 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../../..');
 const artifactDir = path.join(root, 'docs/results');
-const metadataPath = path.join(artifactDir, 'strategy-space.metadata.json');
+const artifactName = process.env.STRATEGY_SPACE_NAME ?? 'strategy-space';
+if (!/^[a-z0-9-]+$/.test(artifactName)) throw new Error('Invalid strategy-space artifact name');
+const metadataPath = path.join(artifactDir, `${artifactName}.metadata.json`);
 const scenario = { city: 'haight', profile: 'koexistenz', seed: 42, disasters: false, speed: 3 };
 
 async function runStrategy(strategy: Strategy): Promise<Result> {
@@ -237,8 +239,8 @@ describe.skipIf(process.env.STRATEGY_SPACE_RUN !== '1')('strategy-space opt-in r
 		}
 		validateCheckpoint(metadata, identity, strategies);
 		expect(metadata.results).toHaveLength(304);
-		atomicWrite(path.join(artifactDir, 'strategy-space.csv'), resultsCsv(metadata.results));
-		atomicWrite(path.join(artifactDir, 'strategy-space.summary.json'), JSON.stringify({
+		atomicWrite(path.join(artifactDir, `${artifactName}.csv`), resultsCsv(metadata.results));
+		atomicWrite(path.join(artifactDir, `${artifactName}.summary.json`), JSON.stringify({
 			identity, sampleSeed: SAMPLE_SEED, ...summarize(metadata.results),
 		}, null, 2) + '\n');
 		metadata.status = 'complete';

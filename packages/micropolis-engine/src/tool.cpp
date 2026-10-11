@@ -1297,6 +1297,7 @@ static const BuildingProperties airportBuilding =
 /** Place owned zones/plants with non-destructive, atomically funded access. */
 int Micropolis::autoBuild(int kind, int count)
 {
+    autoBuildFailure = 0;
     if (kind < 0 || kind > 5 || (kind == 5 && !params.podsEnabled) || count <= 0 || count > 1000) return 0;
 
     const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
@@ -1343,7 +1344,12 @@ int Micropolis::autoBuild(int kind, int count)
     };
     int built = 0;
     while (built < count) {
-        if (totalFunds < gCostOf[building->tool]) break;
+        if (totalFunds < gCostOf[building->tool]) {
+            autoBuildFailure = 1;
+            break;
+        }
+        bool fundingBlocked = false;
+        bool hasRoad = false;
 
         // Stable physical connectivity, not a simulation power scan. Flood
         // through new zones/wires as well as old conductors, without changing
@@ -1353,14 +1359,31 @@ int Micropolis::autoBuild(int kind, int count)
         queue.reserve(cells);
         for (int x = 0; x < WORLD_W; ++x) {
             for (int y = 0; y < WORLD_H; ++y) {
+                if (roadTile(map[x][y])) hasRoad = true;
+                const MapTile tile = map[x][y] & LOMASK;
+                const bool plant = params.foundingEnabled && (map[x][y] & ZONEBIT) &&
+                    (tile == POWERPLANT || tile == NUCLEAR || tile == SOLARPOWER);
                 if ((map[x][y] & CONDBIT) &&
-                    ((map[x][y] & PWRBIT) || powerReachableMap.worldGet(x, y))) {
+                    ((map[x][y] & PWRBIT) || powerReachableMap.worldGet(x, y) || plant)) {
                     const int id = x * WORLD_H + y;
                     connected[id] = 1;
                     queue.push_back(id);
                 }
             }
         }
+        // Before the first generator, join the physically conductive (but
+        // unpowered) founding lots. This does not grant power or scan capacity.
+        const bool offGrid = params.foundingEnabled && queue.empty();
+        if (offGrid) {
+            for (int x = 0; x < WORLD_W; ++x)
+                for (int y = 0; y < WORLD_H; ++y)
+                    if (map[x][y] & CONDBIT) {
+                        const int id = x * WORLD_H + y;
+                        connected[id] = 1;
+                        queue.push_back(id);
+                    }
+        }
+        const bool seedConductor = offGrid && queue.empty();
         for (size_t head = 0; head < queue.size(); ++head) {
             const int x = queue[head] / WORLD_H, y = queue[head] % WORLD_H;
             for (int direction = 0; direction < 4; ++direction) {
@@ -1429,7 +1452,22 @@ int Micropolis::autoBuild(int kind, int count)
                         if (!vacantZone && (map[bx][by] & LOMASK) != DIRT) ++clearing;
                     }
                 }
-                if (!free || totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) continue;
+                if (!free) continue;
+                // Do not found the road grid on a coastal sliver that cannot
+                // accommodate the next lot or a generator. Reserve terrain,
+                // not tiles or money; subsequent lots use ordinary routing.
+                if (params.foundingEnabled && !hasRoad) {
+                    bool room = x >= 4 && y >= 4 &&
+                        x + size + 4 <= WORLD_W && y + size + 4 <= WORLD_H;
+                    for (int px = x - 4; room && px < x + size + 4; ++px)
+                        for (int py = y - 4; py < y + size + 4; ++py)
+                            if (!freeTerrain(map[px][py])) { room = false; break; }
+                    if (!room) continue;
+                }
+                if (totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) {
+                    fundingBlocked = true;
+                    continue;
+                }
 
                 // Every path must stay outside the building, including its
                 // seed; a global shortest path may otherwise cut through it.
@@ -1515,9 +1553,43 @@ int Micropolis::autoBuild(int kind, int count)
                     return path;
                 };
                 std::vector<int> roadPath = findPath(road, false, roadParent);
+                if (roadPath.empty() && params.foundingEnabled && !hasRoad) {
+                    std::sort(edges.begin(), edges.end(), [&](int a, int b) {
+                        const bool ad = (map[a / WORLD_H][a % WORLD_H] & LOMASK) == DIRT;
+                        const bool bd = (map[b / WORLD_H][b % WORLD_H] & LOMASK) == DIRT;
+                        return ad != bd ? ad : a < b;
+                    });
+                    for (int id : edges) {
+                        if (freeTerrain(map[id / WORLD_H][id % WORLD_H])) {
+                            road = id;
+                            roadPath.push_back(id);
+                            break;
+                        }
+                    }
+                }
                 if (roadPath.empty()) continue;
+                if (params.foundingEnabled) {
+                    // A lone access tile can be enclosed by the next lots.
+                    // Keep a paid, connected road perimeter open for expansion.
+                    bool access = true;
+                    for (int px = x - 1; px <= x + size && access; ++px)
+                        for (int py = y - 1; py <= y + size; ++py) {
+                            if (px >= x && px < x + size && py >= y && py < y + size) continue;
+                            if (!testBounds(px, py)) { access = false; break; }
+                            const MapValue value = map[px][py];
+                            if (!freeTerrain(value) && !roadTile(value)) { access = false; break; }
+                            const int id = px * WORLD_H + py;
+                            if (std::find(roadPath.begin(), roadPath.end(), id) == roadPath.end())
+                                roadPath.push_back(id);
+                        }
+                    if (!access) continue;
+                    if (!hasRoad) {
+                        for (int id : roadPath)
+                            if ((map[id / WORLD_H][id % WORLD_H] & LOMASK) != DIRT) ++clearing;
+                    }
+                }
                 std::vector<int> powerPath = findPath(power, true, powerParent);
-                if (powerPath.empty()) continue;
+                if (powerPath.empty() && !seedConductor) continue;
                 candidates.push_back({x, y, road, power,
                     static_cast<int>(roadPath.size() + powerPath.size()) - 2,
                     neighbors, clearing, vacantZone, roadPath, powerPath});
@@ -1569,7 +1641,10 @@ int Micropolis::autoBuild(int kind, int count)
                 continue;
             // Clearing, both routes, and the building share one transaction.
             // Failed tools or funding leave the entire world untouched.
-            if (!effects.modifyIfEnoughFunding()) continue;
+            if (!effects.modifyIfEnoughFunding()) {
+                fundingBlocked = true;
+                continue;
+            }
             if (kind < 3 || kind == 5) {
                 setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : kind == 5 ? 4 : 3);
                 if (kind == 5) bioPlants.push_back({centerX, centerY, 0.0, 0.0, {}});
@@ -1588,7 +1663,10 @@ int Micropolis::autoBuild(int kind, int count)
             placed = true;
             break;
         }
-        if (!placed) break;
+        if (!placed) {
+            autoBuildFailure = fundingBlocked ? 1 : 2;
+            break;
+        }
     }
     return built;
 }

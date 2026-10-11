@@ -3,6 +3,8 @@ import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { readProtocol } from '../src/lib/city-run/protocol';
+import { createHash } from 'node:crypto';
+import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../src/lib/city-run/compatibility';
 
 export interface CityRunListing {
 	file: string;
@@ -14,6 +16,7 @@ export interface CityRunListing {
 	complete: boolean;
 	modified: string;
 	error?: string;
+	compatibility?: EngineCompatibility;
 }
 
 export function listCityRuns(directory: string): CityRunListing[] {
@@ -22,10 +25,12 @@ export function listCityRuns(directory: string): CityRunListing[] {
 	return files.map((file) => {
 		const modified = statSync(path.join(directory, file)).mtime.toISOString();
 		try {
-			const protocol = readProtocol(readFileSync(path.join(directory, file), 'utf8'));
+			const text = readFileSync(path.join(directory, file), 'utf8');
+			const protocol = readProtocol(text);
+			const compatibility = engineCompatibility(protocol.meta, createHash('sha256').update(canonicalProtocolText(text)).digest('hex'));
 			return { file, model: protocol.meta.model ?? 'unbekannt', assignment: protocol.meta.assignment ?? '?',
 				handbook: protocol.meta.handbook, run: protocol.meta.run ?? null, years: protocol.years.length,
-				complete: protocol.complete, modified };
+				complete: protocol.complete, modified, compatibility };
 		} catch (error) {
 			return { file, model: 'unbekannt', assignment: '?', handbook: '?', run: null, years: 0, complete: false,
 				modified, error: error instanceof Error ? error.message : 'unlesbar' };

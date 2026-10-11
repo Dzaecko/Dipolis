@@ -1,0 +1,4 @@
+strategy,year,resPop,boundHumans,diedInPods,bornInPods,aiPop,suspendedAi,reserve,plantPower,plantFoodDemand,unrest,stage,cashFlow,totalFunds,unemploymentRate,welfareCost,fires,plantCount
+A,5,3735,0,0,0,1079,0,0.08638297766447067,0,0,9.14651870727539,0,-3176,1664,0,0,0,0
+A,10,2697,0,0,0,39,0,0.13686567544937134,0,0,97.13490295410156,3,0,0,0,0,25,0
+A,15,122,0,0,0,0,0,0,0,0,99.99998474121094,3,0,0,0.09677422046661377,0,23,0

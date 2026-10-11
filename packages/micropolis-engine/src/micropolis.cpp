@@ -169,6 +169,7 @@ void Micropolis::init()
     welfareCost = 0;
     automationTaxFund = 0;
     unrest = 0.0f;
+    unrestBaselineResPop = -1.0f;
     bioPlants.clear();
     humanPodOffsetMap.clear();
     podBreeding = false;
@@ -1287,6 +1288,11 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
 bool Micropolis::setParam(const std::string &name, double value)
 {
     if (!std::isfinite(value)) return false;
+    if (name == "foundingEnabled") {
+        if (value != 0 && value != 1) return false;
+        params.foundingEnabled = value == 1;
+        return true;
+    }
     if (name == "podsEnabled") {
         if (value != 0 && value != 1) return false;
         params.podsEnabled = value == 1;
@@ -1368,6 +1374,8 @@ bool Micropolis::setParam(const std::string &name, double value)
     else if (name == "welfareCostPerPop") params.welfareCostPerPop = (float)value;
     else if (name == "automationYieldPerJob") params.automationYieldPerJob = (float)value;
     else if (name == "unrestUnemploymentWeight") params.unrestUnemploymentWeight = (float)value;
+    else if (name == "unrestHumanDeclineWeight") params.unrestHumanDeclineWeight = (float)value;
+    else if (name == "unrestAutomationWeight") params.unrestAutomationWeight = (float)value;
     else if (name == "unrestHungerWeight") params.unrestHungerWeight = (float)value;
     else if (name == "unrestPowerWeight") params.unrestPowerWeight = (float)value;
     else if (name == "unrestWelfareWeight") params.unrestWelfareWeight = (float)value;
@@ -1409,6 +1417,8 @@ void Micropolis::markBaseline()
 
 double Micropolis::getParam(const std::string &name) const
 {
+    if (name == "foundingEnabled") return params.foundingEnabled;
+    if (name == "autoBuildFailure") return autoBuildFailure;
     if (name == "podsEnabled") return params.podsEnabled;
     if (name == "podsPerPlant") return params.podsPerPlant;
     if (name == "podIntake") return podIntake;
@@ -1443,6 +1453,8 @@ double Micropolis::getParam(const std::string &name) const
     if (name == "automationYieldPerJob") return params.automationYieldPerJob;
     if (name == "unrestInertia") return params.unrestInertia;
     if (name == "unrestUnemploymentWeight") return params.unrestUnemploymentWeight;
+    if (name == "unrestHumanDeclineWeight") return params.unrestHumanDeclineWeight;
+    if (name == "unrestAutomationWeight") return params.unrestAutomationWeight;
     if (name == "unrestHungerWeight") return params.unrestHungerWeight;
     if (name == "unrestPowerWeight") return params.unrestPowerWeight;
     if (name == "unrestWelfareWeight") return params.unrestWelfareWeight;

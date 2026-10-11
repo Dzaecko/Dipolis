@@ -958,6 +958,7 @@ struct MicropolisParams {
     float welfareCostPerPop = 0.0f;
     bool unrestEnabled = false;
     bool podsEnabled = false;
+    bool foundingEnabled = false;
     int podsPerPlant = 357;
     double podPowerPerHuman = 1.96078431372549;
     double podFoodPerHuman = 1.0;
@@ -973,6 +974,8 @@ struct MicropolisParams {
     float automationYieldPerJob = 0.0f;
     float unrestInertia = 0.2f;
     float unrestUnemploymentWeight = 90.0f;
+    float unrestHumanDeclineWeight = 100.0f;
+    float unrestAutomationWeight = 90.0f;
     float unrestHungerWeight = 50.0f;
     float unrestPowerWeight = 30.0f;
     float unrestWelfareWeight = 35.0f;
@@ -1149,6 +1152,7 @@ public:
     Quad automationTaxFund = 0;
     float automatedJobs = 0.0f;
     float unrest = 0.0f;
+    float unrestBaselineResPop = -1.0f;
     short unrestStage = 0;
     Quad sabotageFires = 0;
     Quad damagedAiZones = 0;
@@ -2628,6 +2632,7 @@ public:
     void setOriginalPowerScanForTests(bool enabled);
     void markBaseline();
     int autoBuild(int kind, int count);
+    int autoBuildFailure = 0;
     int getAiZoneCount() const;
     int getRoadTileCount() const;
     void setServiceFunding(double road, double police, double fire);

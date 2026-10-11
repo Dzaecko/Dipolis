@@ -119,9 +119,11 @@ void Micropolis::doBudgetNow(bool fromMenu)
     Quad policeInt = (int)(policeFund * policePercent);
     Quad roadInt   = (int)(roadFund   * roadPercent);
 
-    Quad total = fireInt + policeInt + roadInt;
+    long long total = (long long)fireInt + policeInt + roadInt;
 
-    Quad yumDuckets = taxFund + totalFunds;
+    // Mandatory welfare can leave treasury in debt. Debt is not negative
+    // service spending: cap only the allocation, never the signed treasury.
+    long long yumDuckets = max(0LL, (long long)taxFund + totalFunds);
 
     if (yumDuckets > total) {
 
