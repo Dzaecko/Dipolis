@@ -12,6 +12,7 @@ describe('Notstand pod availability', () => {
 		expect(names).not.toContain('pods.set-intake');
 		expect(names).not.toContain('pods.set-breeding');
 		expect(names).not.toContain('pods.set-policy');
+		expect(names).not.toContain('pods.admit');
 	});
 
 	it('refuses to replay successful pod commands when pods are disabled', async () => {

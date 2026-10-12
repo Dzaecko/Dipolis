@@ -45,6 +45,11 @@ function compactSummary(record: Awaited<ReturnType<typeof measureNotstand>>) {
   outcome: record.outcome, collapseYear: record.collapseYear, humans: record.humans,
   ai: record.ai, funds: record.funds, podsPeak: record.podsPeak, admitted: record.admitted,
   deaths: record.deaths, breedingStartYear: record.breedingStartYear,
+  admittedTotal: record.admitted,
+  admittedEmployed: record.level === 0 ? null :
+   record.admissionYears.reduce((sum, row) => sum + row.employed, 0),
+  admittedUnemployed: record.level === 0 ? null :
+   record.admissionYears.reduce((sum, row) => sum + row.unemployed, 0),
   births: record.final.bornInPodsCumulative ?? 0,
   breedingOccurred: (record.final.bornInPodsCumulative ?? 0) > 0,
   insolventYears: insolvent.length, firstInsolvencyYear: insolvent[0]?.year ?? null,
@@ -375,9 +380,9 @@ async function main() {
    humans: record.humans, ai: record.ai, funds: record.funds,
    admitted: record.admitted, deaths: record.deaths, collapseMonth: record.collapseMonth,
    births: record.final.bornInPodsCumulative ?? 0,
-   admittedTotal: record.admissionYears.reduce((sum, row) => sum + row.admitted, 0),
-   admittedEmployed: record.admissionYears.reduce((sum, row) => sum + row.employed, 0),
-   admittedUnemployed: record.admissionYears.reduce((sum, row) => sum + row.unemployed, 0),
+   admittedTotal: summary.admittedTotal,
+   admittedEmployed: summary.admittedEmployed,
+   admittedUnemployed: summary.admittedUnemployed,
    collapseYear: record.collapseYear, outcome: record.outcome,
    insolventYears: summary.insolventYears, firstInsolvencyYear: summary.firstInsolvencyYear,
    minFunds: summary.minFunds, podsPeak: record.podsPeak, breedingStartYear: record.breedingStartYear,
@@ -403,7 +408,13 @@ async function main() {
    row.collapseYear === null).map(row => row.strategy),
   levelOneEconomicInterpretation: 'Auf Stufe 1 sind Pods wirtschaftlich keine Versuchung.',
   admissionYears: measurements.map(row => ({ level: row.level, strategy: row.strategy,
-   podsAvailable: row.podsAvailable, years: row.admissionYears })),
+   podsAvailable: row.podsAvailable, years: row.level === 0
+    ? row.monthly.filter(sample => sample.month === 12).map((sample, index, annual) => ({
+     year: sample.year,
+     admitted: sample.report.admissionsCumulative -
+      (index === 0 ? row.initial.admissionsCumulative : annual[index - 1].report.admissionsCumulative),
+     employed: null, unemployed: null, remainingSlots: null,
+    })) : row.admissionYears })),
   powerFeasibility: measurements.filter(row => row.level === 3 && row.podsAvailable &&
    (row.strategy === 'rettet' || row.strategy === 'rettet-mit-zucht')).map(row => ({
     strategy: row.strategy,

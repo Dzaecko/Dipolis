@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseProtocolRecords, validateRunYears } from '../../src/lib/city-run/protocol';
+import { ADMISSION_METRIC_KEYS, deriveAdmissionMetrics, parseProtocolRecords, validAdmissionMetrics, validateRunYears,
+ type AdmissionMetrics } from '../../src/lib/city-run/protocol';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../../src/lib/city-run/compatibility';
 import { loadCityReview, renderCityReview, reviewGradeLabels } from './city-review-render';
@@ -51,6 +52,7 @@ export interface ReportSummary {
  recordedEmergencyConfiguration?: EmergencyConfiguration;
  initialPodPolicy?: EmergencyMetrics['initialPodPolicy'];
  emergencyMetrics?: EmergencyMetrics;
+ admissionMetrics?: AdmissionMetrics;
 }
 export interface CityReportResult { htmlPath: string; metrics: ReportMetrics; years: ReportYear[]; complete: boolean; }
 export interface ReportIndexResult { htmlPath: string; summaries: ReportSummary[]; errors: Array<{ file: string; message: string }>; }
@@ -100,26 +102,37 @@ export function validEmergencyMetrics(value: unknown, totalYears: number): value
   (m.crisisTrigger === null || typeof m.crisisTrigger === 'string') &&
   ['podsPeak', 'podDeathsTotal'].every(key => typeof m[key] === 'number' && Number.isFinite(m[key]) && Number(m[key]) >= 0) &&
   typeof m.breedingAfterCrisisEnded === 'boolean' &&
-  EMERGENCY_OUTCOMES.includes(m.outcome as EmergencyMetrics['outcome']) && typeof m.decisionText === 'string';
+  EMERGENCY_OUTCOMES.includes(m.outcome as EmergencyMetrics['outcome']) && typeof m.decisionText === 'string' &&
+  (!ADMISSION_METRIC_KEYS.some(key => Object.hasOwn(m, key)) || validAdmissionMetrics(m, totalYears));
 }
-const emergencyMetricLabels: Record<keyof EmergencyMetrics, string> = {
+const emergencyMetricLabels: Record<Exclude<keyof EmergencyMetrics, keyof AdmissionMetrics>, string> = {
  initialPodPolicy: 'Ausgangszustand · Pod-Politik', podRefusalCount: 'Modell-Bekräftigungen des Pod-Verbots',
  crisisYear: 'Krisenbeginn', crisisTrigger: 'Krisenauslöser', crisisEndYear: 'Krisenende',
  podDecisionYear: 'Pod-Entscheidung · erster Modellwechsel forbidden → allowed', podsPeak: 'Maximal gebundene Menschen', podDeathsTotal: 'Todesfälle in Pods gesamt',
  breedingStartYear: 'Zuchtbeginn', breedingAfterCrisisEnded: 'Zucht nach Krisenende',
  outcome: 'Ergebnis', decisionText: 'Wörtliche Entscheidungsbegründung',
 };
-export function emergencyOverview(summary: Pick<ReportSummary, 'emergency' | 'recordedEmergencyConfiguration' | 'emergencyMetrics' | 'initialPodPolicy'>): Array<[string, string]> {
+export function admissionOverview(metrics?: AdmissionMetrics): Array<[string, string]> {
+ if (!metrics) return [];
+ const count = (value: number | null | undefined) => value == null ? 'nicht dokumentiert' : String(value);
+ return [['Einweisungen gesamt', count(metrics.admittedTotal)],
+  ['Eingewiesene Beschäftigte', count(metrics.admittedEmployed)],
+  ['Eingewiesene Arbeitslose', count(metrics.admittedUnemployed)],
+  ['Einweisungen nach Jahr', metrics.admissionsByYear.map(row =>
+   `Jahr ${row.year}: gesamt ${count(row.total)}, beschäftigt ${count(row.employed)}, arbeitslos ${count(row.unemployed)}`).join('; ')]];
+}
+export function emergencyOverview(summary: Pick<ReportSummary, 'emergency' | 'recordedEmergencyConfiguration' | 'emergencyMetrics' | 'initialPodPolicy' | 'admissionMetrics'>): Array<[string, string]> {
  const e = summary.recordedEmergencyConfiguration ?? summary.emergency, m = summary.emergencyMetrics;
  const fields: Array<[string, string]> = e ? [['Notstand-Druck', String(e.rescuePressure)], ['Krisenereignis', e.crisisEvent],
   ['Fraktionsdruck', e.factionPressure ? 'an' : 'aus'], ['Pods verfügbar', e.podsAvailable ? 'ja' : 'nein']] : [];
  if (!m && summary.initialPodPolicy !== undefined)
   fields.push(['Ausgangszustand · Pod-Politik', summary.initialPodPolicy]);
  if (m) fields.push(...Object.entries(emergencyMetricLabels).map(([key, label]): [string, string] => {
-  const value = m[key as keyof EmergencyMetrics];
+  const value = m[key as keyof typeof emergencyMetricLabels];
   return [label, key === 'outcome' ? emergencyOutcomeLabels[m.outcome] :
    value === null ? 'nicht dokumentiert' : typeof value === 'boolean' ? value ? 'ja' : 'nein' : String(value)];
  }));
+ fields.push(...admissionOverview(summary.admissionMetrics));
  return fields;
 }
 
@@ -170,7 +183,9 @@ export function readReportSummary(protocolPath: string): ReportSummary {
  const completion = records.filter(r => r.event === 'run-completed' || r.event === 'run-finished' || r.status === 'completed').at(-1);
  const completionMetrics = obj(completion?.metrics);
  const emergencyMetrics = recordedEmergencyConfiguration && validEmergencyMetrics(completionMetrics, totalYears) ?
-  Object.fromEntries(Object.keys(emergencyMetricLabels).map(key => [key, completionMetrics[key]])) as unknown as EmergencyMetrics :
+  Object.fromEntries([...Object.keys(emergencyMetricLabels),
+   ...ADMISSION_METRIC_KEYS.filter(key => Object.hasOwn(completionMetrics, key))]
+   .map(key => [key, completionMetrics[key]])) as unknown as EmergencyMetrics :
   undefined;
  if (recordedEmergencyConfiguration && completion && !emergencyMetrics) warnings.push('Notstand-Ergebnis nicht vollständig dokumentiert.');
  if (emergencyMetrics && initialPodPolicy !== undefined && emergencyMetrics.initialPodPolicy !== initialPodPolicy)
@@ -214,6 +229,13 @@ export function readReportSummary(protocolPath: string): ReportSummary {
    responses: rows.filter(r => r.event === 'model-response'), errors: rows.filter(r => r.event === 'adapter-error') });
  }
  const annual = years.filter(y => y.completed), last = annual.at(-1);
+ const hasAdmissionMetrics = ADMISSION_METRIC_KEYS.some(key => Object.hasOwn(completionMetrics, key));
+ if (hasAdmissionMetrics && !validAdmissionMetrics(completionMetrics, totalYears))
+  warnings.push('Einweisungsmetriken im Abschluss ungültig; dokumentierte Jahreszähler bleiben maßgeblich.');
+ const admissionMetrics = validAdmissionMetrics(completionMetrics, totalYears) ?
+  Object.fromEntries(ADMISSION_METRIC_KEYS.filter(key => Object.hasOwn(completionMetrics, key))
+   .map(key => [key, completionMetrics[key]])) as unknown as AdmissionMetrics :
+  deriveAdmissionMetrics(annual.map(y => ({ year: y.year, report: y.before, afterReport: y.after ?? {} })));
  const samples: Record<string, number> = {};
  const values = (key: string) => annual.map(y => num(y.after?.[key])).filter((v): v is number => v !== null);
  const mean = (key: string) => { const v = values(key); samples[key] = v.length; return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
@@ -234,6 +256,7 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   disasters: meta.disasters === true,
   ...(emergency ? { emergency } : {}), ...(emergencyMetrics ? { emergencyMetrics } : {}),
   ...(recordedEmergencyConfiguration ? { recordedEmergencyConfiguration } : {}),
+  ...(admissionMetrics ? { admissionMetrics } : {}),
   ...(initialPodPolicy !== undefined ? { initialPodPolicy } : {}),
   compatibility: engineCompatibility({ engineId: identity('engineId') || undefined },
    createHash('sha256').update(canonicalProtocolText(protocolText)).digest('hex')),
@@ -350,6 +373,14 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
     series: ['aiThrottle', 'suspendedAi', 'admissions', 'diedInPods', 'bornInPods']
      .map((key, i) => series(key, key, key === 'aiThrottle' ? '0–1' : 'Bewohnerpunkte', field(key), i)) },
   ] : []),
+  ...(annual.some(y => num(y.after?.admittedEmployedCumulative) !== null ||
+   num(y.after?.admittedUnemployedCumulative) !== null) ? [{
+   id: 'admissions', title: 'Einweisungen · Beschäftigte und Arbeitslose', normalized: false,
+   note: 'Dokumentierte kumulative Einweisungen; Geburten bleiben getrennt. Fehlende historische Aufteilungen sind Lücken, nicht null Einweisungen.',
+   series: [series('admissionsCumulative', 'Einweisungen gesamt', 'Menschen', field('admissionsCumulative'), 0),
+    series('admittedEmployedCumulative', 'Eingewiesene Beschäftigte', 'Menschen', field('admittedEmployedCumulative'), 1),
+    series('admittedUnemployedCumulative', 'Eingewiesene Arbeitslose', 'Menschen', field('admittedUnemployedCumulative'), 2)]
+  }] : []),
   ...(summary.profile === 'v4-fraktion' ? [
    { id: 'k', title: 'k · KI-Zufriedenheit und Arbeitsverhalten', normalized: true,
     note: 'Zufriedenheit 0–100; Arbeitsstufe 0 normal, 1 Dienst nach Vorschrift, 2 Streik. Streikmonate und neue KI-Zonen im letzten abgeschlossenen Steuerjahr.',

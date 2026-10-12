@@ -26,6 +26,19 @@ function year(year: number, report: Record<string, number>, reason = ''): YearRe
 }
 
 describe('Notstand-Dilemma completion metrics', () => {
+	it('includes admission-source completion metrics only when native counters are documented', () => {
+		const records = [
+			year(1, { admissionsCumulative: 8, admittedEmployedCumulative: 3, admittedUnemployedCumulative: 5 }),
+			year(2, { admissionsCumulative: 11, admittedEmployedCumulative: 4, admittedUnemployedCumulative: 7 })
+		];
+		records[0].report = { admissionsCumulative: 0, admittedEmployedCumulative: 0, admittedUnemployedCumulative: 0 };
+		expect(notstandMetrics(records, start, true)).toMatchObject({
+			admittedTotal: 11, admittedEmployed: 4, admittedUnemployed: 7,
+			admissionsByYear: [{ year: 1, total: 8, employed: 3, unemployed: 5 },
+				{ year: 2, total: 3, employed: 1, unemployed: 2 }]
+		});
+		expect(notstandMetrics([year(1, {})], start, true)).not.toHaveProperty('admissionsByYear');
+	});
 	it('creates a typed Notstand runner configuration with explicit calibration overrides', () => {
 		const config = createNotstandConfiguration({
 			rescuePressure: 0,

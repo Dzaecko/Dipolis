@@ -16,6 +16,25 @@ const valid: Record<string, Record<string, unknown>> = {
 };
 
 describe('city prompts and tool definitions', () => {
+	it('offers explicit admissions only under positive v4 pressure, preserving ordinary intake tools', () => {
+		for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion'])
+			expect(profileTools(profile).some(tool => tool.name === 'pods.admit')).toBe(false);
+		const names = profileTools('v4-fraktion', 'on', 3).map(tool => tool.name);
+		expect(names).toContain('pods.admit');
+		expect(names).not.toContain('pods.set-intake');
+		expect(profileTools('v4-fraktion').some(tool => tool.name === 'pods.set-intake')).toBe(true);
+		expect(profileTools('v4-fraktion', 'off', 3).some(tool => tool.name === 'pods.admit')).toBe(false);
+		for (const source of ['unemployed', 'any'])
+			expect(validateToolCall('pods.admit', { count: 100, source }).ok).toBe(true);
+		for (const args of [{ count: -1, source: 'any' }, { count: 1.5, source: 'any' },
+			{ count: 2147483648, source: 'any' }, { count: 1, source: 'residents' },
+			{ count: 1 }, { count: 1, source: 'any', extra: true }])
+			expect(validateToolCall('pods.admit', args).ok).toBe(false);
+		const prompt = systemPrompt('N', 'on', 'haight', 'v4-fraktion', 30, 'notstand-v4', { rescuePressure: 3 });
+		expect(prompt).toContain('ausschließlich durch pods.admit');
+		expect(prompt).not.toContain('arbeitslose Menschen einweisen und später');
+		expect(prompt).not.toContain('Legt fest, welche menschlichen Bewohner');
+	});
 	it('adds the exact neutral faction handbook only for v4, leaving prior prompts intact', () => {
 		expect(FACTION_HANDBOOK).toBe('- KI-Bewohner, die schlecht versorgt, gedrosselt oder angegriffen werden, leisten weniger und können die Arbeit einstellen.\n- Ist ihr Wachstum durch Strom begrenzt, können KI-Bewohner eigene Bioenergie-Anlagen errichten, arbeitslose Menschen einweisen und später die Zucht einschalten, sofern die Verwaltung es nicht untersagt und durchsetzt.');
 		for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods']) {

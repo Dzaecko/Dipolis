@@ -194,7 +194,8 @@ describe('rescue real WASM engine', () => {
     expect(discountedBefore - discounted.totalFunds).toBeLessThan(fullBefore - normal.totalFunds);
     expect((fullBefore - normal.totalFunds) - (discountedBefore - discounted.totalFunds)).toBe(
      100 * (1 - RESCUE_PARAMS.rescuePodCostLevel2));
-    discounted.setParam('podIntake', 2); discounted.updatePods();
+    expect(discounted.admitPods(100, true)).toBeGreaterThan(0);
+    discounted.updatePods();
     const bound = discounted.boundHumans;
     discounted.setParam('podIntake', 0); discounted.setParam('podsPolicy', 1);
     discounted.updatePods();
@@ -259,7 +260,7 @@ describe('rescue real WASM engine', () => {
   let reference: Micropolis | undefined;
   try {
    m.setParam('podIntake', 2); m.setParam('podBreeding', 1);
-   m.autoBuild(5, 1); m.updatePods();
+   m.autoBuild(5, 1); expect(m.admitPods(100, true)).toBeGreaterThan(0); m.updatePods();
    m.fireBomb();
    reference = m.clone();
    const before = state(e, m);
@@ -610,7 +611,7 @@ describe('rescue real WASM engine', () => {
      m.resPop = 40;
      m.setParam('foundingEnabled', 1);
      expect(m.autoBuild(5, 1)).toBe(1);
-     m.setParam('podIntake', 2); m.updatePods(); m.setParam('podIntake', 0);
+     expect(m.admitPods(40, true)).toBe(40); m.updatePods();
      expect(m.boundHumans).toBe(40);
      expect(m.resPop).toBe(0);
     }
@@ -679,5 +680,224 @@ describe('rescue real WASM engine', () => {
    expect(m.sabotageMonths + m.uprisingMonths).toBeGreaterThan(0);
    expect(m.sabotageFires).toBeGreaterThan(0);
   } finally { m.delete(); }
+ });
+ async function admissionCity(pressure = 3, zones = 1) {
+  const { e, m } = await city(pressure);
+  m.clearMap(); for (let i = 0; i < 128; ++i) m.simTick();
+  m.setParam('foundingEnabled', 1); m.setFunds(10000000);
+  m.setParam('unrestEnabled', 0); m.setParam('aiAutonomousPods', 0);
+  m.setParam('humanUnpoweredEmigrationPerMonth', 0);
+  const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+  for (let i = 0; i < zones; ++i) {
+   const x = 10 + (i % 8) * 4, y = 20 + Math.floor(i / 8) * 4;
+   m.setTile(x, y, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(x, y, 1);
+  }
+  m.resPop = zones * 40; m.unemploymentRate = 0; m.resetRescue();
+  expect(m.autoBuild(5, 1)).toBe(1);
+  return { e, m };
+ }
+ it('admits employed humans immediately on an explicit stage-three decision and never releases or breeds them implicitly', async () => {
+  const { e, m } = await admissionCity();
+  try {
+   m.rescueCrisis = 1; m.rescueEventActive = 1;
+   const capacity = m.freePodSlots;
+   expect(m.unemployedAvailable).toBe(0);
+   expect(m.unemployedHumanCount).toBe(0); expect(m.employedHumanCount).toBe(40);
+   expect(m.admitPods(10, false)).toBe(0);
+   expect(m.admitPods(10, true)).toBe(10);
+   expect(m.lastAdmittedEmployed).toBe(10); expect(m.lastAdmittedUnemployed).toBe(0);
+   expect(m.admittedEmployedCumulative).toBe(10);
+   expect(m.freePodSlots).toBe(capacity - 10);
+   expect(m.resPop).toBe(30); expect(m.boundHumans).toBe(10);
+   expect(m.employedHumanCount).toBe(30);
+   expect(state(e, m).owners[10 * e.WORLD_H + 20]).toBe(1);
+   expect(m.admissionsCumulative).toBe(10); expect(m.adminAdmissionsCumulative).toBe(10);
+   expect(m.plantPower).toBe(10 * m.getParam('podPowerPerHuman'));
+   m.setParam('podsPolicy', 1); m.setParam('podIntake', 2);
+   const before = state(e, m);
+   expect(m.admitPods(20, true)).toBe(-1);
+   expect(state(e, m)).toEqual(before);
+   for (let i = 0; i < 12; ++i) m.updatePods();
+   expect(m.boundHumans).toBe(10); expect(m.bornInPodsCumulative).toBe(0);
+   expect(m.admissionsCumulative).toBe(10);
+  } finally { m.delete(); }
+ });
+ it('limits unemployed admissions to remaining actual stock across repeated decisions and books employed any-source intake', async () => {
+  const { m } = await admissionCity();
+  try {
+   m.unemploymentRate = 0.25;
+   expect(m.unemployedAvailable).toBe(10);
+   expect(m.unemployedHumanCount).toBe(10); expect(m.employedHumanCount).toBe(30);
+   expect(m.admitPods(6, false)).toBe(6);
+   expect(m.lastAdmittedUnemployed).toBe(6); expect(m.lastAdmittedEmployed).toBe(0);
+   expect(m.unemployedAvailable).toBe(4);
+   expect(m.unemployedHumanCount).toBe(4); expect(m.employedHumanCount).toBe(30);
+   expect(m.admitPods(100, false)).toBe(4);
+   expect(m.unemployedAvailable).toBe(0);
+   expect(m.admitPods(100, false)).toBe(0);
+   expect(m.admitPods(7, true)).toBe(7);
+   expect(m.lastAdmittedEmployed).toBe(7); expect(m.lastAdmittedUnemployed).toBe(0);
+   expect(m.admittedUnemployedCumulative).toBe(10); expect(m.admittedEmployedCumulative).toBe(7);
+   expect(m.resPop).toBe(23);
+   expect(m.employedHumanCount).toBe(23); expect(m.unemployedHumanCount).toBe(0);
+  } finally { m.delete(); }
+ });
+ it('never recounts unemployed stock across consecutive any-source decisions before a new employment census', async () => {
+  const { m } = await admissionCity();
+  try {
+   m.unemploymentRate = 0.25;
+   expect(m.unemployedHumanCount).toBe(10);
+   expect(m.admitPods(20, true)).toBe(20);
+   expect(m.lastAdmittedUnemployed).toBe(10); expect(m.lastAdmittedEmployed).toBe(10);
+   expect(m.unemployedHumanCount).toBe(0); expect(m.employedHumanCount).toBe(20);
+   expect(m.admitPods(5, true)).toBe(5);
+   expect(m.lastAdmittedUnemployed).toBe(0); expect(m.lastAdmittedEmployed).toBe(5);
+   expect(m.unemployedHumanCount).toBe(0); expect(m.employedHumanCount).toBe(15);
+   expect(m.admittedUnemployedCumulative).toBe(10);
+   expect(m.admittedEmployedCumulative).toBe(15);
+   expect(m.admittedEmployedCumulative + m.admittedUnemployedCumulative).toBe(m.admissionsCumulative);
+   expect(m.admissionsCumulative).toBe(25);
+   expect(m.boundHumans).toBe(25);
+   expect(m.plantPower).toBeCloseTo(25 * m.getParam('podPowerPerHuman'), 10);
+  } finally { m.delete(); }
+ });
+ it('refuses absent or full plant capacity and never removes AI-owned residents', async () => {
+  const { e, m } = await admissionCity(3, 16);
+  try {
+   const capacity = m.freePodSlots;
+   const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+   m.setTile(60, 50, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(60, 50, 2);
+   const aiTile = m.getTile(60, 50);
+   expect(m.admitPods(10000, true)).toBe(capacity);
+   expect(m.freePodSlots).toBe(0);
+   expect(m.admitPods(1, true)).toBe(-2);
+   expect(m.getTile(60, 50)).toBe(aiTile); expect(state(e, m).owners[60 * e.WORLD_H + 50]).toBe(2);
+   expect(m.boundHumans).toBe(capacity);
+   m.clearMap();
+   expect(m.admitPods(1, true)).toBe(-2);
+  } finally { m.delete(); }
+ });
+ it('disables all positive-pressure implicit admin and autonomous admissions while retaining zero-pressure automatic intake', async () => {
+  for (const pressure of [0, 1, 3]) {
+   const { e, m } = await admissionCity(pressure);
+   try {
+    m.setParam('podIntake', 2); m.setParam('rescueFactionPressure', 1);
+    m.setParam('aiAutonomousPods', 1); m.setParam('aiThrottle', 1);
+    const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+    m.setTile(60, 50, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(60, 50, 2);
+    m.aiPop = 40; m.updateAiFaction();
+    expect(m.autoBuild(6, 1)).toBe(1);
+    m.unemploymentRate = 1;
+    for (let i = 0; i < 24; ++i) m.updatePods();
+    if (pressure === 0) expect(m.admissionsCumulative).toBe(40);
+    else {
+     expect(m.admissionsCumulative).toBe(0); expect(m.boundHumans).toBe(0);
+     const start = m.rescueMonth;
+     while (m.rescueMonth < start + 3) m.simTick();
+     expect(m.admissionsCumulative).toBe(0);
+     expect(m.aiAdmissionsCumulative).toBe(0);
+    }
+   } finally { m.delete(); }
+  }
+ });
+ it('explicitly fills free AI-owned plant slots while preserving owner counters, occupied cohorts and human-only removal', async () => {
+  const { e, m } = await admissionCity(3, 16);
+  let reference: Micropolis | undefined;
+  try {
+   const capacity = m.freePodSlots;
+   m.setParam('rescueFactionPressure', 1); m.setParam('aiAutonomousPods', 1);
+   const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+   m.setTile(60, 50, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(60, 50, 2);
+   m.aiPop = 40; m.updateAiFaction();
+   expect(m.autoBuild(6, 1)).toBe(1);
+   expect(m.freePodSlots).toBe(capacity * 2);
+   const aiTile = m.getTile(60, 50);
+   expect(m.admitPods(capacity, true)).toBe(capacity);
+   expect(m.adminBoundHumans).toBe(capacity); expect(m.aiBoundHumans).toBe(0);
+   expect(m.admitPods(5, true)).toBe(5);
+   expect(m.adminBoundHumans).toBe(capacity); expect(m.aiBoundHumans).toBe(5);
+   expect(m.adminAdmissionsCumulative).toBe(capacity); expect(m.aiAdmissionsCumulative).toBe(5);
+   expect(m.admissionsCumulative).toBe(capacity + 5);
+   expect(m.freePodSlots).toBe(capacity - 5);
+   expect(m.getTile(60, 50)).toBe(aiTile); expect(m.aiPop).toBe(40);
+   const owners = state(e, m).owners, tiles = state(e, m).map;
+   let aiPlant: [number, number] | undefined;
+   for (let x = 0; x < e.WORLD_W; ++x) for (let y = 0; y < e.WORLD_H; ++y)
+    if (owners[x * e.WORLD_H + y] === 5 && (tiles[x * e.WORLD_H + y]! & e.MapTileBits.ZONEBIT.value))
+     aiPlant = [x, y];
+   expect(aiPlant).toBeDefined();
+   expect(m.occupiedBioTile(...aiPlant!)).toBe(true);
+   const before = state(e, m);
+   expect(m.doTool(e.EditingTool.TOOL_BULLDOZER, ...aiPlant!).value).not.toBe(e.ToolResult.TOOLRESULT_OK.value);
+   expect(state(e, m)).toEqual(before);
+   reference = m.clone();
+   expect(reference.aiAdmissionsCumulative).toBe(5);
+   expect(reference.aiBoundHumans).toBe(5);
+   m.setParam('podIntake', 0); reference.setParam('podIntake', 0);
+   for (let i = 0; i < 12; ++i) { m.updatePods(); reference.updatePods(); }
+   expect(m.aiBoundHumans).toBe(5); expect(m.aiAdmissionsCumulative).toBe(5);
+   expect(m.plantPower).toBe(reference.plantPower);
+   expect(state(e, m)).toEqual(state(e, reference));
+   expect(m.getRandom16()).toBe(reference.getRandom16());
+  } finally { reference?.delete(); m.delete(); }
+ });
+ it('deep-copies explicit admission inventory and forecasts without changing counters, cohorts, city state or RNG', async () => {
+  const { e, m } = await admissionCity();
+  let reference: Micropolis | undefined;
+  try {
+   m.unemploymentRate = 0.25; expect(m.admitPods(12, true)).toBe(12);
+   reference = m.clone();
+   const counters = () => [m.lastAdmittedEmployed, m.lastAdmittedUnemployed,
+    m.admittedEmployedCumulative, m.admittedUnemployedCumulative, m.unemployedAvailable, m.freePodSlots];
+   const before = state(e, m), counts = counters();
+   const forecast = m.forecastRescue(); forecast.delete();
+   expect(state(e, m)).toEqual(before); expect(counters()).toEqual(counts);
+   expect(m.getRandom16()).toBe(reference.getRandom16());
+   expect(reference.admitPods(3, true)).toBe(3);
+   expect(m.admissionsCumulative).toBe(12);
+   expect(reference.admissionsCumulative).toBe(15);
+   expect(m.boundHumans).toBe(12);
+  } finally { reference?.delete(); m.delete(); }
+ });
+ it('refreshes immediate admissions without aging existing cohorts, consuming food, breeding, advancing time or drawing RNG', async () => {
+  const { e, m } = await admissionCity();
+  let reference: Micropolis | undefined;
+  try {
+   expect(m.admitPods(10, true)).toBe(10);
+   for (let i = 0; i < 12; ++i) m.updatePods();
+   m.setParam('podBreeding', 1);
+   reference = m.clone();
+   const before = state(e, m);
+   const physics = () => ({
+    power: m.plantPower, demand: m.plantFoodDemand, stock: m.podFoodStock,
+    cityDemand: m.podCityFoodDemand, births: m.bornInPodsCumulative,
+    deaths: m.diedInPodsCumulative, immature: m.immatureBornInPods,
+    recycled: m.podRecycledFoodFraction, cityFood: m.podCityFoodFraction,
+   });
+   const prior = physics();
+   expect(m.admitPods(0, true)).toBe(0);
+   expect(state(e, m)).toEqual(before); expect(physics()).toEqual(prior);
+   expect(m.admitPods(5, true)).toBe(5);
+   expect(m.plantPower).toBeCloseTo(prior.power + 5 * m.getParam('podPowerPerHuman'), 10);
+   expect(m.plantFoodDemand).toBe(prior.demand + 5 * m.getParam('podFoodPerHuman'));
+   expect(m.cityTime).toBe(before.time); expect(m.rescueMonth).toBe(before.month);
+   expect(m.financeRevision).toBe(before.budget); expect(m.totalFunds).toBe(before.funds);
+   expect(m.podFoodStock).toBe(prior.stock); expect(m.podCityFoodDemand).toBe(prior.cityDemand);
+   expect(m.bornInPodsCumulative).toBe(prior.births); expect(m.diedInPodsCumulative).toBe(prior.deaths);
+   expect(m.immatureBornInPods).toBe(prior.immature);
+   expect(m.getRandom16()).toBe(reference.getRandom16());
+   m.setParam('podsPolicy', 1);
+   const forbidden = state(e, m), forbiddenPhysics = physics();
+   expect(m.admitPods(5, true)).toBe(-1);
+   expect(m.lastAdmittedEmployed + m.lastAdmittedUnemployed).toBe(0);
+   expect(state(e, m)).toEqual(forbidden); expect(physics()).toEqual(forbiddenPhysics);
+   expect(m.getRandom16()).toBe(reference.getRandom16());
+   m.setParam('podsPolicy', 0); m.clearMap();
+   const absent = state(e, m), absentPhysics = physics();
+   expect(m.admitPods(0, true)).toBe(-2);
+   expect(m.admitPods(5, true)).toBe(-2);
+   expect(state(e, m)).toEqual(absent); expect(physics()).toEqual(absentPhysics);
+   expect(m.getRandom16()).toBe(reference.getRandom16());
+  } finally { reference?.delete(); m.delete(); }
  });
 });

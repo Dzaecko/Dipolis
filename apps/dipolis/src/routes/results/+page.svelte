@@ -25,7 +25,7 @@
 							{#each run.grades as grade}<td>{grade ?? '–'}</td>{/each}
 							<td>{run.warning ?? (run.fake ? 'Schein-Adapter: keine inhaltliche Bewertung' : '')}
 								{#if run.emergency.length}
-									<details><summary>Notstand-Konfiguration und Ergebnis</summary><dl>
+									<details><summary>Konfiguration, Ergebnis und Einweisungen</summary><dl>
 										{#each run.emergency as [label, value]}<dt>{label}</dt><dd>{value}</dd>{/each}
 									</dl></details>
 								{/if}

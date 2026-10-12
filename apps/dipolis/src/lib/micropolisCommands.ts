@@ -5,6 +5,7 @@ import type { NumericReport } from '../types/micropolisengine.d.js';
 import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync';
 import { PROFILES, RESCUE_PARAMS, isSimulationProfile } from './params/profiles';
 import { advanceMonths } from './city-run/advance';
+import { validateToolCall } from './city-run/tools';
 
 export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
@@ -333,6 +334,39 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       },
     })),
     {
+      id: 'pods.admit', label: 'Admit humans to pods', icon: 'power',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'destructive', allowLLM: true, requiresApproval: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const validation = validateToolCall('pods.admit', args);
+        if (!validation.ok) return { handled: false, message: validation.message };
+        const m = simulator?.micropolis as ScenarioEngine | undefined;
+        if (!m || m.getParam('podsEnabled') !== 1 || m.getParam('rescuePressure') <= 0 || podsUnavailable(m))
+          return { handled: false, message: 'explicit admission requires an available positive-pressure pod profile' };
+        if (!m.admitPods) return { handled: false, message: 'engine admitPods binding is unavailable' };
+        const count = validation.args.count;
+        if (typeof count !== 'number')
+          return { handled: false, message: 'validated admission count is unavailable' };
+        const admitted = m.admitPods(count, validation.args.source === 'any');
+        const employed = m.lastAdmittedEmployed, unemployed = m.lastAdmittedUnemployed;
+        const remainingSlots = m.freePodSlots;
+        if (typeof employed !== 'number' || typeof unemployed !== 'number' || typeof remainingSlots !== 'number' ||
+          ![admitted, employed, unemployed, remainingSlots].every(Number.isSafeInteger) ||
+          employed < 0 || unemployed < 0 || remainingSlots < 0 ||
+          (admitted >= 0 && (admitted > count || employed + unemployed !== admitted)) ||
+          (admitted < 0 && admitted !== -1 && admitted !== -2))
+          return { handled: false, message: 'engine admission receipt is invalid' };
+        if (admitted < 0) return {
+          handled: false,
+          message: admitted === -1 ? 'Pod policy forbids admission.' : 'No free pod slots are available.',
+          data: { admitted: 0, employed: 0, unemployed: 0, remainingSlots,
+            failureReason: admitted === -1 ? 'policy' : 'no-capacity' }
+        };
+        return { data: { admitted, employed, unemployed, remainingSlots } };
+      },
+    },
+    {
       id: 'pods.set-policy', label: 'Set autonomous AI pod policy', icon: 'power',
       context: ['simulator', 'button', 'chat', 'llm', 'script'],
       policy: { risk: 'safe', allowLLM: true }, enabled: hasMicropolis,
@@ -434,7 +468,20 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         if (!m.getAiZoneCount) return { handled: false, message: 'engine getAiZoneCount binding is unavailable' };
         let rescueForecast: Record<string, number> | undefined;
         let rescueOptions: Record<string, number> | undefined;
+        let admissionReport: Record<string, number> | undefined;
         if (m.getParam('rescuePressure') > 0) {
+          const values = {
+            freePodSlots: m.freePodSlots, employedHumanCount: m.employedHumanCount,
+            unemployedHumanCount: m.unemployedHumanCount,
+            admittedEmployedCumulative: m.admittedEmployedCumulative,
+            admittedUnemployedCumulative: m.admittedUnemployedCumulative
+          };
+          admissionReport = {};
+          for (const [key, value] of Object.entries(values)) {
+            if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+              return { handled: false, message: `engine admission report ${key} is unavailable or invalid` };
+            admissionReport[key] = value;
+          }
           if (!m.rescueOptions) return { handled: false, message: 'engine rescueOptions binding is unavailable' };
           const options = m.rescueOptions();
           try {
@@ -524,6 +571,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             ...(m.getParam('podsEnabled') === 1 ? {
               plantCount: m.getBioPlantCount(), boundHumans: m.boundHumans,
               admissions: m.admissions, admissionsCumulative: m.admissionsCumulative,
+              ...admissionReport,
               diedInPods: m.diedInPods, diedInPodsCumulative: m.diedInPodsCumulative,
               bornInPods: m.bornInPods, bornInPodsCumulative: m.bornInPodsCumulative,
               immatureBornInPods: m.immatureBornInPods, bornPodOccupants: m.bornPodOccupants,

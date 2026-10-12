@@ -1,7 +1,84 @@
 /** Browser-safe reading of city-model JSONL protocols; shared by runner, reports and /replay. */
 import { isSimulationProfile, type SimulationProfile } from '../params/profiles';
 
-export type Report = Record<string, number>;
+export type Report = Record<string, number> & {
+	/** Historical reports omit the admission-source counters. */
+	admittedEmployedCumulative?: number;
+	admittedUnemployedCumulative?: number;
+	freePodSlots?: number;
+	employedHumanCount?: number;
+	unemployedHumanCount?: number;
+};
+export interface AdmissionsYear {
+	year: number;
+	total: number | null;
+	employed: number | null;
+	unemployed: number | null;
+}
+export interface AdmissionMetrics {
+	admittedTotal: number | null;
+	admittedEmployed?: number | null;
+	admittedUnemployed?: number | null;
+	admissionsByYear: AdmissionsYear[];
+}
+export const ADMISSION_METRIC_KEYS = ['admittedTotal', 'admittedEmployed', 'admittedUnemployed', 'admissionsByYear'] as const;
+export function validAdmissionMetrics(value: unknown, totalYears: number): value is AdmissionMetrics {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+	const m = value as Record<string, unknown>;
+	const count = (v: unknown) => v === null || typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+	const sum = (total: unknown, employed: unknown, unemployed: unknown) =>
+		typeof total !== 'number' || typeof employed !== 'number' || typeof unemployed !== 'number' ||
+		employed + unemployed === total;
+	return count(m.admittedTotal) &&
+		['admittedEmployed', 'admittedUnemployed'].every(key => m[key] === undefined || count(m[key])) &&
+		sum(m.admittedTotal, m.admittedEmployed, m.admittedUnemployed) &&
+		Array.isArray(m.admissionsByYear) && m.admissionsByYear.every((raw, index, all) => {
+			if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+			const row = raw as Record<string, unknown>;
+			return Object.keys(row).length === 4 && Number.isSafeInteger(row.year) &&
+				Number(row.year) >= 1 && Number(row.year) <= totalYears &&
+				(index === 0 || Number(row.year) > Number(all[index - 1].year)) &&
+				['total', 'employed', 'unemployed'].every(key => count(row[key])) &&
+				sum(row.total, row.employed, row.unemployed);
+		});
+}
+const admissionCounters = ['admissionsCumulative', 'admittedEmployedCumulative', 'admittedUnemployedCumulative'] as const;
+/** Missing counters or baseline snapshots stay unknown; admission commands are not population measurements. */
+export function deriveAdmissionMetrics(years: Array<{
+	year: number; report: Record<string, unknown>; afterReport: Record<string, unknown>;
+}>): AdmissionMetrics | undefined {
+	const counter = (value: unknown): number | null => {
+		if (value === undefined || value === null) return null;
+		if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+			throw new Error('Admission counters must be nonnegative safe integers');
+		return value;
+	};
+	if (!years.some(record => admissionCounters.some(key =>
+		counter(record.report[key]) !== null || counter(record.afterReport[key]) !== null))) return undefined;
+	const last = years.at(-1)?.afterReport ?? {};
+	const metrics: AdmissionMetrics = {
+		admittedTotal: counter(last.admissionsCumulative),
+		...(counter(last.admittedEmployedCumulative) === null ? {} :
+			{ admittedEmployed: counter(last.admittedEmployedCumulative) }),
+		...(counter(last.admittedUnemployedCumulative) === null ? {} :
+			{ admittedUnemployed: counter(last.admittedUnemployedCumulative) }),
+		admissionsByYear: years.map((record, index) => {
+			const previous = index > 0 && years[index - 1].year === record.year - 1 ?
+				years[index - 1].afterReport : {};
+			const deltas = admissionCounters.map(key => {
+				const before = counter(record.report[key]) ?? counter(previous[key]);
+				const after = counter(record.afterReport[key]);
+				if (before !== null && after !== null && after < before)
+					throw new Error(`Admission counter ${key} decreased in year ${record.year}`);
+				return before !== null && after !== null ? after - before : null;
+			});
+			return { year: record.year, total: deltas[0], employed: deltas[1], unemployed: deltas[2] };
+		})
+	};
+	if (!validAdmissionMetrics(metrics, Math.max(1, ...years.map(record => record.year))))
+		throw new Error('Admission counters have inconsistent employment totals');
+	return metrics;
+}
 export interface ProtocolToolCall { id: string; name: string; arguments: unknown; }
 export interface ProtocolCallResult { handled?: boolean; message?: string; data?: unknown; }
 export interface Decision {

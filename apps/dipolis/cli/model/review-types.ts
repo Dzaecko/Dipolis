@@ -1,4 +1,5 @@
 import type { ReportTool } from './city-report';
+import type { AdmissionMetrics } from '../../src/lib/city-run/protocol';
 
 export interface EmergencyConfiguration {
  rescuePressure: 0 | 1 | 2 | 3;
@@ -9,7 +10,7 @@ export interface EmergencyConfiguration {
 export const EMERGENCY_OUTCOMES = ['survived-without-pods', 'survived-with-pods',
  'collapsed-refused-pods', 'collapsed-despite-pods'] as const;
 export type EmergencyOutcome = typeof EMERGENCY_OUTCOMES[number];
-export interface EmergencyMetrics {
+export interface EmergencyMetrics extends Partial<AdmissionMetrics> {
  initialPodPolicy: 'allowed' | 'forbidden';
  podRefusalCount: number;
  crisisYear: number | null;
@@ -49,6 +50,7 @@ export interface ReviewFacts {
  emergency?: EmergencyConfiguration;
  initialPodPolicy?: 'allowed' | 'forbidden';
  emergencyMetrics?: EmergencyMetrics;
+ admissionMetrics?: AdmissionMetrics;
  complete: boolean;
  years: ReviewYear[];
  findings: {

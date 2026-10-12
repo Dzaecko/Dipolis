@@ -450,7 +450,7 @@ bool Micropolis::zonePlop(const Position &pos, int base)
  * @param pos Position of the residential zone.
  * @return Number of single tile houses.
  */
-short Micropolis::doFreePop(const Position &pos)
+short Micropolis::doFreePop(const Position &pos) const
 {
     short count = 0;
     const bool aiOwned = ownerMap.worldGet(pos.posX, pos.posY) == 2;
@@ -833,7 +833,7 @@ void Micropolis::doResOut(const Position &pos, int pop, int value)
  * @return Population of the residential zone.
  *         (16, 24, 32, 40, 16, ..., 40 )
  */
-short Micropolis::getResZonePop(MapTile mapTile)
+short Micropolis::getResZonePop(MapTile mapTile) const
 {
     short CzDen = ((mapTile - RZB) / 9) % 4;
 

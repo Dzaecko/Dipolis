@@ -911,6 +911,98 @@ void Micropolis::updateAiFaction()
         aiLastPlantMonth = podMonth;
 }
 
+int Micropolis::getFreeHumanStock() const
+{
+    int stock = 0;
+    for (int x = 1; x < WORLD_W - 1; ++x) for (int y = 1; y < WORLD_H - 1; ++y) {
+        const MapValue tile = map[x][y];
+        const int base = tile & LOMASK;
+        if (!(tile & ZONEBIT) || base < RESBASE || base >= HOSPITAL ||
+            ownerMap.worldGet(x, y) == 2) continue;
+        stock += max(0, (base == FREEZ ? doFreePop(Position(x, y)) : getResZonePop(base)) -
+            (int)humanPodOffsetMap.worldGet(x, y));
+    }
+    return stock;
+}
+
+int Micropolis::getUnemployedAvailable() const
+{
+    const int stock = getFreeHumanStock();
+    return min(stock, max(0, (int)floor((stock + admittedSinceEmploymentCensus) * unemploymentRate) -
+        unemployedAdmittedSinceEmploymentCensus));
+}
+
+int Micropolis::getFreePodSlots() const
+{
+    int slots = 0;
+    for (const auto &plant : bioPlants) {
+        if ((plant.owner != 4 && plant.owner != 5) || !(map[plant.x][plant.y] & ZONEBIT) ||
+            ownerMap.worldGet(plant.x, plant.y) != plant.owner) continue;
+        int occupants = 0;
+        for (const auto &cohort : plant.cohorts) occupants += cohort.count;
+        slots += max(0, params.podsPerPlant - occupants);
+    }
+    return slots;
+}
+
+int Micropolis::admitPods(int count, bool anySource)
+{
+    lastAdmittedEmployed = lastAdmittedUnemployed = 0;
+    if (podsPolicy != 0) return -1;
+    if (!params.podsEnabled || !getFreePodSlots()) return -2;
+    if (count <= 0) return 0;
+    const int unemployed = getUnemployedAvailable();
+    int budget = min(count, anySource ? getFreeHumanStock() : unemployed);
+    int admittedTotal = 0;
+    for (auto &plant : bioPlants) {
+        if (!budget) break;
+        if ((plant.owner != 4 && plant.owner != 5) || !(map[plant.x][plant.y] & ZONEBIT) ||
+            ownerMap.worldGet(plant.x, plant.y) != plant.owner) continue;
+        int occupants = 0;
+        for (const auto &cohort : plant.cohorts) occupants += cohort.count;
+        int remaining = min(budget, max(0, params.podsPerPlant - occupants));
+        int admitted = 0;
+        for (int x = 1; x < WORLD_W - 1 && remaining > 0; ++x)
+            for (int y = 1; y < WORLD_H - 1 && remaining > 0; ++y) {
+                const MapValue tile = map[x][y];
+                const int base = tile & LOMASK;
+                if (!(tile & ZONEBIT) || base < RESBASE || base >= HOSPITAL ||
+                    ownerMap.worldGet(x, y) == 2) continue;
+                const Position pos(x, y);
+                const int population = max(0, (base == FREEZ ? doFreePop(pos) : getResZonePop(base)) -
+                    (int)humanPodOffsetMap.worldGet(x, y));
+                const int taken = min(population, remaining);
+                if (!taken) continue;
+                setHumanZonePopulation(pos, population - taken);
+                previousHumanResPopMap.worldSet(x, y, (Byte)(population - taken));
+                admitted += taken;
+                remaining -= taken;
+            }
+        if (!admitted) continue;
+        plant.cohorts.push_back({podMonth, admitted, false, 0.0, plant.owner});
+        resPop = max(0, (int)resPop - admitted);
+        totalPop = (short)((float)resPop / 8.0f + comPop + indPop);
+        resHist[1] = max(0, (int)resHist[1] - (admitted + 7) / 8);
+        pendingAdmissions += admitted;
+        admissionsCumulative += admitted;
+        if (plant.owner == 5) {
+            pendingAiAdmissions += admitted;
+            aiAdmissionsCumulative += admitted;
+        } else adminAdmissionsCumulative += admitted;
+        admittedTotal += admitted;
+        budget -= admitted;
+    }
+    lastAdmittedUnemployed = min(admittedTotal, unemployed);
+    lastAdmittedEmployed = admittedTotal - lastAdmittedUnemployed;
+    admittedEmployedCumulative += lastAdmittedEmployed;
+    admittedUnemployedCumulative += lastAdmittedUnemployed;
+    admittedSinceEmploymentCensus += admittedTotal;
+    unemployedAdmittedSinceEmploymentCensus += lastAdmittedUnemployed;
+    refreshPods();
+    if (rescueEnabled()) rescueOccupancyPeak = max(rescueOccupancyPeak, boundHumans);
+    return admittedTotal;
+}
+
 void Micropolis::updatePods()
 {
     ++podMonth;
@@ -965,6 +1057,7 @@ void Micropolis::updatePods()
         int free = max(0, params.podsPerPlant - occupants);
         const int intake = plant.owner == 5 ? (aiAutonomyPermitted ? 1 : 0) : podIntake;
         int intakeBudget = intake == 1 ? min(free, unemployedAvailable) : intake == 2 ? free : 0;
+        if (rescueEnabled()) intakeBudget = 0;
         for (int x = 1; x < WORLD_W - 1 && intakeBudget > 0; ++x)
             for (int y = 1; y < WORLD_H - 1 && intakeBudget > 0; ++y) {
                 const MapValue tile = map[x][y];
@@ -1090,6 +1183,7 @@ void Micropolis::setValves()
         employment = 1.0f;
         unemploymentRate = 0.0f;
     }
+    admittedSinceEmploymentCensus = unemployedAdmittedSinceEmploymentCensus = 0;
 
     const float welfareAdjustedEmployment = employment + (1.0f - employment) * params.welfareLevel;
     migration = normalizedResPop * (welfareAdjustedEmployment - 1.0f);

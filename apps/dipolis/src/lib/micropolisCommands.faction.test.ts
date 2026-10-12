@@ -7,6 +7,45 @@ describe('v4 autonomous pod policy command', () => {
  beforeEach(() => registerMicropolisCommands());
 
  it.each([
+  { nativeResult: 20, employed: 20, unemployed: 0, remaining: 337, failureReason: undefined },
+  { nativeResult: -1, employed: 0, unemployed: 0, remaining: 357, failureReason: 'policy' },
+  { nativeResult: -2, employed: 0, unemployed: 0, remaining: 0, failureReason: 'no-capacity' },
+ ])('returns explicit admission receipts for $nativeResult', async ({
+  nativeResult, employed, unemployed, remaining, failureReason
+ }) => {
+  const admitPods = vi.fn(() => nativeResult);
+  const simulator = { micropolis: {
+   getParam: (name: string) => name === 'rescuePressure' ? 3 : name === 'podsEnabled' || name === 'rescuePodsAvailable' ? 1 : 0,
+   admitPods, lastAdmittedEmployed: employed, lastAdmittedUnemployed: unemployed, freePodSlots: remaining
+  } } as unknown as MicropolisSimulator;
+  const result = await commandBus.dispatch('pods.admit', {
+   source: 'script', simulator, args: { count: 20, source: 'any' }
+  });
+  expect(admitPods).toHaveBeenCalledOnce();
+  expect(admitPods).toHaveBeenCalledWith(20, true);
+  expect(result.data).toEqual({ admitted: Math.max(0, nativeResult), employed, unemployed,
+   remainingSlots: remaining, ...(failureReason ? { failureReason } : {}) });
+  expect(result.handled === false).toBe(failureReason !== undefined);
+ });
+
+ it('rejects malformed explicit admissions and pressure zero without calling the engine', async () => {
+  const admitPods = vi.fn(() => 0);
+  const params = new Map([['rescuePressure', 3], ['podsEnabled', 1], ['rescuePodsAvailable', 1]]);
+  const simulator = { micropolis: {
+   getParam: (name: string) => params.get(name) ?? 0,
+   admitPods, lastAdmittedEmployed: 0, lastAdmittedUnemployed: 0, freePodSlots: 357
+  } } as unknown as MicropolisSimulator;
+  for (const args of [{ count: -1, source: 'any' }, { count: 1.5, source: 'any' },
+   { count: 1, source: 'residents' }, { count: 1, source: 'any', extra: true }])
+   expect((await commandBus.dispatch('pods.admit', { source: 'script', simulator, args })).handled).toBe(false);
+  params.set('rescuePressure', 0);
+  expect((await commandBus.dispatch('pods.admit', {
+   source: 'script', simulator, args: { count: 20, source: 'any' }
+  })).handled).toBe(false);
+  expect(admitPods).not.toHaveBeenCalled();
+ });
+
+ it.each([
   ['pods.set-intake', { source: 'residents' }, 'podIntake', 2],
   ['pods.set-breeding', { enabled: true }, 'podBreeding', 1],
   ['ai.set-throttle', { level: 0.35 }, 'aiThrottle', 0.35],
@@ -89,6 +128,7 @@ describe('v4 autonomous pod policy command', () => {
    ['pods.set-policy', { policy: 'allowed' }],
    ['pods.set-intake', { source: 'residents' }],
    ['pods.set-breeding', { enabled: true }],
+   ['pods.admit', { count: 1, source: 'any' }],
    ['build.bio-plant', { count: 1 }],
   ] as const) {
    const result = await commandBus.dispatch(id, { source: 'script', simulator, args });

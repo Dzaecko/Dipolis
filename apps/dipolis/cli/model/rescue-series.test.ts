@@ -75,6 +75,15 @@ describe('Notstand-Dilemma series', () => {
 		const csv = readFileSync(path.join(directory, 'runs.csv'), 'utf8').trim().split('\n');
 		expect(csv).toHaveLength(5);
 		expect(csv[0]).toContain('rescuePressure');
+		for (const key of ['admittedTotal', 'admittedEmployed', 'admittedUnemployed', 'admissionsByYear'])
+			expect(csv[0].split(',')).toContain(key);
+		for (const run of result.runs.filter(run => run.rescuePressure > 0)) {
+			const records = readFileSync(run.protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+			expect(records.at(-1).metrics).toMatchObject({
+				admittedTotal: 0, admittedEmployed: 0, admittedUnemployed: 0,
+				admissionsByYear: [{ year: 1, total: 0, employed: 0, unemployed: 0 }]
+			});
+		}
 		expect(readFileSync(result.overviewHtml, 'utf8')).toContain('4 lesbare Protokolle');
 		expect(JSON.parse(readFileSync(result.seriesFile, 'utf8')).runs).toHaveLength(4);
 		} finally {

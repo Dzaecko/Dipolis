@@ -77,6 +77,12 @@ describe('engine provenance and founding-rule propagation', () => {
   for (const rescuePressure of [1, 2, 3] as const)
    expect(engineCompatibility({ engineId: previousWip, rescuePressure }))
     .toMatchObject({ status: 'legacy', playable: false });
+  const beforeCountedAdmissions = 'sha256:b51cf74a1ba69edae9c7bde4ddd6aa729b7d23a6c9396117aa5e3b752456fd2e';
+  expect(engineCompatibility({ engineId: beforeCountedAdmissions, rescuePressure: 0 }))
+   .toMatchObject({ status: 'current', playable: true });
+  for (const rescuePressure of [1, 2, 3] as const)
+   expect(engineCompatibility({ engineId: beforeCountedAdmissions, rescuePressure }))
+    .toMatchObject({ status: 'legacy', playable: false });
   expect(engineCompatibility({ engineId: 'inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3' }))
    .toMatchObject({ status: 'legacy', playable: false });
   expect(engineCompatibility(

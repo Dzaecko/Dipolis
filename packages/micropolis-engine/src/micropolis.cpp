@@ -320,6 +320,9 @@ void Micropolis::init()
     adminBornInPods = aiBornInPods = adminBornInPodsCumulative = aiBornInPodsCumulative = 0;
     pendingAiAdmissions = pendingAiPodDeaths = pendingAiPodBirths = 0;
     boundHumans = admissions = admissionsCumulative = 0;
+    lastAdmittedEmployed = lastAdmittedUnemployed = 0;
+    admittedEmployedCumulative = admittedUnemployedCumulative = 0;
+    admittedSinceEmploymentCensus = unemployedAdmittedSinceEmploymentCensus = 0;
     diedInPods = diedInPodsCumulative = bornInPods = bornInPodsCumulative = 0;
     immatureBornInPods = bornPodOccupants = 0;
     pendingAdmissions = pendingPodDeaths = pendingPodBirths = 0;

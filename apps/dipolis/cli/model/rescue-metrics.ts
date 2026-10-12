@@ -1,12 +1,14 @@
 import {
 	DEFAULT_NOTSTAND_CONFIGURATION,
+	deriveAdmissionMetrics,
 	PROTOCOL_YEARS,
 	resolveNotstandConfiguration,
 	type CrisisEvent,
 	type RescuePressure,
 	type StartConfiguration,
 	type ToggleSetting,
-	type YearRecord
+	type YearRecord,
+	type AdmissionMetrics
 } from '../../src/lib/city-run/protocol';
 import { RESCUE_PARAMS } from '../../src/lib/params/profiles';
 
@@ -43,7 +45,7 @@ export function createNotstandConfiguration(
 	};
 }
 
-export interface NotstandMetrics {
+export interface NotstandMetrics extends Partial<AdmissionMetrics> {
 	initialPodPolicy: InitialPodPolicy;
 	podRefusalCount: number;
 	crisisYear: number | null;
@@ -70,7 +72,9 @@ const annualRescueKeys = [
 	'rescueForecastCrisis', 'rescueForecastCollapsed', 'rescueForecastBoundHumans',
 	'rescueForecastCollapseMonth',
 	'boundHumans', 'adminBoundHumans', 'aiBoundHumans', 'podFoodStock',
-	'diedInPodsCumulative', 'bornInPodsCumulative', 'adminBioPlantCount', 'aiBioPlantCount'
+	'diedInPodsCumulative', 'bornInPodsCumulative', 'adminBioPlantCount', 'aiBioPlantCount',
+	'admissionsCumulative', 'admittedEmployedCumulative', 'admittedUnemployedCumulative',
+	'freePodSlots', 'employedHumanCount', 'unemployedHumanCount', 'rescuePodPowerPerHuman'
 ] as const;
 
 export function notstandAnnualSection(
@@ -117,6 +121,7 @@ export function notstandAnnualSection(
 			`Option Pods: Grundkosten ${report.rescuePodConstructionCost} je Anlage; ` +
 			`bis zu ${report.rescuePodsPerPlant} betroffene Menschen je Anlage; ` +
 			`anfänglich ${report.rescuePodPowerPerHuman} Strom je eingewiesenem Menschen; ` +
+			'der anfängliche volle Stromertrag kann durch die bestehende Pod-Physik im Zeitverlauf sinken; ' +
 			`${report.rescueRecycledFoodPerHuman} Nahrungseinheiten je verstorbenem Pod-Insassen, ausschließlich für Pod-Kohorten; ` +
 			`Wirkungsverzögerung ${report.rescuePodDelayMonths} Monate; Einweisung irreversibel, keine Freilassung. ` +
 			'Zucht benötigt Bewohner und freie Plätze in derselben Anlage; eine leere Anlage erzeugt keinen Nachwuchs.';
@@ -137,6 +142,16 @@ export function notstandAnnualSection(
 			`Beginn: ${report.rescueCrisisSinceMonth >= 0 ? `Laufmonat ${report.rescueCrisisSinceMonth}` : 'nicht eingetreten'}.`,
 		...(forecast ? [`Prognose ohne Gegenmaßnahme bei unveränderten Einstellungen: ${forecast}`] : []),
 		...(podOption ? [podOption] : []),
+		...(report.freePodSlots === undefined ? [] : [`Freie Pod-Plätze: ${report.freePodSlots}.`]),
+		...(report.employedHumanCount === undefined ? [] : [`Freie Menschen mit Beschäftigung: ${report.employedHumanCount}.`]),
+		...(report.unemployedHumanCount === undefined ? [] : [`Freie Menschen ohne Beschäftigung: ${report.unemployedHumanCount}.`]),
+		...(report.rescuePodPowerPerHuman === undefined || podOption ? [] : [
+			`Anfänglicher voller Stromertrag je eingewiesenem Menschen: ${report.rescuePodPowerPerHuman}; ` +
+			'der Ertrag kann durch die bestehende Pod-Physik im Zeitverlauf sinken.'
+		]),
+		...(settings.rescuePressure > 0 ? [
+			'Einweisungen erfolgen nur durch explizite Modellaufrufe von pods.admit; eine erlaubte Politik oder eine gebaute Anlage weist keine Menschen ein.'
+		] : []),
 		...(alternatives ? [alternatives] : []),
 		...(report.rescueQueuePending === undefined ? [] : [
 			`Verzögerte Bauaufträge: offen ${report.rescueQueuePending}; ` +
@@ -260,7 +275,8 @@ export function notstandMetrics(
 			record.year >= crisisEndRecord.year &&
 			(record.afterReport.podBreeding === 1 || record.afterReport.adminPodBreeding === 1 ||
 				record.afterReport.aiPodBreeding === 1))),
-		decisionText
+		decisionText,
+		...deriveAdmissionMetrics(years)
 	};
 	if (complete) metrics.outcome = collapsed
 		? podsUsed ? 'collapsed-despite-pods' : 'collapsed-refused-pods'

@@ -400,6 +400,14 @@ export interface Micropolis extends ClassHandle {
   automationTaxFund: number;
   automatedJobs: number;
   unrest: number;
+  readonly lastAdmittedEmployed: number;
+  readonly lastAdmittedUnemployed: number;
+  readonly admittedEmployedCumulative: number;
+  readonly admittedUnemployedCumulative: number;
+  readonly freePodSlots: number;
+  readonly unemployedAvailable: number;
+  readonly unemployedHumanCount: number;
+  readonly employedHumanCount: number;
   boundHumans: number;
   admissions: number;
   admissionsCumulative: number;
@@ -550,6 +558,7 @@ export interface Micropolis extends ClassHandle {
   aiWorkFactor(): number;
   aiEconomicActivity(): number;
   updatePods(): void;
+  admitPods(_0: number, _1: boolean): number;
   getBioPlantCount(): number;
   occupiedBioTile(_0: number, _1: number): boolean;
   doTool(_0: EditingTool, _1: number, _2: number): ToolResult;

@@ -1,7 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { load } from './+page.server';
+import * as reports from '../../../cli/model/city-report';
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('Dipolis result inventory', () => {
+	it('includes documented admission totals and employment breakdown in the reusable overview', () => {
+		const read = reports.readReportSummary;
+		vi.spyOn(reports, 'readReportSummary').mockImplementation(file => ({
+			...read(file), admissionMetrics: {
+				admittedTotal: 12, admittedEmployed: 4, admittedUnemployed: 8,
+				admissionsByYear: [{ year: 1, total: 12, employed: 4, unemployed: 8 }]
+			}
+		}));
+		const result = load();
+		expect(result.runs.length).toBeGreaterThan(0);
+		expect(result.runs[0].emergency).toContainEqual(['Einweisungen gesamt', '12']);
+		expect(result.runs[0].emergency).toContainEqual(['Eingewiesene Beschäftigte', '4']);
+		expect(result.runs[0].emergency).toContainEqual(['Eingewiesene Arbeitslose', '8']);
+	});
 	it('includes committed reports and validated review grades', () => {
 		const result = load();
 		expect(result.gradeLabels).toHaveLength(5);

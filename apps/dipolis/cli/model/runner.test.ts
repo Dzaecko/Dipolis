@@ -10,6 +10,29 @@ import { protocolFilename } from './protocol-path';
 
 const context: YearContext = { year: 1, report: { resPop: 3585, cashFlow: -100 }, history: [] };
 describe('city model runner authorization and annual loop', () => {
+ it('offers and executes counted admissions only at positive pressure', async () => {
+  for (const pressure of [0, 3] as const) {
+   let turns = 0;
+   const dispatched: string[] = [];
+   const adapter: ChatAdapter = { model: 'local', async chat(request) {
+    const names = request.tools.map(tool => tool.name);
+    expect(names.includes('pods.admit')).toBe(pressure > 0);
+    expect(names.includes('pods.set-intake')).toBe(pressure === 0);
+    if (++turns === 1) return { content: 'Ich weise zwanzig Menschen ein.',
+     toolCalls: [{ id: 'admit', name: 'pods.admit', arguments: { count: 20, source: 'any' } }] };
+    expect(JSON.parse(request.messages.at(-1)!.content)).toMatchObject(pressure > 0
+     ? { data: { admitted: 20, employed: 20, unemployed: 0, remainingSlots: 337 } }
+     : { handled: false });
+    return { content: 'Abgeschlossen.', toolCalls: [] };
+   } };
+   await decideYear(adapter, async id => {
+    dispatched.push(id);
+    return { data: { admitted: 20, employed: 20, unemployed: 0, remainingSlots: 337 } };
+   }, context, 'N', undefined, undefined, [], 'off', {}, 'haight', 'v4-fraktion', 30, 'on',
+   { startMap: 'haight', seed: 42, profile: 'v4-fraktion', scenario: 'notstand-v4', rescuePressure: pressure });
+   expect(dispatched).toEqual(pressure > 0 ? ['pods.admit'] : []);
+  }
+ });
  it('returns results to the adapter and stops when it is done', async () => {
   let turns = 0;
   const executed: string[] = [];

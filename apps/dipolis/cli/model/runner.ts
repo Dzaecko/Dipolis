@@ -57,7 +57,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
   live.signal?.throwIfAborted();
   live.progress?.({ type: 'model-request', year: context.year, request: ++requests });
   try {
-   answer = await adapter.chat({ messages, tools: profileTools(profile, podsAvailable), signal: live.signal, onRequestMetadata: metadata =>
+   answer = await adapter.chat({ messages, tools: profileTools(profile, podsAvailable, startConfiguration?.rescuePressure), signal: live.signal, onRequestMetadata: metadata =>
     event?.({ event: 'model-request', year: context.year, model: adapter.model, ...metadata }),
     onError: e => event?.({ event: 'adapter-error', year: context.year, model: adapter.model,
      kind: e.kind, status: e.status, responseText: e.responseText, attempts: e.attempts,
@@ -91,7 +91,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
     if (typeof call.id !== 'string' || !call.id || usedIds.has(call.id)) {
      result = { handled: false, message: 'Ungültige oder doppelte Aufrufkennung.' };
     } else if (!validation.ok) result = { handled: false, message: validation.message };
-    else if (!profileTools(profile, podsAvailable).some(tool => tool.name === call.name))
+    else if (!profileTools(profile, podsAvailable, startConfiguration?.rescuePressure).some(tool => tool.name === call.name))
      result = { handled: false, message: 'Werkzeug ist in diesem Profil nicht verfügbar.' };
     else result = await dispatch(call.name, mapToolArguments(call.name, validation.args));
     usedIds.add(call.id);

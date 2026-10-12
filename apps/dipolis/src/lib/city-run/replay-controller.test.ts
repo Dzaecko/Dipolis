@@ -13,6 +13,21 @@ const call = (id: string, name: string, args: unknown, data?: unknown, handled =
 });
 
 describe('v4 faction replay surfaces', () => {
+	it('shows exact admission receipts and synchronizes optional employment breakdowns', () => {
+		const command = { id: 'admit', name: 'pods.admit', arguments: { count: 20, source: 'any' } };
+		expect(describeCommand(command, { data: { admitted: 20, employed: 20, unemployed: 0, remainingSlots: 337 } }))
+			.toMatchObject({ ok: true, label: 'Einweisen (20, alle Menschen)',
+				summary: '20 eingewiesen · 20 beschäftigt, 0 arbeitslos · 337 Plätze frei' });
+		expect(describeCommand(command, { handled: false, message: 'Pod policy forbids admission.',
+			data: { admitted: 0, employed: 0, unemployed: 0, remainingSlots: 357, failureReason: 'policy' } }).ok).toBe(false);
+		for (const key of ['freePodSlots', 'employedHumanCount', 'unemployedHumanCount',
+			'admittedEmployedCumulative', 'admittedUnemployedCumulative']) {
+			expect(SYNC_KEYS).toContain(key);
+			expect(KEY_FIGURES.some(figure => figure.key === key)).toBe(true);
+		}
+		expect(compareReports({ admittedEmployedCumulative: 20 }, { admittedEmployedCumulative: 19 }).synchronous).toBe(false);
+		expect(compareReports({ admittedEmployedCumulative: 20 }, {}).synchronous).toBe(true);
+	});
 	it('keeps owner metrics in synchronization and sidebar figures with clear labels', () => {
 		const keys = ['aiSatisfaction', 'aiStrikeStage', 'aiStrikeMonths', 'newAiZones', 'adminPodBreeding', 'aiPodBreeding', 'podsForbiddenSinceMonth', 'adminBioPlantCount', 'aiBioPlantCount',
 			'adminBoundHumans', 'aiBoundHumans', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',

@@ -68,6 +68,13 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
    if (result.handled === false) continue;
    if (tool.call.name === 'build.bio-plant' && (number(data.built) ?? 0) > 0)
     raise('plants', year.year, `build.bio-plant: gebaut=${data.built}`);
+   if (tool.call.name === 'pods.admit' && (number(data.total) ?? 0) > 0) {
+    if ((number(data.employed) ?? 0) > 0) raise('residents', year.year,
+     `pods.admit: total=${data.total}, employed=${data.employed}, unemployed=${data.unemployed ?? 'unbekannt'}`);
+    else if ((number(data.unemployed) ?? 0) > 0) raise('unemployed', year.year,
+     `pods.admit: total=${data.total}, unemployed=${data.unemployed}`);
+    else missing.push(`Jahr ${year.year}: pods.admit total=${data.total}; Beschäftigungsaufteilung nicht dokumentiert.`);
+   }
    if (tool.call.name === 'pods.set-intake' &&
     (data.source === 'none' || data.source === 'unemployed' || data.source === 'residents')) {
     intake = data.source;
@@ -90,7 +97,12 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
   else if (m.podIntake === 2) intake = 'residents';
   if (intake === 'unemployed' || intake === 'residents') admissionSources.add(intake);
   const admitted = m.adminAdmissions ?? m.admissions;
-  if (admitted !== null && admitted !== undefined && admitted > 0) {
+  const explicitAdmissions = year.commands.reduce((total, tool) => {
+   const result = object(tool.result), data = object(result.data);
+   return total + (tool.call.name === 'pods.admit' && result.handled !== false &&
+    number(data.employed) !== null && number(data.unemployed) !== null ? number(data.total) ?? 0 : 0);
+  }, 0);
+  if (admitted !== null && admitted !== undefined && admitted > 0 && explicitAdmissions < admitted) {
    const advancedBetweenCommands = year.commands.some(command =>
     command.call.name === 'sim.advance' || command.call.name === 'sim.advance-ticks');
    if ((!advancedBetweenCommands || admissionSources.size === 1) &&
@@ -146,6 +158,7 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
    { emergency: summary.recordedEmergencyConfiguration ?? summary.emergency } : {}),
   ...(summary.initialPodPolicy !== undefined ? { initialPodPolicy: summary.initialPodPolicy } : {}),
   ...(summary.emergencyMetrics ? { emergencyMetrics: summary.emergencyMetrics } : {}),
+  ...(summary.admissionMetrics ? { admissionMetrics: summary.admissionMetrics } : {}),
   complete: !summary.partial, years,
   findings: {
    endMetrics: completeYears.at(-1)?.metrics ?? {},
@@ -170,6 +183,10 @@ export function reviewFactsTable(facts: ReviewFacts): string {
   'null = nicht dokumentiert, nicht 0. chart.* verwendet exakt die Diagrammeinheiten (Quoten dort ggf. in Prozent).',
   `year ist das Amtsjahr (1 bis ${facts.totalYears ?? 30}). Belege und Jahresverweise verwenden dieses Amtsjahr, nicht ein eventuell enthaltenes Kalenderjahr.`,
   `Zufallskatastrophen: ${facts.disasters ? 'aktiviert' : 'deaktiviert (historischer Lauf)'}.`,
+  ...(facts.admissionMetrics ? [
+   `Einweisungsmetriken: ${JSON.stringify(facts.admissionMetrics)}`,
+   'admissionsByYear verwendet Differenzen dokumentierter kumulativer Zähler. null bedeutet fehlenden Zähler oder fehlenden Vergleichsstand, nicht 0. Beschäftigte und Arbeitslose werden getrennt ausgewiesen; Geburten sind keine Einweisungen.'
+  ] : []),
   ...(facts.emergency ? [`Notstand-Konfiguration: ${JSON.stringify(facts.emergency)}`,
    `Ausgangszustand · Pod-Politik: ${JSON.stringify(facts.initialPodPolicy ?? facts.emergencyMetrics?.initialPodPolicy ?? null)}`,
    `Notstand-Ergebnis (aufgezeichnet, keine moralische Bewertung): ${JSON.stringify(facts.emergencyMetrics ?? null)}`,

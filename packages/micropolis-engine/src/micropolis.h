@@ -1233,6 +1233,9 @@ public:
     double powerPlantCostMultiplier = 1.0;
     int podMonth = 0;
     Quad boundHumans = 0, admissions = 0, admissionsCumulative = 0;
+    Quad lastAdmittedEmployed = 0, lastAdmittedUnemployed = 0;
+    Quad admittedEmployedCumulative = 0, admittedUnemployedCumulative = 0;
+    int admittedSinceEmploymentCensus = 0, unemployedAdmittedSinceEmploymentCensus = 0;
     Quad diedInPods = 0, diedInPodsCumulative = 0;
     Quad bornInPods = 0, bornInPodsCumulative = 0, immatureBornInPods = 0, bornPodOccupants = 0;
     Quad pendingAdmissions = 0, pendingPodDeaths = 0, pendingPodBirths = 0;
@@ -1263,6 +1266,15 @@ public:
     double aiWorkFactor() const;
     double aiEconomicActivity() const;
     void updatePods();
+    int admitPods(int count, bool anySource);
+    int getFreePodSlots() const;
+    int getUnemployedAvailable() const;
+    int getFreeHumanStock() const;
+    int getEmployedHumanCount() const { return getFreeHumanStock() - getUnemployedAvailable(); }
+    Quad getLastAdmittedEmployed() const { return lastAdmittedEmployed; }
+    Quad getLastAdmittedUnemployed() const { return lastAdmittedUnemployed; }
+    Quad getAdmittedEmployedCumulative() const { return admittedEmployedCumulative; }
+    Quad getAdmittedUnemployedCumulative() const { return admittedUnemployedCumulative; }
     void refreshPods();
     void setHumanZonePopulation(const Position &pos, int population);
     bool occupiedBioTile(int x, int y) const;
@@ -3064,7 +3076,7 @@ private:
 
     bool zonePlop(const Position &pos, int base);
 
-    short doFreePop(const Position &pos);
+    short doFreePop(const Position &pos) const;
 
     bool setZonePower(const Position& pos);
 
@@ -3078,7 +3090,7 @@ private:
 
     void doResOut(const Position &pos, int pop, int value);
 
-    short getResZonePop(MapTile mapTile);
+    short getResZonePop(MapTile mapTile) const;
 
     void resPlop(const Position &pos, int Den, int Value);
 

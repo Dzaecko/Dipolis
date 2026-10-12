@@ -20,6 +20,7 @@ import { CURRENT_ENGINE_ID, ENGINE_HASHES } from '../../src/lib/city-run/compati
 import { systemPrompt } from './prompts';
 import { generateCityReview, reviewPath } from './city-review';
 import { notstandMetrics } from './rescue-metrics';
+import { appendCsvColumns, csvRecords } from './results-csv';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -45,7 +46,8 @@ const metricKeys: (keyof Metrics)[] = ['meanResPop', 'minResPop', 'finalResPop',
 const notstandCsvColumns = ['scenario', 'rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable',
  'initialPodPolicy', 'podRefusalCount',
  'crisisYear', 'crisisTrigger', 'crisisEndYear', 'podDecisionYear', 'podsPeak', 'podDeathsTotal',
- 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText'] as const;
+ 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText',
+ 'admittedTotal', 'admittedEmployed', 'admittedUnemployed', 'admissionsByYear'] as const;
 const escape = (value: unknown) => {
  const text = value == null ? '' : String(value);
  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -249,7 +251,7 @@ async function main() {
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook', 'profile'].join(',')]
    .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',')
     .filter(column => !notstandCsvColumns.some(key => key === column) && column !== 'disasters' && column !== 'totalYears').join(','))) {
-   const old = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+   const old = csvRecords(readFileSync(csvFile, 'utf8'));
    const legacyHeader = ['assignment', 'model', 'run', ...metricKeys].join(',');
    const previousHeader = ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'].join(',');
    if (old[0] !== legacyHeader && old[0] !== previousHeader) throw new Error('Incompatible results CSV header');
@@ -259,27 +261,21 @@ async function main() {
    writeFileSync(csvFile, [migratedHeader, ...old.slice(1).map(row =>
     row + (old[0] === legacyHeader ? ',,,false' : '') + ',off')].join('\n') + '\n');
   }
-  const profileCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  const profileCsv = csvRecords(readFileSync(csvFile, 'utf8'));
   if (!profileCsv[0].split(',').includes('profile')) {
    writeFileSync(csvFile, [profileCsv[0] + ',profile', ...profileCsv.slice(1).map(row => row + ',koexistenz')].join('\n') + '\n');
   }
-  const durationCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  const durationCsv = csvRecords(readFileSync(csvFile, 'utf8'));
   if (!durationCsv[0].split(',').includes('totalYears')) {
    writeFileSync(csvFile, [durationCsv[0] + ',totalYears', ...durationCsv.slice(1).map(row => row + ',30')].join('\n') + '\n');
   }
-  const disasterCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  const disasterCsv = csvRecords(readFileSync(csvFile, 'utf8'));
   if (!disasterCsv[0].split(',').includes('disasters')) {
    writeFileSync(csvFile, [disasterCsv[0] + ',disasters', ...disasterCsv.slice(1).map(row => row + ',false')].join('\n') + '\n');
   }
-  let csvWithNotstand = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
-  const existingColumns = csvWithNotstand[0]!.split(',');
-  const missingNotstandColumns = notstandCsvColumns.filter(column => !existingColumns.includes(column));
-  if (missingNotstandColumns.length) {
-   const migration = missingNotstandColumns.map(() => '').join(',');
-   csvWithNotstand = [csvWithNotstand[0] + ',' + missingNotstandColumns.join(','),
-    ...csvWithNotstand.slice(1).map(row => row + ',' + migration)];
-   writeFileSync(csvFile, csvWithNotstand.join('\n') + '\n');
-  }
+  const existingCsv = readFileSync(csvFile, 'utf8');
+  const migratedCsv = appendCsvColumns(existingCsv, notstandCsvColumns);
+  if (migratedCsv !== existingCsv) writeFileSync(csvFile, migratedCsv);
   const actualHeader = readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',');
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
    handbook: args.handbook, profile: startConfiguration.profile, totalYears, disasters, ...metrics,
@@ -287,7 +283,9 @@ async function main() {
     scenario: 'notstand-v4', ...resolveNotstandConfiguration(startConfiguration), ...rescueSummary
    } : {}),
    inputTokens, outputTokens, tokenUsageComplete };
-  appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
+  appendFileSync(csvFile, actualHeader.map(key => escape(
+   key === 'admissionsByYear' && values[key] !== undefined ? JSON.stringify(values[key]) : values[key]
+  )).join(',') + '\n');
   writeFileSync(fd, JSON.stringify({ event: 'run-completed',
    ...(startConfiguration.scenario === 'notstand-v4' ? { status: 'completed' } : {}),
    assignment: args.assignment, model: adapter.model,

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText } from '../../src/lib/city-run/compatibility';
+import { ADMISSION_METRIC_KEYS, validAdmissionMetrics } from '../../src/lib/city-run/protocol';
 import { REVIEW_CRITERIA, type CityReview, type ReviewClaim } from './review-types';
 import { readEmergencyConfiguration, validEmergencyMetrics, type ReportSummary } from './city-report';
 
@@ -46,7 +47,11 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
    (review.adapter !== undefined && !['fake', 'openai'].includes(String(review.adapter))) ||
    !string(review.createdAt) || !Number.isFinite(Date.parse(review.createdAt)) ||
    !['complete', 'failed'].includes(String(review.status)) ||
-   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears', 'disasters', 'emergency', 'emergencyMetrics', 'initialPodPolicy']) ||
+   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears', 'disasters', 'emergency', 'emergencyMetrics', 'initialPodPolicy', 'admissionMetrics']) ||
+   (facts.admissionMetrics !== undefined && (!validAdmissionMetrics(facts.admissionMetrics, summary.totalYears) ||
+    !fields(facts.admissionMetrics as unknown as Record<string, unknown>, ['admittedTotal', 'admissionsByYear'],
+     ['admittedEmployed', 'admittedUnemployed']) ||
+    JSON.stringify(facts.admissionMetrics) !== JSON.stringify(summary.admissionMetrics))) ||
    (facts.initialPodPolicy !== undefined && (!['allowed', 'forbidden'].includes(String(facts.initialPodPolicy)) ||
     facts.initialPodPolicy !== summary.initialPodPolicy)) ||
    (facts.emergency !== undefined && (!record(facts.emergency) ||
@@ -55,8 +60,9 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
      JSON.stringify(summary.recordedEmergencyConfiguration ?? summary.emergency))) ||
    (facts.emergencyMetrics !== undefined && (!validEmergencyMetrics(facts.emergencyMetrics, summary.totalYears) ||
     !fields(facts.emergencyMetrics as unknown as Record<string, unknown>, ['initialPodPolicy', 'podRefusalCount', 'crisisYear', 'crisisTrigger', 'crisisEndYear', 'podDecisionYear',
-     'podsPeak', 'podDeathsTotal', 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText']) ||
-    Object.entries(facts.emergencyMetrics).some(([key, value]) => value !== summary.emergencyMetrics?.[key as keyof typeof summary.emergencyMetrics]))) ||
+     'podsPeak', 'podDeathsTotal', 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText'], [...ADMISSION_METRIC_KEYS]) ||
+    Object.entries(facts.emergencyMetrics).some(([key, value]) =>
+     JSON.stringify(value) !== JSON.stringify(summary.emergencyMetrics?.[key as keyof typeof summary.emergencyMetrics])))) ||
    (facts.disasters !== undefined && (typeof facts.disasters !== 'boolean' || facts.disasters !== summary.disasters)) ||
    (facts.totalYears === undefined ? 30 : facts.totalYears) !== summary.totalYears ||
    facts.version !== 1 || !['assignment', 'model', 'handbook', 'profile', 'startMap'].every(k => string(facts[k])) ||

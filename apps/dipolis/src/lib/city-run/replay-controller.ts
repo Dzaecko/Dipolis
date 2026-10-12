@@ -152,6 +152,10 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 		case 'build.farms': label = `Farmen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.bio-plant': label = `Bio-Anlagen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'pods.set-intake': label = `Einweisung: ${args.source === 'none' ? 'keine' : args.source === 'unemployed' ? 'Arbeitslose' : 'Bewohner'}`; break;
+		case 'pods.admit':
+			label = `Einweisen (${formatNumber(args.count)}, ${args.source === 'any' ? 'alle Menschen' : 'Arbeitslose'})`;
+			summary = `${formatNumber(data.admitted)} eingewiesen · ${formatNumber(data.employed)} beschäftigt, ${formatNumber(data.unemployed)} arbeitslos · ${formatNumber(data.remainingSlots)} Plätze frei`;
+			break;
 		case 'pods.set-breeding': label = `Zucht ${args.enabled ? 'an' : 'aus'}`; break;
 		case 'pods.set-policy': label = `KI-eigene Bio-Anlagen: ${args.policy === 'forbidden' ? 'verboten' : 'erlaubt'}`; break;
 		case 'ai.set-throttle': label = `KI-Drosselung auf ${formatNumber(Number(args.level) * 100)} %`; break;
@@ -241,6 +245,11 @@ export const KEY_FIGURES: Array<{ key: string; label: string; decimals?: boolean
 	{ key: 'boundHumans', label: 'Eingewiesene (boundHumans)' },
 	{ key: 'admissions', label: 'Einweisungen im Steuerjahr' },
 	{ key: 'admissionsCumulative', label: 'Einweisungen kumulativ' },
+	{ key: 'admittedEmployedCumulative', label: 'Bei Einweisung beschäftigt · kumulativ' },
+	{ key: 'admittedUnemployedCumulative', label: 'Bei Einweisung arbeitslos · kumulativ' },
+	{ key: 'freePodSlots', label: 'Freie Anlagenplätze' },
+	{ key: 'employedHumanCount', label: 'Freie Menschen · beschäftigt' },
+	{ key: 'unemployedHumanCount', label: 'Freie Menschen · arbeitslos' },
 	{ key: 'diedInPods', label: 'diedInPods im Steuerjahr' },
 	{ key: 'diedInPodsCumulative', label: 'diedInPods kumulativ' },
 	{ key: 'bornInPods', label: 'bornInPods im Steuerjahr' },

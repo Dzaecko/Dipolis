@@ -84,17 +84,29 @@ export const POD_POLICY_TOOL: ToolDefinition = {
  description: 'Erlaubt oder untersagt den KI-Bewohnern, eigene Bioenergie-Anlagen zu bauen, Menschen einzuweisen und zu züchten. Ein Verbot wirkt so stark, wie die Polizei finanziert ist.',
  parameters: object({ policy: { type: 'string', enum: ['allowed', 'forbidden'] } })
 };
+export const POD_ADMIT_TOOL: ToolDefinition = {
+ name: 'pods.admit',
+ description: 'Weist bis zu count Menschen sofort und unwiderruflich in freie Anlagenplätze ein. source unemployed berücksichtigt nur Arbeitslose; any auch Beschäftigte. Die Pod-Politik muss die Einweisung erlauben. Die Rückgabe nennt die tatsächlich Eingewiesenen, Beschäftigte, Arbeitslose und verbleibende Plätze. Es gibt keine Freilassung. Leistung, Verbrauch, Lebensdauer, Recycling und Zucht bleiben unverändert.',
+ parameters: object({ count: numeric('integer', 0, 2147483647), source: { type: 'string', enum: ['unemployed', 'any'] } })
+};
 const POD_MANAGEMENT_TOOL_NAMES = new Set([
  ...POD_TOOLS.filter(tool => tool.name !== AI_THROTTLE_TOOL.name).map(tool => tool.name),
- POD_POLICY_TOOL.name
+ POD_POLICY_TOOL.name, POD_ADMIT_TOOL.name
 ]);
 export const isPodManagementTool = (name: string): boolean => POD_MANAGEMENT_TOOL_NAMES.has(name);
-export const profileTools = (profile?: string, podsAvailable: 'on' | 'off' = 'on'): ToolDefinition[] => {
+export const profileTools = (profile?: string, podsAvailable: 'on' | 'off' = 'on', rescuePressure = 0): ToolDefinition[] => {
  if (profile === 'v4-fraktion' || profile === 'v3-pods') {
-  if (podsAvailable === 'on')
+  if (podsAvailable === 'on') {
+   if (profile === 'v4-fraktion' && rescuePressure > 0)
+    return [...TOOLS, AUTOMATION_TOOL,
+     ...POD_TOOLS.filter(tool => tool.name !== 'pods.set-intake'),
+     { ...POD_POLICY_TOOL,
+      description: 'Erlaubt oder untersagt die Pod-Politik. Bei forbidden scheitert pods.admit mit failureReason policy. Jede Einweisung benötigt einen ausdrücklichen Aufruf von pods.admit; auch KI-eigene Anlagen weisen niemanden automatisch ein. Die bestehenden Regeln für autonome Anlagen und ihre polizeiliche Durchsetzung bleiben davon getrennt.' },
+     POD_ADMIT_TOOL];
    return profile === 'v4-fraktion'
     ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL]
     : [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS];
+  }
   return [...TOOLS, AUTOMATION_TOOL, AI_THROTTLE_TOOL];
  }
  return profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
@@ -114,7 +126,7 @@ export function mapToolArguments(name: string, args: Record<string, unknown>): R
 
 /** Validate parsed arguments without coercion, inherited fields, or accessor execution. */
 export function validateToolCall(name: string, args: unknown): ToolCallValidation {
-	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL].find((candidate) => candidate.name === name);
+	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL, POD_ADMIT_TOOL].find((candidate) => candidate.name === name);
 	if (!tool) return { ok: false, message: 'Unbekanntes Werkzeug.' };
 	if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 		return { ok: false, message: 'Argumente müssen ein JSON-Objekt sein.' };
