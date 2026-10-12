@@ -158,6 +158,7 @@ The workspace retains only the components needed by Dipolis:
 - [Shared rendering foundations](packages/render-core)
 
 Internal engine names remain unchanged to preserve provenance and compatibility.
+Packaged engine artifacts are checked against recorded SHA-256 hashes before a run starts. Git attributes preserve their bytes across platforms, including LF line endings in the generated JavaScript loader. Do not regenerate provenance merely to bypass a mismatch; actual engine changes require compatibility validation.
 For a static frontend build using the included engine artifacts:
 
 ```sh

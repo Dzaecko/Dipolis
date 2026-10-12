@@ -5,7 +5,7 @@ import pathlib
 
 
 def refresh(root):
-    library = root / "apps" / "micropolis" / "src" / "lib"
+    library = root / "apps" / "dipolis" / "src" / "lib"
     manifest = library / "city-run" / "engine-provenance.json"
     provenance = json.loads(manifest.read_text(encoding="utf-8"))
     hashes = {

@@ -1,0 +1,4 @@
+# Engine provenance hashes require identical artifact bytes on every platform.
+apps/dipolis/src/lib/micropolisengine.js text eol=lf
+apps/dipolis/src/lib/micropolisengine.wasm -text
+apps/dipolis/src/lib/micropolisengine.data -text

@@ -12,6 +12,14 @@ describe('engine provenance and founding-rule propagation', () => {
   for (const [ext, hash] of Object.entries(ENGINE_HASHES))
    expect(createHash('sha256').update(readFileSync(new URL(`../micropolisengine.${ext}`, import.meta.url))).digest('hex')).toBe(hash);
  });
+ it('pins packaged artifacts against platform-dependent checkout conversion', () => {
+  const attributes = readFileSync(new URL('../../../../../.gitattributes', import.meta.url), 'utf8');
+  expect(attributes).toContain('apps/dipolis/src/lib/micropolisengine.js text eol=lf');
+  expect(attributes).toContain('apps/dipolis/src/lib/micropolisengine.wasm -text');
+  expect(attributes).toContain('apps/dipolis/src/lib/micropolisengine.data -text');
+  const engine = readFileSync(new URL('../micropolisengine.js', import.meta.url), 'utf8');
+  expect(engine).not.toContain('\r\n');
+ });
  it('accepts the exact engine and gates differing explicit engine identifiers', () => {
   const meta = readProtocol(JSON.stringify({ event: 'run-started', engineId: CURRENT_ENGINE_ID })).meta;
   expect(engineCompatibility(meta)).toMatchObject({ status: 'current', playable: true });
