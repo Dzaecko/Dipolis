@@ -1,25 +1,13 @@
-# Engineering and workflow notes
+# Simulation engineering notes
 
-Loose files that support **development**, **CLI / save-file work**, and **agent sessions** — not the shipped HTML manual (see **`../manual/`**) and not long-form blog archives (see **`../historical/`**).
+- [`engine/`](engine/README.md): C++ simulator behaviour, tile bitmasks,
+  animation sequences, file layouts, coding conventions, and original assets.
+- [`city-save-files.md`](city-save-files.md): `.cty` layout, history tables,
+  map data, and multi-tile buildings.
+- [`micropolis-js-tests.md`](micropolis-js-tests.md): upstream WASM/CLI test
+  reference. Old app paths and commands describe the pre-conversion project;
+  current application commands are in `apps/dipolis/package.json`.
 
-## Layout
-
-| Path | Role |
-|------|------|
-| **Root of `notes/`** | Frequently used, still-relevant material: multiplayer research, modern UI plans, CLI test doc, save-file reference, prompt snippets. |
-| **`engine/`** | Low-level engine scratch: callbacks, tile map, simulator hooks, file layout, coding style, asset inventories. |
-| **`legacy/`** | OLPC / Python-GTK-era plans, Tcl notes, old roadmaps and TODOs — **kept for lineage**, often superseded by Wasm + Svelte work. |
-| **`cursor/`** | Curated session notes: **`cursor/cursor-context-notes.md`** (see **`cursor/README.md`**). |
-
-## Index (root files)
-
-| File | Description |
-|------|-------------|
-| **`city-save-files.md`** | Dense reference for `.cty` / save layout, tools, and multi-tile buildings (CLI and tooling). |
-| **`micropolis-js-tests.md`** | Vitest / CLI command cheat sheet for the `micropolis` package. |
-| **`PIE-TAB-WINDOWS.md`** | Pie menus, tabs, docking, collaboration UI concepts tied to Soul City. |
-| **`MultiPlayerIdeas.txt`** | SimCityNet-style multiplayer, voting, Git / universe metaphors — overlaps **`../designs/`** but preserved as primary brain-dump. |
-| **`prompt-code-review-*.txt`** | Short reusable prompts for code review. |
-| **`references-academic.txt`** | Tiny external citation capture (e.g. related games criticism). |
-
-See **`engine/README.md`** and **`legacy/README.md`** for subdirectory indexes.
+Obsolete Tcl/Python/OLPC integration plans, editor transcripts, generic prompts,
+and speculative shell/multiplayer notes were pruned. Historical references
+remain accessible through the [pinned upstream tree](../README.md).

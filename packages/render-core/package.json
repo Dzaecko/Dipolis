@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"description": "Shared viewport, holodeck plugins, render schemas, and WebGPU compositor shell for vitamoo and micropolis",
+	"description": "Dipolis viewport, map composition, render schemas, and WebGPU compositor",
 	"exports": {
 		".": {
 			"types": "./src/index.ts",

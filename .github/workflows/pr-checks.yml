@@ -1,6 +1,4 @@
-# Lightweight checks on push/PR — no Emscripten, no GitHub Pages deploy.
-# The live demo at https://micropolisweb.com/ is unchanged by pushes to main.
-# Publish only via: Actions → "Build Wasm Library with Emscripten" → deploy_to_pages ✓
+# Lightweight Dipolis checks on push/PR — no model calls or Pages deployment.
 
 name: PR Checks
 
@@ -24,7 +22,7 @@ jobs:
       - run: pnpm run verify:structure
 
   build-ts:
-    name: TypeScript builds (vitamoo / mooshow / vitamoospace)
+    name: Renderer TypeScript builds
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,12 +32,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter vitamoo run build
-      - run: pnpm --filter mooshow run build
-      - run: pnpm --filter vitamoospace run build
+      - run: pnpm --filter @micropolis/render-core run build
+      - run: pnpm --filter @micropolis/tile-renderer run build
 
-  check-micropolis:
-    name: Micropolis svelte-check
+  check-dipolis:
+    name: Dipolis svelte-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,10 +46,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter micropolis run check
+      - run: pnpm --filter dipolis run check
 
   test:
-    name: Tests (sims-io, mooshow, Micropolis WASM)
+    name: Dipolis and renderer tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,9 +59,4 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter vitamoo run build
-      - run: pnpm --filter mooshow run build
-      - run: pnpm --filter mooshow run test
-      - run: pnpm --filter @micropolis/sims-io run build
-      - run: pnpm --filter @micropolis/sims-io run test
-      - run: pnpm --filter micropolis run test
+      - run: pnpm test

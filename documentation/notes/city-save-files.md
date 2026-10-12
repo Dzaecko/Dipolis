@@ -4,9 +4,7 @@ title: Micropolis Save File Reference
 
 # Micropolis Save File: A Window into the Simulation World
 
-> "What's cool is that the behavior is entirely distributed in the environment." — [Will Wright]({{ '/pages/will-wright' | relative_url }}#from-simcity-to-the-sims)
-
-This document serves as both a technical reference for SimCity/Micropolis save files and a guide to interpreting the game state they represent. By understanding these files, an AI system can gain "X-ray vision" into the simulation, analyzing patterns and offering insights beyond what human players typically see.
+This document serves as both a technical reference for Dipolis-compatible city save files and a guide to interpreting the game state they represent. By understanding these files, an AI system can gain "X-ray vision" into the simulation, analyzing patterns and offering insights beyond what human players typically see.
 
 ## Technical File Structure
 
@@ -100,7 +98,7 @@ unsigned short MakeTile(unsigned short baseTile, unsigned short flags) {
 
 ## Multi-Resolution Data Architecture
 
-SimCity uses a hierarchical data structure where information exists at different resolutions:
+The city engine uses a hierarchical data structure where information exists at different resolutions:
 
 ```c
 // Map dimensions
@@ -471,8 +469,8 @@ This analytical approach transforms raw save file data into actionable urban pla
 ## Implementation Example: Reading a Save File
 
 ```c
-// C example for loading a SimCity save file
-bool loadSimCityFile(const char *filename, CityData *cityData) {
+// C example for loading a city save file
+bool loadCityFile(const char *filename, CityData *cityData) {
     FILE *file = fopen(filename, "rb");
     if (!file) return false;
     
@@ -547,6 +545,4 @@ An AI analyzing a save file should recognize that the game state represents not 
 
 By understanding these causal relationships encoded in the save file, an AI can provide analysis that matches a seasoned player's intuition about their city while adding the benefit of comprehensive pattern recognition across all game systems simultaneously.
 
-> "The actual simulation in SimCity is much less idealistically general-purpose than most people imagine. It sacrifices expandability and modularity for speed and compact size—exactly the right tradeoff for a game running on home computers in the 1980s." — [Excerpt from Will Wright analysis]({{ '/pages/will-wright' | relative_url }}#reverse-over-engineering)
-
-This understanding of SimCity's practical optimizations helps contextualize the data patterns found in save files—they're designed to create believable emergent urban dynamics, not to accurately model real-world urban planning. 
+The engine's practical optimizations help contextualize the data patterns found in save files—they're designed to create believable emergent urban dynamics, not to accurately model real-world urban planning.

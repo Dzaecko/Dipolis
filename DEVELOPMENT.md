@@ -1,103 +1,57 @@
-# Development Guide
+# Dipolis development
 
-## Prerequisites
+Use Node.js 22 or newer and the pnpm version pinned in root `package.json`.
+Emscripten and GNU make are needed only when rebuilding the C++/WASM engine;
+tests can use the committed engine artifacts.
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| [Node.js](https://nodejs.org/) | ≥ 22 (CI: 22) | Use [nvm](https://github.com/nvm-sh/nvm): `nvm use` |
-| [pnpm](https://pnpm.io/) | 10.x | Managed by `packageManager` in root `package.json` — `corepack enable` |
-| [Emscripten](https://emscripten.org/) | any recent | Only needed to **rebuild** the WASM engine. Committed artifacts in `apps/micropolis/src/lib/` work without it. |
+## Workspace inventory
 
-Quick start with nvm:
+- `apps/dipolis`: city simulation, browser interface, local runners and reports.
+- `packages/micropolis-engine`: original simulation core and Dipolis extensions.
+- `packages/render-core`: viewport, map composition, software rendering, WebGPU.
+- `packages/tile-renderer`: Canvas/WebGL/WebGPU tile backends and map export.
 
-```bash
-nvm install 22 && nvm use
-corepack enable
-```
+Internal `@micropolis/*` package names preserve engine-port API compatibility.
+No other applications or character-rendering packages are part of the workspace.
 
-## Install
-
-```bash
-pnpm install
-```
-
-Installs all workspace packages (`apps/*`, `packages/*`).
-
-## Build
+## Commands
 
 ```bash
-# TypeScript + SvelteKit (all packages, in dependency order):
+pnpm install --frozen-lockfile
+pnpm run verify:structure
+pnpm run check
+pnpm run test
+
+# Build the retained renderer packages and app (requires Emscripten for WASM):
 pnpm run build
+pnpm run build:engine
 
-# Single package:
-pnpm --filter micropolis run build       # Micropolis SvelteKit app
-pnpm --filter vitamoospace run build     # VitaMooSpace SvelteKit app
-pnpm --filter vitamoo run build          # VitaMoo core library
-pnpm --filter mooshow run build          # MooShow GPU runtime
+# Browser-only development using committed WASM:
+pnpm --filter dipolis run dev:vite
 
-# Rebuild C++/WASM engine (requires Emscripten on PATH):
-pnpm run build:engine                    # → make install in packages/micropolis-engine/
+# App plus watched engine rebuilds (requires Emscripten):
+pnpm --filter dipolis run dev
 ```
 
-## Tests
+Root tests run render-core, tile-renderer, and app suites. The renderer packages
+export TypeScript source, so tests do not require a separate library build.
+Root build uses pnpm's dependency ordering; the engine build and app's
+`prebuild` install matching WASM artifacts before Vite.
 
-```bash
-pnpm run test                            # Micropolis Vitest suite (52 tests, uses committed WASM)
-pnpm run verify:structure                # Monorepo layout invariants (20 assertions)
-pnpm --filter vitamoo run verify:exchange          # VitaMoo exchange schema
-pnpm --filter vitamoo run verify:exchange:merge    # Playing-scene merge invariants
-```
+The root makefile is an optional wrapper: `make SKIP_DOXYGEN=1` delegates to
+`pnpm run build`, `make build_engine` installs engine artifacts, and
+`make build_doxygen` generates API documentation from retained engine sources.
+`make install` also copies generated API HTML into `apps/dipolis/build/doc`.
+Dependencies must already be installed; the makefile never runs installation.
 
-## Type-check
+Do not start real model runs as part of structure, build, or test validation.
+The local runner configuration is not a prerequisite for these commands.
 
-```bash
-pnpm run check                           # svelte-check on apps/micropolis
-pnpm --filter micropolis run check:watch # Watch mode
-```
+## CI and provenance
 
-## Dev servers
+`pr-checks.yml` validates structure, renderer TypeScript builds, app checks, and
+tests. `emscripten_build.yml` manually rebuilds WASM and optionally deploys the
+Dipolis static build; deployment is disabled by default.
 
-```bash
-pnpm --filter micropolis dev             # Vite + watched C++ rebuild (needs Emscripten)
-pnpm --filter micropolis run dev:vite    # Vite only (uses committed WASM)
-pnpm --filter vitamoospace dev           # VitaMooSpace   → http://localhost:5173
-```
-
-`dev` runs Vite and `chokidar` on `packages/micropolis-engine/src/*.{cpp,h}`; each save
-runs `pnpm run build:engine` (same as [PR #6](https://github.com/SimHacker/MicropolisCore/pull/6),
-adapted for the monorepo).
-
-Or use the VS Code **Debug Micropolis SvelteKit App** launch config (`.vscode/launch.json`).
-
-## Repository layout
-
-```
-apps/
-  micropolis/          SvelteKit city simulation app (WebGL tile renderer, WASM bridge)
-  vitamoospace/        SvelteKit Sims character demo (WebGPU renderer)
-packages/
-  micropolis-engine/   C++/Emscripten WASM engine (GNU make, no CMake)
-  tile-renderer/       Canvas/WebGL/WebGPU tile renderer backends
-  vitamoo/             Sims animation core (TypeScript)
-  mooshow/             GPU stage, picking, camera, hooks (TypeScript)
-content/
-  micropolis/          City saves, tilesets, sounds
-  vitamoo/             Sims demo assets (CMX/SKN/BMP/CFP)
-documentation/
-  TODO.md              ← Open engineering work, start here
-  designs/             Forward-looking specs
-  vitamoo/             VitaMoo renderer docs
-  notes/               Developer notes and CLI cheat sheets
-```
-
-## CI workflows
-
-| Workflow | Trigger | What it does |
-|----------|---------|--------------|
-| `pr-checks.yml` | push / PR | structure check · TypeScript builds · svelte-check · Vitest |
-| `emscripten_build.yml` | manual | WASM build · Vitest · Doxygen · deploy Pages |
-| `vitamoo-pages.yml` | manual | VitaMooSpace static deploy to GitHub Pages |
-
-## iOS / Capacitor
-
-`apps/micropolis/ios/` is a Capacitor iOS shell. Requires periodic `npx cap sync` after dependency bumps to refresh `Pods/` paths. Only maintained if targeting iOS. Android assets are not tracked.
+See [documentation inventory and upstream provenance](documentation/README.md).
+The original root GPL and name-license notices remain unchanged.

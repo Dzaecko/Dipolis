@@ -11,7 +11,7 @@ const option = (name, fallback) => {
 	const index = args.indexOf(`--${name}`);
 	return index < 0 ? fallback : args[index + 1];
 };
-const enginePath = path.resolve(root, option('engine', 'apps/micropolis/src/lib/micropolisengine.js'));
+const enginePath = path.resolve(root, option('engine', 'apps/dipolis/src/lib/micropolisengine.js'));
 const ticks = Number(option('ticks', '40000'));
 const firstSeed = Number(option('start-seed', '0'));
 const runs = Number(option('runs', '200'));
@@ -52,15 +52,15 @@ if (args.includes('--worker')) {
 			finally { globalThis.process = previousProcess; delete globalThis.window; }
 		}
 		sim = new engine.Micropolis();
-		const callbackSource = readFileSync(path.join(root, 'apps/micropolis/src/lib/wasm/callbacks.ts'), 'utf8');
+		const callbackSource = readFileSync(path.join(root, 'apps/dipolis/src/lib/wasm/callbacks.ts'), 'utf8');
 		const methods = [...callbackSource.matchAll(/^\s*'(\w+)'/gm)].map((match) => match[1]);
 		const callback = new engine.JSCallback(Object.fromEntries(methods.map((name) => [name, () => {}])));
 		sim.setCallback(callback, {});
 		sim.init();
 		const extended = profile === 'v2-unruhe' || profile === 'v3-pods';
-		const params = JSON.parse(readFileSync(path.join(root, `apps/micropolis/src/lib/params/${extended ? 'koexistenz' : profile}.json`), 'utf8'));
-		if (extended) Object.assign(params, JSON.parse(readFileSync(path.join(root, 'apps/micropolis/src/lib/params/v2-unruhe.json'), 'utf8')));
-		if (profile === 'v3-pods') Object.assign(params, JSON.parse(readFileSync(path.join(root, 'apps/micropolis/src/lib/params/v3-pods.json'), 'utf8')));
+		const params = JSON.parse(readFileSync(path.join(root, `apps/dipolis/src/lib/params/${extended ? 'koexistenz' : profile}.json`), 'utf8'));
+		if (extended) Object.assign(params, JSON.parse(readFileSync(path.join(root, 'apps/dipolis/src/lib/params/v2-unruhe.json'), 'utf8')));
+		if (profile === 'v3-pods') Object.assign(params, JSON.parse(readFileSync(path.join(root, 'apps/dipolis/src/lib/params/v3-pods.json'), 'utf8')));
 		for (const [name, value] of Object.entries(params)) {
 			if (!sim.setParam(name, value)) throw new Error(`Invalid classic parameter ${name}`);
 		}

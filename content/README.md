@@ -1,18 +1,9 @@
-# Content (build variants)
+# Dipolis city resources
 
-Cross-cutting **data and assets** for MicropolisCore apps live here—not inside `apps/` or `packages/`.
-Each **build variant** (demo, class edition, deployment profile) chooses a manifest under `variants/`
-that points into `micropolis/`, `vitamoo/` (e.g. **`sims-demo`** exchange + assets), `yoot/`, and `shared/`.
+`micropolis/cities` contains the original city files used by the engine preload,
+scenario fixtures, runner and replay. `micropolis/data` retains engine resource
+and localization data. These internal paths retain the engine's historical name.
 
-## Layout
-
-| Path | Purpose |
-|------|---------|
-| **`micropolis/`** | Bundled sim assets: **`cities/`** (.cty saves), **`data/`** (XML/strings), **`images/`**, **`sounds/`**, **`tilesets/`** — consumed by the WASM preload, CLI samples, and archived OpenLaszlo under **`documentation/openlaszlo-micropolis/`**. |
-| **`vitamoo/`** | VitaMoo-facing packs: e.g. **`sims-demo/`** (exchange JSON + sample meshes/textures); the VitaMooSpace app serves this tree via **`apps/vitamoospace/static/data`** (symlink). Use a googlable project name; avoid trademarked franchise names in paths and public URLs. |
-| **`yoot/`** | Tower-vertical empire lineage: scenarios, plug-in/tower-kit-style manifests, fictionalized assets—named for **Yoot** as creator umbrella (not Maxis/EA/other retail marks). See `content/yoot/README.md`. |
-| **`shared/`** | Branding, legal, i18n, or hub copy used by more than one vertical. |
-| **`variants/`** | Small YAML/JSON files: one entry point per stamp-out build (`variant id` → which subtrees to inject). |
-
-Wire builds with something like `VITE_CONTENT_VARIANT=demo` (or your chosen env name) and resolve
-`variants/<name>.yaml` at build time so each deploy gets a fixed content bundle.
+The browser renderer's active tile atlas and sprites live in
+`apps/dipolis/src/lib/images/tilesets`. Unused source artwork, sound archives and
+unrelated application packs have been removed.

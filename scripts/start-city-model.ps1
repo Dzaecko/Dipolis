@@ -113,7 +113,7 @@ try {
     } else {
         $runArgs += @('--start-map', $StartMap, '--seed', $Seed)
     }
-    & $corepack.Source pnpm --filter micropolis run city-model --adapter openai --assignment $Assignment --run $Run --handbook $Handbook --review $Review --live @runArgs
+    & $corepack.Source pnpm --filter dipolis run city-model --adapter openai --assignment $Assignment --run $Run --handbook $Handbook --review $Review --live @runArgs
     if ($LASTEXITCODE -ne 0) { throw 'Stadtlauf fehlgeschlagen. Siehe Terminalausgabe.' }
 } finally {
     foreach ($name in $previous.Keys) { [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process') }

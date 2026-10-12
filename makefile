@@ -61,8 +61,8 @@
 
 ########################################################################
 
-# Set SKIP_DOXYGEN=1 to skip C++ API docs (faster builds; use with CI workflow input).
-CORE_TARGETS = build_MicropolisEngine build_micropolis
+# Dipolis build entrypoint. Set SKIP_DOXYGEN=1 to omit optional C++ API docs.
+CORE_TARGETS = build_dipolis
 
 ifeq ($(SKIP_DOXYGEN),1)
 all: $(CORE_TARGETS)
@@ -70,20 +70,18 @@ else
 all: $(CORE_TARGETS) build_doxygen
 endif
 
-.PHONY: all doxygen
+.PHONY: all install clean build_dipolis build_engine build_doxygen doxygen
 
 install: all
-	mkdir -p build
-	cd packages/micropolis-engine ; make install
 	@if [ -d html ]; then \
-		mkdir -p apps/micropolis/build && cp -r html apps/micropolis/build/doc; \
+		mkdir -p apps/dipolis/build/doc && cp -r html/. apps/dipolis/build/doc/; \
 	else \
-		mkdir -p apps/micropolis/build/doc; \
+		mkdir -p apps/dipolis/build/doc; \
 	fi
 
 clean:
-	cd packages/micropolis-engine ; make clean
-	rm -rf build html doxygen_warnings
+	$(MAKE) -C packages/micropolis-engine clean
+	rm -rf apps/dipolis/build html doxygen_warnings
 
 ########################################################################
 # Build documentation
@@ -93,18 +91,18 @@ build_doxygen:
 	doxygen Doxyfile 2> doxygen_warnings > /dev/null
 	@echo "Warnings stored in 'doxygen_warnings'"
 
-########################################################################
-# build MicropolisEngine
-
-build_MicropolisEngine:
-	echo "Building MicropolisEngine with Emscripten..."
-	cd packages/micropolis-engine ; make all
+doxygen: build_doxygen
 
 ########################################################################
-# build micropolis
+# Build the retained WASM engine separately.
 
-build_micropolis:
-	echo "Building micropolis SvelteKit front and back end..."
-	cd apps/micropolis ; pnpm install ; pnpm run build
+build_engine:
+	$(MAKE) -C packages/micropolis-engine install
+
+########################################################################
+# Build the explicit workspace in dependency order.
+
+build_dipolis:
+	pnpm run build
 
 ########################################################################

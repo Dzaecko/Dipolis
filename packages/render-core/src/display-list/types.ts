@@ -1,6 +1,6 @@
 /**
- * Display-list vocabulary shared by vitamoo and micropolis holodeck plugins.
- * Mesh geometry types stay in vitamoo (`MeshData`); entries reference `mesh: unknown`.
+ * Display-list vocabulary shared by Dipolis compositor plugins.
+ * Mesh geometry stays plugin-owned; entries reference `mesh: unknown`.
  */
 
 export interface Vec3 {

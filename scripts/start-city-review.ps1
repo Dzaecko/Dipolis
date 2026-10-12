@@ -46,7 +46,7 @@ try {
     $protocolPath = (Resolve-Path -LiteralPath $Protocol).Path
     $reviewArgs = @('--protocol', $protocolPath, '--adapter', $Adapter)
     if ($Overwrite) { $reviewArgs += '--overwrite' }
-    & $corepack.Source pnpm --filter micropolis run city-review @reviewArgs
+    & $corepack.Source pnpm --filter dipolis run city-review @reviewArgs
     if ($LASTEXITCODE -ne 0) { throw 'Nachbetrachtung fehlgeschlagen. Siehe Terminalausgabe und review.json.' }
 } finally {
     foreach ($name in $previous.Keys) { [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process') }

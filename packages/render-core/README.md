@@ -1,17 +1,16 @@
 # @micropolis/render-core
 
-Shared **viewport**, **holodeck plugins**, **render schemas**, and **WebGPU compositor shell** for vitamoo and micropolis.
+Dipolis viewport, map composition, render descriptions, measurement, software
+raster, and WebGPU compositor. Internal package names preserve port API
+compatibility.
 
-- **Browser composes** on the client GPU (`HolodeckStage`); server ships `RenderDescription` JSON only.
-- **WebGPU-native** holodeck API — no WebGL-shaped wrapper on the compositor.
-- **Scaffolds** (WebGL/Canvas/software map raster) stay in `@micropolis/tile-renderer`.
+There are no runtime package dependencies. TypeScript, WebGPU types, and Vitest
+are development tools. The tile renderer and app consume TypeScript source
+exports, so no separate library build is required before app tests.
 
-See [documentation/designs/render-core-package.md](../../documentation/designs/render-core-package.md).
-
-```typescript
-import { HolodeckStage, HolodeckLayer, MapViewport } from '@micropolis/render-core';
-
-const stage = await HolodeckStage.create(canvas);
-stage.addPlugin(myMapPlugin);
-stage.render();
+```bash
+pnpm --filter @micropolis/render-core run build
+pnpm --filter @micropolis/render-core run test
 ```
+
+See [simulation references and upstream provenance](../../documentation/README.md).

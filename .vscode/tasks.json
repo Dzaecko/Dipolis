@@ -24,7 +24,7 @@
       "label": "Stadtmodell: Wiedergabe Dev-Server",
       "type": "shell",
       "command": "corepack",
-      "args": ["pnpm", "--filter", "micropolis", "run", "dev:vite", "--", "--strictPort"],
+      "args": ["pnpm", "--filter", "dipolis", "run", "dev:vite", "--", "--strictPort"],
       "options": { "cwd": "${workspaceFolder}", "env": { "VITE_PORT": "5188" } },
       "isBackground": true,
       "problemMatcher": {
@@ -50,7 +50,7 @@
       "label": "Stadtmodell: Berichte neu erzeugen",
       "type": "shell",
       "command": "corepack",
-      "args": ["pnpm", "--filter", "micropolis", "run", "city-report", "--all"],
+      "args": ["pnpm", "--filter", "dipolis", "run", "city-report", "--all"],
       "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
       "problemMatcher": []

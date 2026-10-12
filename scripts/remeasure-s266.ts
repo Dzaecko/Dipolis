@@ -1,7 +1,7 @@
 import { writeFileSync, readFileSync } from 'node:fs';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { runCity } from '../apps/micropolis/cli/model/runner';
-import { S266Adapter } from '../apps/micropolis/cli/model/fake-adapter';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { runCity } from '../apps/dipolis/cli/model/runner';
+import { S266Adapter } from '../apps/dipolis/cli/model/fake-adapter';
 import { fileURLToPath } from 'node:url';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));

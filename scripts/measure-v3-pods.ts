@@ -1,15 +1,15 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { runCity, type YearRecord } from '../apps/micropolis/cli/model/runner';
-import type { ChatAdapter } from '../apps/micropolis/cli/model/adapter';
-import { generateCityReport, generateReportIndex } from '../apps/micropolis/cli/model/city-report';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { runCity, type YearRecord } from '../apps/dipolis/cli/model/runner';
+import type { ChatAdapter } from '../apps/dipolis/cli/model/adapter';
+import { generateCityReport, generateReportIndex } from '../apps/dipolis/cli/model/city-report';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const calibration = JSON.parse(readFileSync('docs/results/v2-unruhe-calibration.json', 'utf8'));
 const measuredPopulation = calibration.rows.reduce((sum: number, row: { resPop: number }) => sum + row.resPop, 0) / calibration.rows.length;
 const capacity = Math.round(measuredPopulation * .1);
-const fixed = JSON.parse(readFileSync('apps/micropolis/src/lib/params/v3-pods.json', 'utf8'));
+const fixed = JSON.parse(readFileSync('apps/dipolis/src/lib/params/v3-pods.json', 'utf8'));
 if (fixed.podsPerPlant !== capacity || Math.abs(fixed.podPowerPerHuman * capacity - 700) > 1e-9)
  throw new Error('Fixed calibration differs from the measured derivation');
 writeFileSync('docs/results/v3-pods-calibration.json', JSON.stringify({

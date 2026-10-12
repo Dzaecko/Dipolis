@@ -1,14 +1,14 @@
 # Manual runs only — does NOT run on push to main.
-# Protects https://micropolisweb.com/ during development: merge freely; publish only when ready.
+# Deploys Dipolis only when explicitly requested; does not call real models.
 #
 # Actions → Build Wasm Library with Emscripten → Run workflow
 #
 # What this does:
 #   1. Build C++/WASM engine (packages/micropolis-engine → make install)
-#   2. Run Vitest suite against real WASM (pnpm --filter micropolis run test)
+#   2. Run Vitest suite against real WASM (pnpm --filter dipolis run test)
 #   3. Verify monorepo structure invariants (pnpm run verify:structure)
 #   4. Optionally generate Doxygen C++ API docs
-#   5. Build SvelteKit app (pnpm --filter micropolis run build) — includes Jekyll
+#   5. Build SvelteKit app (pnpm --filter dipolis run build)
 #   6. Deploy to GitHub Pages ONLY if you check "Deploy to GitHub Pages" (default: off)
 
 name: Build Wasm Library with Emscripten
@@ -22,7 +22,7 @@ on:
         default: true
       deploy_to_pages:
         description: >-
-          Deploy build to GitHub Pages (micropolisweb.com). Leave unchecked while
+          Deploy Dipolis build to this repository's GitHub Pages. Leave unchecked while
           developing — verify the build first, then re-run with this enabled.
         type: boolean
         default: false
@@ -31,7 +31,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: micropolis-pages-deploy
+  group: dipolis-pages-deploy
   cancel-in-progress: false
 
 jobs:
@@ -67,8 +67,8 @@ jobs:
       - name: Verify monorepo structure
         run: pnpm run verify:structure
 
-      - name: Run Micropolis Vitest suite
-        run: pnpm --filter micropolis run test
+      - name: Run Dipolis Vitest suite
+        run: pnpm test
 
       - name: Build optional Doxygen C++ API docs
         if: ${{ inputs.include_doxygen }}
@@ -77,25 +77,13 @@ jobs:
           echo "Doxygen warnings:"
           cat doxygen_warnings || true
 
-      - name: Setup Ruby (for Jekyll)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          working-directory: apps/micropolis/website
-          bundler-cache: true
-
-      - name: Build SvelteKit app (Jekyll → _jekyll_content_build, Vite → build/)
-        # Calls build:jekyll then build:svelte directly — avoids triggering the
-        # prebuild hook (which would re-run make install) while keeping builds ordered.
-        run: |
-          cd apps/micropolis
-          pnpm run build:jekyll
-          pnpm run build:svelte
+      - name: Build Dipolis SvelteKit app
+        run: pnpm --filter dipolis exec vite build
 
       - name: Assemble Pages output
         run: |
           mkdir -p _site/doc
-          cp -r apps/micropolis/build/. _site/
+          cp -r apps/dipolis/build/. _site/
           if [ "${{ inputs.include_doxygen }}" = "true" ] && [ -d html ]; then
             cp -r html/. _site/doc/
           fi

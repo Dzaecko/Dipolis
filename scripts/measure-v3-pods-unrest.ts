@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { CURRENT_ENGINE_ID } from '../apps/micropolis/src/lib/city-run/compatibility';
-import { setupScenario, readReport } from '../apps/micropolis/src/lib/city-run/replay';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { CURRENT_ENGINE_ID } from '../apps/dipolis/src/lib/city-run/compatibility';
+import { setupScenario, readReport } from '../apps/dipolis/src/lib/city-run/replay';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const formulaVersion = 'v2-unruhe-2026.10-human-decline-automation-v1';

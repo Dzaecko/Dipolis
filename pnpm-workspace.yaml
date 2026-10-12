@@ -1,8 +1,6 @@
-# MicropolisCore monorepo — apps/, shared packages, VitaMoo.
+# Dipolis and its runtime dependencies. Keep this inventory explicit.
 packages:
-  - 'apps/*'
-  - 'packages/*'
-  # Screen Angel modules nest, because the nesting IS the ladder: the app loads
-  # modules, a module owns bridges. See apps/screen-angel/SCREEN-ANGEL.yml#the_ladder.
-  - 'apps/screen-angel/modules/*'
-  - 'apps/screen-angel/modules/*/bridges/*'
+  - 'apps/dipolis'
+  - 'packages/micropolis-engine'
+  - 'packages/render-core'
+  - 'packages/tile-renderer'

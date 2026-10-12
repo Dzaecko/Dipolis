@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-/** Three r32uint pick targets + swapchain color (vitamoo layout). */
+/** Three r32uint pick targets plus swapchain color. */
 export type PickAttachments = {
 	idType: GPUTexture;
 	objectId: GPUTexture;

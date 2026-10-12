@@ -1,14 +1,14 @@
 {
-	"name": "micropoliscore",
+	"name": "dipolis-workspace",
 	"version": "0.1.0",
 	"private": true,
-	"description": "MicropolisCore monorepo — WASM engine, packages/, apps (Micropolis, VitaMooSpace), VitaMoo libraries",
+	"description": "Dipolis — political city simulation with a Micropolis WASM engine and shared renderers",
 	"type": "module",
 	"scripts": {
 		"build": "pnpm -r --stream --if-present run build",
 		"build:engine": "pnpm --filter @micropolis/engine-wasm run build",
-		"check": "pnpm --filter micropolis run check",
-		"test": "pnpm --filter vitamoo run build && pnpm --filter mooshow run build && pnpm --filter mooshow run test && pnpm --filter @micropolis/sims-io run build && pnpm --filter @micropolis/sims-io run test && pnpm --filter micropolis run test",
+		"check": "pnpm --filter dipolis run check",
+		"test": "pnpm --filter @micropolis/render-core run test && pnpm --filter @micropolis/tile-renderer run test && pnpm --filter dipolis run test",
 		"verify:structure": "node scripts/verify-monorepo-structure.mjs"
 	},
 	"engines": {

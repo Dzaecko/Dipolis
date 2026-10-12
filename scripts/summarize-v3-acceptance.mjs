@@ -7,7 +7,7 @@ const prefix = read('v3-final-production-prefix');
 if (production.completedRuns !== 200 || prefix.completedRuns !== 80 ||
  production.passedRuns !== 200 || prefix.passedRuns !== 80)
  throw new Error('Finite production acceptance is incomplete');
-const wasmSha256 = createHash('sha256').update(readFileSync('apps/micropolis/src/lib/micropolisengine.wasm')).digest('hex');
+const wasmSha256 = createHash('sha256').update(readFileSync('apps/dipolis/src/lib/micropolisengine.wasm')).digest('hex');
 if (prefix.wasmSha256 !== wasmSha256 || production.wasmSha256 !== wasmSha256)
  throw new Error('Final engine hash mismatch');
 const results = [...prefix.results, ...production.results.filter(r => r.seed >= 80)];
@@ -18,7 +18,7 @@ const lifetime = read('v3-checked-lifetime-stress');
 if (checked.passedRuns !== 6 || lifetime.passedRuns !== 2) throw new Error('Checked stress incomplete');
 writeFileSync('docs/results/v3-final-production-acceptance.json', JSON.stringify({
  node: production.node, platform: production.platform,
- engine: 'apps/micropolis/src/lib/micropolisengine.js', wasmSha256,
+ engine: 'apps/dipolis/src/lib/micropolisengine.js', wasmSha256,
  profile: 'classic', disasters: true, ticksPerRun: 40000, completedRuns: 200,
  passedRuns: 200, completedTicks: 8000000,
  sourceRanges: [

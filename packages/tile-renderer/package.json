@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"description": "Micropolis tile map GPU scaffolds (WebGL/WebGPU/Canvas) and software export — compositor lives in @micropolis/render-core",
+	"description": "Dipolis tile map backends (WebGL/WebGPU/Canvas) and software export using @micropolis/render-core",
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
 	"exports": {

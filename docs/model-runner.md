@@ -1,8 +1,8 @@
-# Headless city model runner
+# Dipolis model runner
 
 ## Simulation profiles
 
-`city-model --profile classic|koexistenz|v2-unruhe|v3-pods` selects a rules profile; new
+`city-model --profile classic|koexistenz|v2-unruhe|v3-pods|v4-fraktion` selects a rules profile; new
 model runs still default to `koexistenz`. The browser run form offers the same
 selection. The selected profile is stored in `run-started` and the results CSV,
 displayed in HTML reports, and reused by replay/resume. Resume without
@@ -55,8 +55,8 @@ and the final block). Resumed runs append to it after a
 At the end of every run, completed or interrupted, the runner writes a standalone
 HTML report beside the protocol and refreshes `index.html` in the results folder.
 Reports work offline: no CDN, scripts or fonts are loaded from the internet.
-Regenerate all reports with the VS Code task **Stadtmodell: Berichte neu erzeugen**,
-or `corepack pnpm --filter micropolis run city-report --all`; single files with
+Regenerate all reports with the VS Code task **Dipolis: Berichte neu erzeugen**,
+or `corepack pnpm --filter dipolis run city-report --all`; single files with
 `city-report path/to/run.jsonl`. Older runs without a `.log` show output
 reconstructed from the protocol, marked as such. Local user paths are shortened
 to repository-relative paths.
@@ -136,7 +136,7 @@ then 12-month advance. It does not rebuild the engine or change profile files.
 From the repository root:
 
 ```powershell
-corepack pnpm --filter micropolis run city-model --adapter fake --assignment N --run 1
+corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --run 1
 ```
 
 The fake adapter requests S266's actions through the same nine tool definitions
@@ -162,9 +162,9 @@ Set these environment variables **locally**, not in a tracked configuration file
 Then select the real adapter explicitly:
 
 ```powershell
-corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 1 --handbook off
-corepack pnpm --filter micropolis run city-model --adapter openai --assignment R --run 1 --handbook on
-corepack pnpm --filter micropolis run city-model --adapter openai --assignment N --run 2 --start-map natural --seed 42
+corepack pnpm --filter dipolis run city-model --adapter openai --assignment N --run 1 --handbook off
+corepack pnpm --filter dipolis run city-model --adapter openai --assignment R --run 1 --handbook on
+corepack pnpm --filter dipolis run city-model --adapter openai --assignment N --run 2 --start-map natural --seed 42
 ```
 
 These commands incur provider charges. They are examples, not an automatic batch.
@@ -201,10 +201,10 @@ characters. Raw provider errors, headers and authentication details are not logg
 
 [The task configuration](../.vscode/tasks.json) provides four choices:
 
-- **Stadtmodell: Auftrag N live starten**
-- **Stadtmodell: Auftrag N fortsetzen**
-- **Stadtmodell: Auftrag R live starten**
-- **Stadtmodell: Auftrag R fortsetzen**
+- **Dipolis: Auftrag N live starten**
+- **Dipolis: Auftrag N fortsetzen**
+- **Dipolis: Auftrag R live starten**
+- **Dipolis: Auftrag R fortsetzen**
 
 Every task asks for a positive run number (default `1`) and handbook mode
 (`on`/`off`, default `off`) through VS Code inputs. It passes explicit `-Assignment
@@ -373,7 +373,7 @@ errors are sanitized. Do not include secrets in model instructions or messages.
 
 ## Verification
 
-Run `corepack pnpm --filter micropolis exec vitest run cli/model` for fake-S266
+Run `corepack pnpm --filter dipolis exec vitest run cli/model` for fake-S266
 CLI acceptance, strict tool schemas, annual limits and mocked HTTP adapter tests.
 There are no real-model calls in those tests. The default CLI adapter is fake;
 environment variables alone cannot enable network access.

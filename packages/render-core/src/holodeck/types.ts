@@ -55,7 +55,7 @@ export interface HolodeckPluginContext {
 }
 
 /**
- * Holodeck compositor plugin. Domain packages (vitamoo, micropolis-render) implement
+ * Holodeck compositor plugin. Dipolis rendering plugins implement
  * `render` and optionally `collect` for future display-list execution.
  */
 export interface HolodeckPlugin {
@@ -65,7 +65,7 @@ export interface HolodeckPlugin {
 	initialize?(ctx: HolodeckPluginContext): void | Promise<void>;
 	resize?(ctx: HolodeckPluginContext): void;
 	render(ctx: HolodeckPluginContext): void;
-	/** Future: display-list entries for vitamoo executor. */
+	/** Optional display-list entries for compositor execution. */
 	collect?(viewport: MapViewport, frame: HolodeckFrameState): readonly unknown[];
 	/**
 	 * Expose screen-space geometry for DOM overlays (tooltips, vote dialogs, labels).

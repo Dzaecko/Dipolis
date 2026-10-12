@@ -3,14 +3,14 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { readProtocol } from '../apps/micropolis/src/lib/city-run/protocol';
-import { setupScenario, readReport, compareReports, advanceYear, replayArguments } from '../apps/micropolis/src/lib/city-run/replay';
-import { mapToolArguments, validateToolCall } from '../apps/micropolis/src/lib/city-run/tools';
-import { generateCityReport, generateReportIndex } from '../apps/micropolis/cli/model/city-report';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { readProtocol } from '../apps/dipolis/src/lib/city-run/protocol';
+import { setupScenario, readReport, compareReports, advanceYear, replayArguments } from '../apps/dipolis/src/lib/city-run/replay';
+import { mapToolArguments, validateToolCall } from '../apps/dipolis/src/lib/city-run/tools';
+import { generateCityReport, generateReportIndex } from '../apps/dipolis/cli/model/city-report';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const app = path.join(root, 'apps', 'micropolis');
+const app = path.join(root, 'apps', 'dipolis');
 const sha = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 const artifacts = ['js', 'wasm', 'data'];
 const engineHashes = Object.fromEntries(artifacts.map(ext => [ext,

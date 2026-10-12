@@ -51,8 +51,9 @@ const comparisons = current.rows.map((row, i) => {
 });
 const hashes = metadata.configuration.hashes ?? metadata.configuration.fingerprint?.hashes;
 for (const ext of ['js', 'wasm', 'data']) {
- const fingerprint = metadata.configuration.fingerprint?.hashes?.[`apps/micropolis/src/lib/micropolisengine.${ext}`] ??
-  hashes?.[`apps/micropolis/src/lib/micropolisengine.${ext}`];
+ const fingerprint = metadata.configuration.fingerprint?.hashes?.[`apps/dipolis/src/lib/micropolisengine.${ext}`] ??
+  metadata.configuration.fingerprint?.hashes?.[`apps/micropolis/src/lib/micropolisengine.${ext}`] ??
+  hashes?.[`apps/dipolis/src/lib/micropolisengine.${ext}`] ?? hashes?.[`apps/micropolis/src/lib/micropolisengine.${ext}`];
  if (fingerprint !== compatibility.engineHashes[ext]) throw new Error(`Measurement engine fingerprint mismatch: ${ext}`);
 }
 const summary = {

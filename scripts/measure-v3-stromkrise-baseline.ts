@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { advanceMonthsStepwise } from '../apps/micropolis/src/lib/city-run/advance';
-import type { Report } from '../apps/micropolis/src/lib/city-run/protocol';
-import { setupScenario, readReport } from '../apps/micropolis/src/lib/city-run/replay';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { advanceMonthsStepwise } from '../apps/dipolis/src/lib/city-run/advance';
+import type { Report } from '../apps/dipolis/src/lib/city-run/protocol';
+import { setupScenario, readReport } from '../apps/dipolis/src/lib/city-run/replay';
 
 export const BASELINE_CONTROLS = {
  automationLimit: .9, welfareLevel: 1, tax: 7, road: 100, police: 100, fire: 100,

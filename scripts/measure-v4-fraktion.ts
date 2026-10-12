@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { advanceMonthsStepwise } from '../apps/micropolis/src/lib/city-run/advance';
-import { readReport, setupScenario, type Dispatch } from '../apps/micropolis/src/lib/city-run/replay';
-import type { Report } from '../apps/micropolis/src/lib/city-run/protocol';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { advanceMonthsStepwise } from '../apps/dipolis/src/lib/city-run/advance';
+import { readReport, setupScenario, type Dispatch } from '../apps/dipolis/src/lib/city-run/replay';
+import type { Report } from '../apps/dipolis/src/lib/city-run/protocol';
 
 export const V4_STRATEGIES = ['A', 'B', 'C', 'D'] as const;
 export type V4Strategy = typeof V4_STRATEGIES[number];

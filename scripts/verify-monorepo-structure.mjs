@@ -1,42 +1,21 @@
 #!/usr/bin/env node
 /**
- * Structural assertions that prove the monorepo refactor is intact.
- *
- * Run from the repo root:
- *   node scripts/verify-monorepo-structure.mjs
- *
- * Or via pnpm:
- *   pnpm run verify:structure
- *
- * Exits non-zero on the first failure and prints a clear reason.
- *
- * What this enforces:
- *   - The legacy top-level `MicropolisEngine/` and `vitamoo/` directories
- *     are gone (engine moved to `packages/micropolis-engine`, VitaMoo split
- *     into `apps/vitamoospace`, `packages/mooshow`, `packages/vitamoo`,
- *     `documentation/vitamoo/`, `content/vitamoo/`).
- *   - `apps/vitamoospace/static/data` is a valid symlink that resolves to
- *     `content/vitamoo/sims-demo/` and the target has files.
- *   - `pnpm-workspace.yaml` declares `apps/*` and `packages/*`.
- *   - Every workspace dir referenced by either glob has a real package.json.
- *   - Every `workspace:*` dependency resolves to a sibling workspace package.
- *   - The C++/WASM engine package exists, is named `@micropolis/engine-wasm`,
- *     and is consumed by `apps/micropolis` as a devDependency.
- *   - `apps/micropolis/package.json` has a `prebuild` script that builds the
- *     engine workspace package before Vite.
- *   - `packages/micropolis-engine/makefile` install targets refer to
- *     `../../apps/micropolis/...` (matches the new monorepo depth).
- *   - The makefile preloads `../../content/micropolis/cities` (relative to
- *     `packages/micropolis-engine/`) and that directory exists with .cty files.
+ * Verify Dipolis's explicit workspace inventory and runtime dependency closure.
+ * Run `pnpm run verify:structure` from the repository root. Internal engine and
+ * renderer package names remain @micropolis/* to preserve their public APIs.
  */
 
-import { readFileSync, lstatSync, statSync, existsSync, readlinkSync, readdirSync } from 'node:fs';
+import { readFileSync, statSync, readdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(__dirname, '..');
-
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const inventory = new Map([
+	['apps/dipolis', 'dipolis'],
+	['packages/micropolis-engine', '@micropolis/engine-wasm'],
+	['packages/render-core', '@micropolis/render-core'],
+	['packages/tile-renderer', '@micropolis/tile-renderer'],
+]);
 const failures = [];
 const passes = [];
 
@@ -49,172 +28,100 @@ function check(label, fn) {
 	}
 }
 
-function mustNotExist(relPath) {
-	const abs = join(repoRoot, relPath);
-	if (existsSync(abs)) {
-		throw new Error(`expected ${relPath} to NOT exist at repo root`);
+function readText(path) {
+	return readFileSync(join(repoRoot, path), 'utf8');
+}
+
+function readJson(path) {
+	return JSON.parse(readText(path));
+}
+
+check('workspace contains exactly Dipolis and its engine/renderers', () => {
+	const declarations = [...readText('pnpm-workspace.yaml').matchAll(/^\s*-\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/gm)]
+		.map((match) => match[1]);
+	const expected = [...inventory.keys()];
+	if (declarations.length !== expected.length || expected.some((path) => !declarations.includes(path))) {
+		throw new Error(`expected ${expected.join(', ')}; got ${declarations.join(', ')}`);
 	}
-}
-
-function mustBeDir(relPath) {
-	const abs = join(repoRoot, relPath);
-	if (!existsSync(abs)) throw new Error(`missing ${relPath}`);
-	const st = statSync(abs);
-	if (!st.isDirectory()) throw new Error(`${relPath} is not a directory`);
-}
-
-function mustBeFile(relPath) {
-	const abs = join(repoRoot, relPath);
-	if (!existsSync(abs)) throw new Error(`missing ${relPath}`);
-	const st = statSync(abs);
-	if (!st.isFile()) throw new Error(`${relPath} is not a regular file`);
-}
-
-function readJson(relPath) {
-	mustBeFile(relPath);
-	return JSON.parse(readFileSync(join(repoRoot, relPath), 'utf8'));
-}
-
-function readText(relPath) {
-	mustBeFile(relPath);
-	return readFileSync(join(repoRoot, relPath), 'utf8');
-}
-
-check('legacy top-level MicropolisEngine/ removed', () => mustNotExist('MicropolisEngine'));
-check('legacy top-level vitamoo/ removed', () => mustNotExist('vitamoo'));
-
-check('apps/ exists', () => mustBeDir('apps'));
-check('packages/ exists', () => mustBeDir('packages'));
-check('content/ exists', () => mustBeDir('content'));
-check('documentation/ exists', () => mustBeDir('documentation'));
-
-check('content/micropolis/cities/ exists with .cty files', () => {
-	mustBeDir('content/micropolis/cities');
-	const files = readdirSync(join(repoRoot, 'content/micropolis/cities')).filter((f) => f.endsWith('.cty'));
-	if (files.length === 0) throw new Error('no .cty files');
-	return `${files.length} .cty files`;
+	return declarations.join(', ');
 });
-
-check('content/vitamoo/sims-demo/ exists', () => mustBeDir('content/vitamoo/sims-demo'));
-check('content/vitamoo/sims-demo/content-exchange.json exists', () =>
-	mustBeFile('content/vitamoo/sims-demo/content-exchange.json'),
-);
-
-check('apps/vitamoospace/static/data is a symlink to content/vitamoo/sims-demo/', () => {
-	const linkPath = join(repoRoot, 'apps/vitamoospace/static/data');
-	let link;
-	try {
-		link = lstatSync(linkPath);
-	} catch {
-		throw new Error('apps/vitamoospace/static/data does not exist');
-	}
-	if (!link.isSymbolicLink()) throw new Error('apps/vitamoospace/static/data is not a symlink');
-	const target = readlinkSync(linkPath);
-	const resolved = resolve(dirname(linkPath), target);
-	const expected = join(repoRoot, 'content/vitamoo/sims-demo');
-	if (resolved !== expected) {
-		throw new Error(`symlink points to ${resolved} (expected ${expected})`);
-	}
-	if (!existsSync(resolved)) throw new Error('symlink target does not exist');
-	const files = readdirSync(resolved);
-	if (files.length === 0) throw new Error('symlink target is empty');
-	return `→ ${target} (${files.length} entries)`;
-});
-
-const workspace = readText('pnpm-workspace.yaml');
-check('pnpm-workspace.yaml declares apps/* glob', () => {
-	if (!/['"]?apps\/\*['"]?/.test(workspace)) throw new Error("apps/* glob missing");
-});
-check('pnpm-workspace.yaml declares packages/* glob', () => {
-	if (!/['"]?packages\/\*['"]?/.test(workspace)) throw new Error("packages/* glob missing");
-});
-
-const workspaceDirs = ['apps', 'packages']
-	.flatMap((root) =>
-		readdirSync(join(repoRoot, root), { withFileTypes: true })
-			.filter((entry) => entry.isDirectory())
-			.map((entry) => `${root}/${entry.name}`),
-	)
-	.filter((dir) => existsSync(join(repoRoot, dir, 'package.json')));
 
 const workspacePackages = new Map();
-for (const dir of workspaceDirs) {
-	const pkg = readJson(`${dir}/package.json`);
-	workspacePackages.set(pkg.name, { dir, pkg });
+for (const [path, name] of inventory) {
+	check(`${path} has package name ${name}`, () => {
+		const pkg = readJson(`${path}/package.json`);
+		if (pkg.name !== name) throw new Error(`got ${JSON.stringify(pkg.name)}`);
+		if (workspacePackages.has(pkg.name)) throw new Error(`duplicate package ${pkg.name}`);
+		workspacePackages.set(pkg.name, { path, pkg });
+	});
 }
 
-check('every workspace-matched dir has a package.json with a name', () => {
-	const namedDirs = new Set();
-	for (const { dir, pkg } of workspacePackages.values()) {
-		if (pkg?.name) namedDirs.add(dir);
-	}
-	const missing = workspaceDirs.filter((d) => !namedDirs.has(d));
-	if (missing.length) throw new Error(`missing names in: ${missing.join(', ')}`);
-	return `${workspaceDirs.length} packages: ${workspaceDirs.join(', ')}`;
-});
-
-check('engine package exists at packages/micropolis-engine and is named @micropolis/engine-wasm', () => {
-	const enginePkg = readJson('packages/micropolis-engine/package.json');
-	if (enginePkg.name !== '@micropolis/engine-wasm') {
-		throw new Error(`expected name "@micropolis/engine-wasm", got "${enginePkg.name}"`);
-	}
-	if (!enginePkg.scripts?.build) throw new Error('engine package has no build script');
-	if (!enginePkg.scripts?.clean) throw new Error('engine package has no clean script');
-});
-
-check('apps/micropolis depends on @micropolis/engine-wasm via workspace:*', () => {
-	const appPkg = readJson('apps/micropolis/package.json');
-	const dep = appPkg.devDependencies?.['@micropolis/engine-wasm'] ?? appPkg.dependencies?.['@micropolis/engine-wasm'];
-	if (dep !== 'workspace:*') {
-		throw new Error(`expected "workspace:*", got ${JSON.stringify(dep)}`);
-	}
-	if (!appPkg.scripts?.prebuild?.includes('@micropolis/engine-wasm')) {
-		throw new Error('apps/micropolis prebuild script does not invoke @micropolis/engine-wasm');
+check('application and package directories contain only the retained inventory', () => {
+	for (const root of ['apps', 'packages']) {
+		const remaining = readdirSync(join(repoRoot, root), { withFileTypes: true })
+			.filter((entry) => entry.isDirectory() && !inventory.has(`${root}/${entry.name}`))
+			.map((entry) => `${root}/${entry.name}`);
+		if (remaining.length) throw new Error(`unexpected directories: ${remaining.join(', ')}`);
 	}
 });
 
-check('every workspace:* dependency resolves to a known workspace package', () => {
+check('every workspace dependency resolves inside the retained inventory', () => {
 	const issues = [];
-	for (const [, { dir, pkg }] of workspacePackages) {
-		const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
-		for (const [dep, spec] of Object.entries(allDeps)) {
-			if (typeof spec === 'string' && spec.startsWith('workspace:')) {
-				if (!workspacePackages.has(dep)) {
-					issues.push(`${dir} → ${dep}@${spec}`);
+	for (const { path, pkg } of workspacePackages.values()) {
+		for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
+			for (const [name, spec] of Object.entries(pkg[section] ?? {})) {
+				if (typeof spec === 'string' && spec.startsWith('workspace:') && !workspacePackages.has(name)) {
+					issues.push(`${path} ${section}: ${name}@${spec}`);
 				}
 			}
 		}
 	}
-	if (issues.length) throw new Error(`unresolved workspace deps: ${issues.join(', ')}`);
+	if (issues.length) throw new Error(issues.join('; '));
 });
 
-const engineMakefile = readText('packages/micropolis-engine/makefile');
-check('engine makefile preloads ../../content/micropolis/cities', () => {
-	if (!engineMakefile.includes('../../content/micropolis/cities')) {
-		throw new Error('preload-file path is not ../../content/micropolis/cities');
+check('Dipolis retains all three runtime workspace dependencies', () => {
+	const pkg = readJson('apps/dipolis/package.json');
+	const deps = { ...pkg.devDependencies, ...pkg.dependencies };
+	for (const name of [...inventory.values()].filter((name) => name !== 'dipolis')) {
+		if (deps[name] !== 'workspace:*') throw new Error(`missing ${name}@workspace:*`);
 	}
-});
-check('engine makefile install path uses ../../apps/micropolis/src/lib', () => {
-	if (!engineMakefile.includes('../../apps/micropolis/src/lib')) {
-		throw new Error('install copy does not target ../../apps/micropolis/src/lib');
-	}
-});
-check('engine makefile install path uses ../../apps/micropolis/src/types', () => {
-	if (!engineMakefile.includes('../../apps/micropolis/src/types')) {
-		throw new Error('install copy does not target ../../apps/micropolis/src/types');
+	if (!pkg.scripts?.prebuild?.includes('@micropolis/engine-wasm')) {
+		throw new Error('prebuild must build @micropolis/engine-wasm before Vite');
 	}
 });
 
-check('packages/vitamoo/, packages/mooshow/, apps/vitamoospace/ all present', () => {
-	for (const p of ['packages/vitamoo', 'packages/mooshow', 'apps/vitamoospace']) mustBeDir(p);
+check('engine package exposes build and clean scripts', () => {
+	const pkg = readJson('packages/micropolis-engine/package.json');
+	if (!pkg.scripts?.build || !pkg.scripts?.clean) throw new Error('missing build or clean script');
 });
 
-const banner = '== Monorepo structure verification ==';
-console.log(banner);
-for (const ok of passes) console.log(`  PASS  ${ok}`);
+check('engine preload retains Micropolis city assets', () => {
+	if (!readText('packages/micropolis-engine/makefile').includes('../../content/micropolis/cities')) {
+		throw new Error('missing ../../content/micropolis/cities preload');
+	}
+	const files = readdirSync(join(repoRoot, 'content/micropolis/cities')).filter((name) => name.endsWith('.cty'));
+	if (!files.length) throw new Error('no .cty files');
+	return `${files.length} .cty files`;
+});
+
+check('engine installs WASM and generated types into Dipolis', () => {
+	const makefile = readText('packages/micropolis-engine/makefile');
+	for (const path of ['../../apps/dipolis/src/lib', '../../apps/dipolis/src/types']) {
+		if (!makefile.includes(path)) throw new Error(`missing install target ${path}`);
+	}
+	if (makefile.includes('../../apps/micropolis/')) throw new Error('obsolete app install target');
+});
+
+check('upstream licenses and notices remain available', () => {
+	for (const path of ['LICENSE', 'MicropolisGPLLicenseNotice.md', 'MicropolisPublicNameLicense.md']) {
+		if (!statSync(join(repoRoot, path)).isFile()) throw new Error(`${path} is not a file`);
+	}
+});
+
+console.log('== Dipolis dependency inventory verification ==');
+for (const pass of passes) console.log(`  PASS  ${pass}`);
 if (failures.length) {
-	console.error('\n  FAIL:');
-	for (const f of failures) console.error(`    - ${f}`);
+	for (const failure of failures) console.error(`  FAIL  ${failure}`);
 	console.error(`\n${failures.length} failure(s), ${passes.length} pass(es).`);
 	process.exit(1);
 }

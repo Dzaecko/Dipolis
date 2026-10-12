@@ -1,9 +1,10 @@
 # Dipolis
 
-**A city where humans and AI residents live together — managed by you or a language model.**
+<img src="docs/assets/dipolis-start.png" alt="Dipolis: nighttime panorama of human and AI city districts" width="1792" height="768">
+
+**Eine Stadt, in der Menschen und KI-Bewohner zusammenleben, geführt von einer KI-Verwaltung.**
 
 Developed and maintained by **Oliver Dzaeck ([Dzaecko](https://github.com/Dzaecko))**.
-Dipolis is a modified fork of [MicropolisCore](https://github.com/SimHacker/MicropolisCore), built on the open-source Micropolis city engine.
 
 ## What you can do
 
@@ -23,10 +24,10 @@ git clone https://github.com/Dzaecko/Dipolis.git
 cd Dipolis
 corepack enable
 corepack pnpm install
-corepack pnpm --filter micropolis run dev:vite
+corepack pnpm --filter dipolis run dev:vite
 ```
 
-Open the address printed in the terminal, usually **http://localhost:5173**.
+Open the address printed in the terminal, usually **http://localhost:5177**.
 The included engine files let you start without compiling C++.
 
 ## Let a model run the city
@@ -36,14 +37,14 @@ The runner starts Haight, lets it settle, sets the treasury to **60,000**, and r
 ### Free trial — no model account needed
 
 ```sh
-corepack pnpm --filter micropolis run city-model --adapter fake --assignment N --handbook off --run 1
+corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --handbook off --run 1
 ```
 
 This local adapter follows the measured **S266** strategy. It makes no network requests and checks its results against the saved reference. Use a new run number if the output already exists.
 
 ### Use your own model
 
-1. Copy [.env.city-model.example](.env.city-model.example) to `.env.city-model` in the repository root.
+1. Create a local `.env.city-model` in the repository root using the [configuration guide](docs/model-runner.md).
 2. Enter `CITY_MODEL_ENDPOINT`, `CITY_MODEL_NAME` and `CITY_MODEL_KEY`.
 3. In VS Code, select **Tasks: Run Task** and choose an N/R start task.
 4. Enter a run number and choose handbook **on** or **off**.
@@ -61,23 +62,38 @@ Logs contain tool results, annual reasoning, reports, errors and token usage. De
 
 ## Results and tests
 
-A saved comparison covers **304 fixed strategies**, each over 30 years. In that sample, **195** never had an empty year-end treasury. This is evidence for one scenario, not a guarantee for other cities or models.
+A saved comparison covers **304 fixed strategies**, each over 30 years. With the corrected engine, **191** never had an empty year-end treasury. This is evidence for one scenario, not a guarantee for other cities or models. The earlier comparison is retained separately.
 
 - [All strategy results](docs/results/strategy-space.csv)
+- [Corrected-engine strategy results](docs/results/strategy-space-safe-engine.csv)
 - [Rankings and summaries](docs/results/strategy-space-report.md)
 
 ```sh
-corepack pnpm --filter micropolis exec vitest run cli/model
+corepack pnpm --filter dipolis exec vitest run cli/model
 corepack pnpm run check
 ```
 
 The normal tests do not make paid model calls. S266 must reproduce its stored metrics exactly. Historical behavior is checked separately using the **classic** profile; the extended rules use **koexistenz**.
 
-## Development and credits
+## Herkunft und Lizenz
 
-Main code: [browser app and CLI](apps/micropolis), [C++ engine](packages/micropolis-engine), and [documentation](documentation).
-Rebuilding the engine requires Emscripten, GNU Make and Python: `corepack pnpm run build:engine`.
+Dipolis ist eine veränderte Fassung von Micropolis, beruhend auf dem 2008 von Electronic Arts unter GPL-3 veröffentlichten Quellcode und der Engine-Portierung [MicropolisCore von Don Hopkins](https://github.com/SimHacker/MicropolisCore).
+Ausgangs-Commit: [f9ae6a57bbe5f5ff94c149bccb3015757f18241d](https://github.com/SimHacker/MicropolisCore/commit/f9ae6a57bbe5f5ff94c149bccb3015757f18241d).
 
-Dipolis preserves the original work and attribution of **Will Wright, Don Hopkins, Electronic Arts and the MicropolisCore contributors**. It is a modified project, not the original game or an Electronic Arts product.
+> Micropolis is a registered trademark of Micropolis Corporation (Micropolis GmbH) and is licensed here as a courtesy of the owner under the Micropolis Public Name License.
 
-Read [LICENSE](LICENSE), [the GPL notice and additional terms](MicropolisGPLLicenseNotice.md), and [the Micropolis name license](MicropolisPublicNameLicense.md). Some inherited components have separate licenses, including [Screen Angel](apps/screen-angel/LICENSE.md). No Electronic Arts trademark rights are claimed.
+Dipolis steht unter GPL-3. [LICENSE](LICENSE), [GPL-Hinweis](MicropolisGPLLicenseNotice.md) und [Namenslizenz](MicropolisPublicNameLicense.md) bleiben unverändert. Die Arbeit von Will Wright, Don Hopkins, Electronic Arts und den ursprünglichen Mitwirkenden bleibt nachvollziehbar. Dipolis ist kein Produkt von Electronic Arts.
+
+Gegenüber dem Original ergänzt Dipolis Menschen- und KI-Zonen, getrennte Stromversorgung, Nahrung und Farmen, Arbeitslosigkeit, Grundversorgung, Automatisierung, Unruhe, Anlagen und KI-Fraktionen. Dazu kommen eine eigene Oberfläche, modellgeführte Verwaltung, reproduzierbare Laufprotokolle, Live-Modus, Wiedergabe, Berichte und Nachbetrachtungen sowie Speicherzugriffskorrekturen.
+
+## Entwicklung
+
+Code: [Oberfläche und CLI](apps/dipolis), [C++-Engine](packages/micropolis-engine), [Renderer](packages/tile-renderer) und [gemeinsame Render-Grundlagen](packages/render-core).
+Die internen Engine-Namen bleiben zur Dokumentation der Herkunft erhalten.
+Für einen statischen Frontend-Build mit den mitgelieferten Engine-Artefakten:
+
+```sh
+corepack pnpm --filter dipolis exec vite build
+```
+
+Der Engine-Neubau benötigt Emscripten, GNU Make und Python: `corepack pnpm run build:engine`.

@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createCitySession } from '../apps/micropolis/cli/model/city-session';
-import { setupScenario, readReport, advanceYear } from '../apps/micropolis/src/lib/city-run/replay';
-import { runCity } from '../apps/micropolis/cli/model/runner';
-import { S266Adapter } from '../apps/micropolis/cli/model/fake-adapter';
-import { CURRENT_ENGINE_ID } from '../apps/micropolis/src/lib/city-run/compatibility';
+import { createCitySession } from '../apps/dipolis/cli/model/city-session';
+import { setupScenario, readReport, advanceYear } from '../apps/dipolis/src/lib/city-run/replay';
+import { runCity } from '../apps/dipolis/cli/model/runner';
+import { S266Adapter } from '../apps/dipolis/cli/model/fake-adapter';
+import { CURRENT_ENGINE_ID } from '../apps/dipolis/src/lib/city-run/compatibility';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const stages = ['ruhig', 'Protest', 'Sabotage', 'Aufstand'];
@@ -35,7 +35,7 @@ if (process.argv.includes('--calibrate')) {
   const yieldPerJob = Number((humanTaxes / taxableAutomatedJobs).toFixed(8));
   const result = { setup: 'Haight seed42 common12000-tick warmup; calibration treasury600000;25 farms;8 nuclear plants;200 requested AI lots;welfare1;limit.5;unrest drivers disabled;20-year burn-in;years21..25 measured. This calibration does not change household-crisis defaults.', built, rows, humanTaxes, taxableAutomatedJobs, yieldPerJob, formula: 'sum(humanTaxFund) / sum(automatedJobs * cityTax); fixed to 8 decimal places' };
   writeFileSync('docs/results/v2-unruhe-calibration.json', JSON.stringify(result, null, 2) + '\n');
-  const file = 'apps/micropolis/src/lib/params/v2-unruhe.json';
+  const file = 'apps/dipolis/src/lib/params/v2-unruhe.json';
   const params = JSON.parse(readFileSync(file, 'utf8'));
   params.automationYieldPerJob = yieldPerJob;
   writeFileSync(file, JSON.stringify(params, null, 2) + '\n');

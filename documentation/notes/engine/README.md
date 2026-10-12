@@ -13,6 +13,9 @@ Text artifacts that describe **internals of the C++ simulator**, **tile represen
 | **`CODING-STYLE.txt`** | C++ style expectations for the core (`packages/micropolis-engine/src/`). |
 | **`ASSETS.txt`** | Inventory of UI surfaces (dialogs, tools, overlays) from the classic activity era. |
 
-Files moved to **`../legacy/`**: `CALLBACKS.txt`, `SharedData.txt`, `outline.txt` — these describe Tcl/Python-era integration patterns superseded by the Wasm/Embind bridge.
+The former `legacy/` Tcl/Python integration notes were pruned because the
+Wasm/Embind bridge supersedes them. They remain in the
+[pinned upstream history](../../README.md).
 
-For **current** architecture direction prefer **`../../designs/wasm-bridge-and-testing-trajectory.md`** and **`../../designs/callback-interface-roadmap.md`**.
+For current project structure and upstream history, see the
+[provenance index](../../README.md).
