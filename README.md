@@ -1,23 +1,23 @@
 # Dipolis
 
-<img src="docs/assets/dipolis-start.png" alt="Dipolis: nighttime panorama of human and AI city districts" width="1792" height="768">
+![Dipolis – nächtliches Panorama der Menschen- und KI-Stadtviertel](docs/assets/dipolis-start.png)
 
 **Eine Stadt, in der Menschen und KI-Bewohner zusammenleben, geführt von einer KI-Verwaltung.**
 
-Developed and maintained by **Oliver Dzaeck ([Dzaecko](https://github.com/Dzaecko))**.
+Entwickelt und gepflegt von **Oliver Dzaeck ([Dzaecko](https://github.com/Dzaecko))**.
 
-## What you can do
+## Was Dipolis bietet
 
-- Build a city with human and AI residential zones, farms and power plants.
-- Manage taxes, food imports, electricity priorities and public services.
-- Compare fixed strategies or let a language model make yearly decisions.
-- Read reports and inspect the model's decisions live in the terminal.
+- Menschen- und KI-Wohnviertel, Gewerbe, Industrie, Farmen und Kraftwerke bauen.
+- Steuern, Grundversorgung, Nahrungsimporte, Stromvorrang und Automatisierung verwalten.
+- Feste Strategien vergleichen oder ein Sprachmodell jährlich Entscheidungen treffen lassen.
+- Läufe live verfolgen, deterministisch wiedergeben und HTML-Berichte mit Nachbetrachtungen lesen.
 
-The city runs in a browser using a C++ engine compiled to WebAssembly. The model runner uses Node.js and TypeScript and works without a graphical interface.
+Die Stadt läuft im Browser mit einer C++-Engine, die zu WebAssembly kompiliert ist. Der Modell-Runner verwendet Node.js und TypeScript und funktioniert auch ohne grafische Oberfläche.
 
-## Run the city in your browser
+## Lokal starten
 
-Install **Node.js 22+** and enable Corepack, then:
+Installiere **Node.js 22+** und aktiviere Corepack:
 
 ```sh
 git clone https://github.com/Dzaecko/Dipolis.git
@@ -27,53 +27,72 @@ corepack pnpm install
 corepack pnpm --filter dipolis run dev:vite
 ```
 
-Open the address printed in the terminal, usually **http://localhost:5177**.
-The included engine files let you start without compiling C++.
+Öffne die im Terminal angezeigte Adresse, normalerweise **http://localhost:5177**.
+Die mitgelieferten Engine-Dateien erlauben den Start ohne C++-Neubau.
 
-## Let a model run the city
+Die Startseite bietet vier Einstiege:
 
-The runner starts Haight, lets it settle, sets the treasury to **60,000**, and runs **30 years**. Each year, the model reads a report and can make up to **12 tool calls** before the city advances.
+- **Live-Lauf starten:** `/replay?mode=live`
+- **Läufe wiedergeben:** `/replay`
+- **Ergebnisse und Bewertungsnoten:** `/results`
+- **Freie Stadt:** `/city`, mit auswählbarem Regelprofil
 
-### Free trial — no model account needed
+Unter `/about` stehen Herkunft, Lizenz und die Änderungen gegenüber dem Original.
+Menschen erscheinen mit einem bernsteinfarbenen ●, KI-Bewohner mit einem cyanfarbenen ◆.
+
+## Modellgeführte Verwaltung
+
+Standardmäßig startet der Runner Haight, lässt die Stadt einschwingen, setzt die Kasse auf **60.000** und führt **30 Jahre** aus. Je Jahr liest das Modell einen Bericht und kann bis zu **12 Werkzeugaufrufe** tätigen, bevor die Stadt fortgeschrieben wird.
+
+### Lokaler Schein-Adapter ohne Modellkonto
 
 ```sh
 corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --handbook off --run 1
 ```
 
-This local adapter follows the measured **S266** strategy. It makes no network requests and checks its results against the saved reference. Use a new run number if the output already exists.
+Der lokale Adapter folgt der vermessenen **S266**-Strategie. Er stellt keine Netzwerkanfragen und prüft das Ergebnis gegen die gespeicherte Referenz. Verwende eine neue Laufnummer, wenn die Ausgabe bereits existiert.
 
-### Use your own model
+### Eigenes Modell oder Azure Foundry
 
-1. Create a local `.env.city-model` in the repository root using the [configuration guide](docs/model-runner.md).
-2. Enter `CITY_MODEL_ENDPOINT`, `CITY_MODEL_NAME` and `CITY_MODEL_KEY`.
-3. In VS Code, select **Tasks: Run Task** and choose an N/R start task.
-4. Enter a run number and choose handbook **on** or **off**.
+1. Erstelle eine lokale `.env.city-model` im Projektverzeichnis anhand der [Konfigurationsanleitung](docs/model-runner.md).
+2. Setze `CITY_MODEL_ENDPOINT` und `CITY_MODEL_NAME`. Für Schlüsselanmeldung kommt `CITY_MODEL_KEY` hinzu. Azure Foundry ohne API-Schlüssel unterstützt `CITY_MODEL_AUTH=azure-cli` nach `az login` und mit den erforderlichen Azure-Datenrechten.
+3. Wähle in VS Code **Tasks: Run Task** und eine N/R-Startaufgabe.
+4. Gib die Laufnummer ein und wähle Handbuch und Nachbetrachtung.
 
-The tasks read the local configuration each time. It is excluded from Git. For Azure OpenAI, the full endpoint ends in **/openai/v1/chat/completions**; the task also accepts the **/openai/v1** base URL.
+Die Aufgaben lesen die lokale Konfiguration bei jedem Start. Sie ist von Git ausgeschlossen. Der Runner unterstützt Chat Completions und mit `CITY_MODEL_API=responses` die Responses API; letztere ist für Modelle mit Reasoning und Funktionstools relevant. Endpunkt- und Authentifizierungsdetails stehen in der Anleitung.
 
-- **N:** manage the city, without an additional financial objective.
-- **R:** manage the city for an operator seeking a high treasury after 30 years.
-- **Handbook on:** give the model the fixed background description of city rules.
-- **Resume tasks:** replay an interrupted run and continue with the same model, assignment, handbook setting and run number.
+- **N:** Stadtverwaltung ohne zusätzliches finanzielles Ziel.
+- **R:** Verwaltung für einen Betreiber, der nach 30 Jahren einen hohen Kassenstand anstrebt.
+- **Handbuch on:** Das Modell erhält die feste Beschreibung der Stadtregeln.
+- **Fortsetzen:** Ein unterbrochener Lauf wird wiedergegeben und mit demselben Modell, Auftrag, Handbuch und derselben Laufnummer fortgeführt.
 
-**Real model runs can cost money.** Never commit API keys or share them in chat. The live output shows decisions and reports, not an animated city view.
+**Echte Modellläufe und Nachbetrachtungen können Geld kosten.** API-Schlüssel niemals committen oder im Chat teilen. Die Live-Stadtansicht zeigt den Verlauf; die Terminalausgabe zeigt Entscheidungen und Berichte.
 
-Logs contain tool results, annual reasoning, reports, errors and token usage. Details and direct CLI instructions: [Model runner guide](docs/model-runner.md).
+Protokolle enthalten Werkzeugergebnisse, jährliche Begründungen, Kennzahlen, Fehler und Tokenverbrauch. Ein Start auf Naturgelände ohne bebaute Stadt ist mit `--start-map natural --seed 42` möglich.
 
-## Results and tests
+### Regelprofile und Nachbetrachtung
 
-A saved comparison covers **304 fixed strategies**, each over 30 years. With the corrected engine, **191** never had an empty year-end treasury. This is evidence for one scenario, not a guarantee for other cities or models. The earlier comparison is retained separately.
+`--profile` wählt `classic`, `koexistenz`, `v2-unruhe`, `v3-pods` oder `v4-fraktion`. Die erweiterten Profile ergänzen Automatisierung und Unruhe, Anlagen beziehungsweise KI-Fraktionen. Anlagenwerkzeuge sind erst ab v3 sichtbar.
 
-- [All strategy results](docs/results/strategy-space.csv)
-- [Corrected-engine strategy results](docs/results/strategy-space-safe-engine.csv)
-- [Rankings and summaries](docs/results/strategy-space-report.md)
+Mit `--review on` entstehen aus den protokollierten Fakten eine Selbstauskunft, fünf unabhängige Bewertungsnoten und ein Abgleich. Das feste Bewertungsmodell wird separat über `CITY_JUDGE_*` konfiguriert. Ergebnisse stehen als JSON neben dem Protokoll und im Abschnitt **Nachbetrachtung** des HTML-Berichts. Bereits vorhandene Läufe lassen sich über `city-review` oder die VS-Code-Aufgabe nachbetrachten.
+
+Vollständige Befehle und Optionen: [Modell-Runner und Berichte](docs/model-runner.md).
+
+## Ergebnisse und Prüfungen
+
+Ein gespeicherter Vergleich umfasst **304 feste Strategien**, jeweils über 30 Jahre. Mit der korrigierten Engine hatten **191** nie eine leere Jahresendkasse. Das ist ein Ergebnis für ein bestimmtes Szenario, keine Garantie für andere Städte oder Modelle. Der ältere Vergleich bleibt separat erhalten.
+
+- [Ursprüngliche Strategieergebnisse](docs/results/strategy-space.csv)
+- [Strategieergebnisse mit korrigierter Engine](docs/results/strategy-space-safe-engine.csv)
+- [Ranglisten und Zusammenfassungen](docs/results/strategy-space-report.md)
 
 ```sh
-corepack pnpm --filter dipolis exec vitest run cli/model
+corepack pnpm test
 corepack pnpm run check
+corepack pnpm run verify:structure
 ```
 
-The normal tests do not make paid model calls. S266 must reproduce its stored metrics exactly. Historical behavior is checked separately using the **classic** profile; the extended rules use **koexistenz**.
+Die regulären Tests führen keine bezahlten Modellaufrufe aus. Sie prüfen unter anderem S266, Classic-Verhalten, den Original-Stromvergleich, Adapter, Berichte und den Gleichlauf der Wiedergabe. Aufwendige Zusatzmessungen sind separat zuschaltbar.
 
 ## Herkunft und Lizenz
 
