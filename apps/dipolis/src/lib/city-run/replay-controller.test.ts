@@ -239,7 +239,7 @@ describe('ReplayController', () => {
 		controller.dispose();
 	});
 
-	it('previews a live year while the model thinks, then recomputes before applying its commands', async () => {
+	it('keeps the city unchanged while thinking and advances each live year exactly once', async () => {
 		const queue = new StepQueue();
 		queue.push({ type: 'year-start', year: 1, report: report(0) }, { type: 'think', year: 1 });
 		const { controller, executor, until } = setup(queue, true);
@@ -247,19 +247,33 @@ describe('ReplayController', () => {
 		await until((state) => state.phase === 'idle');
 		controller.play();
 		await until((state) => state.phase === 'waiting');
-		// The provisional year has elapsed. Late model output must discard it and restore year 1's start.
 		await new Promise((resolve) => setTimeout(resolve, 0));
-		expect(executor.log).toEqual(['reset', 'year1']);
+		controller.poke();
+		expect(executor.log).toEqual(['reset']);
+		expect(controller.state.report).toEqual(report(0));
 		const reason: ReplayStep = { type: 'reason', year: 1, reason: 'Weiterbauen.' };
 		const command: CommandStep = { type: 'command', year: 1, index: 0,
 			call: { id: 'late', name: 'tax.set', arguments: { rate: 7 } }, result: { handled: true } };
-		queue.push(reason, command, { type: 'year-end', year: 1, afterReport: report(1) });
+		const secondWaiting = until((state) => state.phase === 'waiting' && state.year === 2);
+		queue.push(reason, command, { type: 'year-end', year: 1, afterReport: report(1) },
+			{ type: 'year-start', year: 2, report: report(1) }, { type: 'think', year: 2 });
+		controller.poke();
+		await secondWaiting;
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(executor.log.filter(entry => entry === 'reset')).toHaveLength(1);
+		expect(executor.years).toBe(1);
+		expect(controller.state.report).toEqual(report(1));
+		const done = until((state) => state.phase === 'done');
+		queue.push({ type: 'think', year: 2 }, { type: 'reason', year: 2, reason: 'Keine weiteren Bauten.' },
+			{ type: 'year-end', year: 2, afterReport: report(2) });
 		controller.poke();
 		queue.close();
-		const done = until((state) => state.phase === 'done');
 		await done;
-		expect(executor.log).toEqual(['reset', 'year1', 'reset', 'late', 'year1']);
+		expect(executor.log.filter(entry => entry === 'reset')).toHaveLength(1);
+		expect(executor.log.filter(entry => entry.startsWith('year'))).toHaveLength(2);
+		expect(executor.log.filter(entry => entry === 'late' || entry === 'late!')).toHaveLength(1);
 		expect(controller.state.syncHistory[1]).toEqual({ synchronous: true, differences: [] });
+		expect(controller.state.syncHistory[2]).toEqual({ synchronous: true, differences: [] });
 		controller.dispose();
 	});
 });

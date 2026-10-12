@@ -10,7 +10,7 @@ export interface CommandStep { type: 'command'; year: number; index: number; cal
 export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; }
 /** Live only: the model's reasoning arrives before its commands. */
 export interface ReasonStep { type: 'reason'; year: number; reason: string; }
-/** Live only: animate a provisional year while the model is thinking. */
+/** Live only: keep the current city visible while the model is thinking. */
 export interface ThinkStep { type: 'think'; year: number; }
 export type ReplayStep = YearStartStep | CommandStep | YearEndStep | ReasonStep | ThinkStep;
 
@@ -357,8 +357,6 @@ export interface AdvanceOptions {
 	yearMs: () => number;
 	/** Await between animation chunks: holds while paused, throws ReplayAborted on jump. */
 	checkpoint: () => Promise<void>;
-	/** Stop an in-flight live preview immediately when a model event arrives. */
-	signal?: AbortSignal;
 }
 
 export interface ReplayExecutor {
@@ -412,8 +410,6 @@ export class ReplayController {
 	private waiters: Array<() => void> = [];
 	private jumpTarget: number | null;
 	private fastYear = false;
-	private previewYear: number | null = null;
-	private previewAbort: AbortController | null = null;
 	private running: Promise<void> | null = null;
 
 	constructor(private readonly source: AsyncIterator<ReplayStep, unknown>, private readonly executor: ReplayExecutor,
@@ -602,7 +598,6 @@ export class ReplayController {
 			lastSync: null, syncHistory: {}, error: null
 		} satisfies Partial<ReplayState>);
 		this.emit({ type: 'state' });
-		this.previewYear = null;
 		await this.executor.reset();
 		this.check(generation);
 		this.emit({ type: 'reset' });
@@ -648,26 +643,9 @@ export class ReplayController {
 		const fast = this.hurry();
 		const timings = this.timings;
 		if (step.type === 'think') {
-			// If a response is already buffered, replay the decision without showing a stale preview.
-			if (this.options.live && !this.history.slice(this.pos + 1).some((later) => later.year === step.year &&
-				(later.type === 'reason' || later.type === 'command' || later.type === 'year-end'))) {
-				this.s.year = step.year;
-				this.s.phase = 'waiting';
-				this.emit({ type: 'state' });
-				const abort = new AbortController();
-				this.previewAbort = abort;
-				this.previewYear = step.year;
-				try {
-					await this.executor.advanceYear({ fast: () => false, yearMs: () => this.timings.yearMs,
-						checkpoint: async () => {
-							this.check(generation);
-							if (abort.signal.aborted) throw new ReplayAborted();
-						}, signal: abort.signal });
-					this.check(generation);
-				} finally {
-					if (this.previewAbort === abort) this.previewAbort = null;
-				}
-			}
+			this.s.year = step.year;
+			this.s.phase = 'waiting';
+			this.emit({ type: 'state' });
 		} else if (step.type === 'reason') {
 			this.s.year = step.year;
 			this.s.reason = step.reason;
@@ -711,13 +689,8 @@ export class ReplayController {
 		}
 	}
 
-	/** A live event cancels the provisional year and recomputes to its start before applying decisions. */
+	/** Wake playback when new live events arrive, without changing the city state. */
 	poke(): void {
-		if (this.previewYear !== null) {
-			this.jumpTarget = this.previewYear;
-			this.generation++;
-			this.previewAbort?.abort();
-		}
 		this.notify();
 	}
 }

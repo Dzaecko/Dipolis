@@ -88,6 +88,8 @@ The tasks read the local configuration each time they start. It is excluded from
 
 **Real model runs and reviews can cost money.** Never commit API keys or share them in chat. The live city view shows the evolving city; terminal output shows decisions and reports.
 
+While the model is thinking, the live view keeps the last valid city state visible. It does not simulate a speculative year or reset the map when the answer arrives. Decisions are applied first, then the actual year is animated and checked against the recorded outcome.
+
 Protocols record tool results, annual reasoning, metrics, errors and token usage. To start on natural terrain without an existing built city, use `--start-map natural --seed 42`.
 
 ## Rule profiles
