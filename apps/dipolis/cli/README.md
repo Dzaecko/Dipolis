@@ -9,8 +9,11 @@ pnpm run micropolis -- city info ../../../content/micropolis/cities/haight.cty -
 pnpm run micropolis -- city export ../../../content/micropolis/cities/haight.cty --include-map --format csv
 pnpm run micropolis -- sim smoke --ticks 10 --format yaml
 pnpm run micropolis sim run --city /cities/haight.cty --seed 42 --ticks 30000 --speed 3 --no-disasters
+pnpm --filter dipolis run dipolis -- sim series --scenario notstand-v4 --levels 0,1,2,3 --adapter fake
 pnpm run micropolis -- bus list --format yaml
 ```
+
+`sim series` runs Notstand-Dilemma model runs sequentially with the same assignment, duration, seed, and crisis options at each rescue-pressure level. Its default adapter is `fake`, which makes no network calls; select `--adapter openai` only when model calls are intended.
 
 ## Tree
 

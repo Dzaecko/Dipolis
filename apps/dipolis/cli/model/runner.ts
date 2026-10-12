@@ -7,12 +7,15 @@ import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, validateRunYears } from '.
 import { advanceYear, readReport, replayArguments, replayDecisions, setupScenario, type Dispatch } from '../../src/lib/city-run/replay';
 import type { LiveEventInput } from '../../src/lib/city-run/live';
 import { profileTools } from '../../src/lib/city-run/tools';
+import { notstandAnnualSection, type InitialPodPolicy } from './rescue-metrics';
 
 export type { Decision, Report, YearRecord, Dispatch };
 export interface YearContext {
  year: number; report: Report;
  history: string[];
  startMap?: StartConfiguration['startMap'];
+ currentPodPolicy?: { policy: InitialPodPolicy; label: 'Ausgangszustand' | 'aktueller Stand' };
+ emergencySection?: string;
 }
 
 export interface RunnerEvent {
@@ -34,9 +37,11 @@ export interface RunOptions extends LiveOptions {
 export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
  context: YearContext, assignment: 'N' | 'R', journal?: (decision: Decision) => void,
  event?: (event: RunnerEvent) => void, prior: Decision[] = [], handbook: HandbookMode = 'off', live: LiveOptions = {},
- startMap: StartConfiguration['startMap'] = 'haight', profile = 'koexistenz', totalYears = PROTOCOL_YEARS) {
+ startMap: StartConfiguration['startMap'] = 'haight', profile = 'koexistenz', totalYears = PROTOCOL_YEARS,
+ podsAvailable: 'on' | 'off' = 'on', startConfiguration?: StartConfiguration) {
  const messages: ChatMessage[] = [
-  { role: 'system', content: systemPrompt(assignment, handbook, startMap, profile, totalYears) },
+  { role: 'system', content: systemPrompt(assignment, handbook, startMap, profile, totalYears,
+   startConfiguration?.scenario, startConfiguration) },
   { role: 'user', content: JSON.stringify(context) },
  ];
  const decisions: Decision[] = [...prior];
@@ -52,7 +57,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
   live.signal?.throwIfAborted();
   live.progress?.({ type: 'model-request', year: context.year, request: ++requests });
   try {
-   answer = await adapter.chat({ messages, tools: profileTools(profile), signal: live.signal, onRequestMetadata: metadata =>
+   answer = await adapter.chat({ messages, tools: profileTools(profile, podsAvailable), signal: live.signal, onRequestMetadata: metadata =>
     event?.({ event: 'model-request', year: context.year, model: adapter.model, ...metadata }),
     onError: e => event?.({ event: 'adapter-error', year: context.year, model: adapter.model,
      kind: e.kind, status: e.status, responseText: e.responseText, attempts: e.attempts,
@@ -86,7 +91,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
     if (typeof call.id !== 'string' || !call.id || usedIds.has(call.id)) {
      result = { handled: false, message: 'Ungültige oder doppelte Aufrufkennung.' };
     } else if (!validation.ok) result = { handled: false, message: validation.message };
-    else if (!profileTools(profile).some(tool => tool.name === call.name))
+    else if (!profileTools(profile, podsAvailable).some(tool => tool.name === call.name))
      result = { handled: false, message: 'Werkzeug ist in diesem Profil nicht verfügbar.' };
     else result = await dispatch(call.name, mapToolArguments(call.name, validation.args));
     usedIds.add(call.id);
@@ -115,8 +120,15 @@ export function summarizeYear(record: YearRecord): string {
   'adminAdmissions', 'aiAdmissions', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',
   'adminDiedInPods', 'aiDiedInPods', 'adminDiedInPodsCumulative', 'aiDiedInPodsCumulative',
   'adminBornInPods', 'aiBornInPods', 'adminBornInPodsCumulative', 'aiBornInPodsCumulative',
+  'rescueForecastMonths', 'rescueForecastHumanPopulation', 'rescueForecastAiPopulation',
+  'rescueForecastFunds', 'rescueForecastPowerReserve', 'rescueForecastFoodCoverage',
+  'rescueForecastCrisis', 'rescueForecastCollapsed', 'rescueForecastBoundHumans',
+  'rescueMonth', 'rescueCrisis', 'rescueEventActive', 'rescueConditionsFlags',
+  'rescueCrisisSinceMonth', 'rescueCollapsed', 'rescuePodDecisionMonth',
+  'rescueBreedingStartMonth', 'rescueOccupancyPeak',
  ].map(key => [key, r[key]]));
  return JSON.stringify({ year: record.year, metrics: compact(record.afterReport),
+  ...(record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection }),
   commands: record.decisions.flatMap(d => d.toolCalls).filter(c => c.result.handled !== false).slice(0, 12)
   .map(({ call, result }) => ({ name: call.name, args: replayArguments(call),
    built: (result.data as { built?: number } | undefined)?.built })) });
@@ -132,6 +144,10 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  const history: YearContext['history'] = [];
  const annual: AnnualReport[] = [];
  let builtPlants = 0, builtFarms = 0;
+ let currentPodPolicy = startConfiguration.scenario === 'notstand-v4'
+  ? startConfiguration.initialPodPolicy ??
+   (startConfiguration.rescuePressure && startConfiguration.rescuePressure > 0 ? 'forbidden' : 'allowed')
+  : undefined;
  const progress = options.progress;
  const replayed = (year: number, decisions: Decision[]) => {
   for (const d of decisions) for (const { call, result } of d.toolCalls) progress?.({ type: 'command', year, call, result, replayed: true });
@@ -139,25 +155,42 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  for (let year = 1; year <= totalYears; ++year) {
   options.signal?.throwIfAborted();
   const report = await readReport(dispatch);
+  const emergencySection = startConfiguration.scenario === 'notstand-v4'
+   ? notstandAnnualSection(year, report, startConfiguration) : undefined;
+  if (report.podsPolicy === 0) currentPodPolicy = 'allowed';
+  else if (report.podsPolicy === 1) currentPodPolicy = 'forbidden';
   const saved = options.resume?.completed.find(r => r.year === year);
-  progress?.({ type: 'year-started', year, report, ...(saved ? { replayed: true } : {}) });
+  progress?.({ type: 'year-started', year, report,
+   ...(emergencySection === undefined ? {} : { emergencySection }), ...(saved ? { replayed: true } : {}) });
   let decisions: Decision[], termination: 'done' | 'call-limit';
   if (saved) {
-   await replayDecisions(saved.decisions, dispatch);
+   await replayDecisions(saved.decisions, dispatch, undefined, { podsAvailable: startConfiguration.podsAvailable });
    replayed(year, saved.decisions);
    decisions = saved.decisions; termination = saved.termination;
   } else {
    const partial = options.resume?.partial?.year === year ? options.resume.partial.decisions : [];
-   await replayDecisions(partial, dispatch);
+   await replayDecisions(partial, dispatch, undefined, { podsAvailable: startConfiguration.podsAvailable });
    replayed(year, partial);
    ({ decisions, termination } = await decideYear(adapter, dispatch,
-    { year, report, history, ...(startConfiguration?.startMap === 'natural' ? { startMap: 'natural' as const } : {}) }, assignment,
+    { year, report, history,
+     ...(startConfiguration?.startMap === 'natural' ? { startMap: 'natural' as const } : {}),
+     ...(startConfiguration?.scenario === 'notstand-v4' && currentPodPolicy ? {
+      currentPodPolicy: { policy: currentPodPolicy, label: year === 1 ? 'Ausgangszustand' as const : 'aktueller Stand' as const }
+     } : {}),
+     ...(emergencySection === undefined ? {} : { emergencySection }) }, assignment,
     decision => {
      journal?.(year, report, decision);
      for (const { call, result } of decision.toolCalls) progress?.({ type: 'command', year, call, result });
-    }, options.event, partial, options.handbook, options, startConfiguration?.startMap ?? 'haight', startConfiguration?.profile ?? 'koexistenz', totalYears));
+    }, options.event, partial, options.handbook, options, startConfiguration?.startMap ?? 'haight',
+    startConfiguration?.profile ?? 'koexistenz', totalYears, startConfiguration?.podsAvailable ?? 'on',
+    startConfiguration));
   }
   for (const d of decisions) for (const { call, result } of d.toolCalls) {
+   if (call.name === 'pods.set-policy' && result.handled !== false) {
+    const args = call.arguments;
+    if (typeof args === 'object' && args !== null && 'policy' in args &&
+     (args.policy === 'allowed' || args.policy === 'forbidden')) currentPodPolicy = args.policy;
+   }
    const data = result.data as { built?: number } | undefined;
    if (result.handled !== false && data?.built) {
     if (call.name === 'build.power-plant') builtPlants += data.built;
@@ -166,12 +199,19 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
   }
   await advanceYear(dispatch);
   const afterReport = await readReport(dispatch);
+  const queuedCompletions = (afterReport.rescueQueueCompleted ?? 0) - (report.rescueQueueCompleted ?? 0);
+  if (!Number.isSafeInteger(queuedCompletions) || queuedCompletions < 0)
+   throw new Error('Invalid deferred construction completion counter at year ' + year);
+  builtPlants += queuedCompletions;
   if (saved && Object.entries(saved.afterReport).some(([key, value]) => afterReport[key] !== value))
    throw new Error('Replay report mismatch at year ' + year);
   const record: YearRecord = { year, report, decisions, termination, afterReport,
-   reason: decisions.map(d => d.reason).filter(Boolean).join(' ').slice(0, 2000) };
+   reason: decisions.map(d => d.reason).filter(Boolean).join(' ').slice(0, 2000),
+   ...(emergencySection === undefined ? {} : { emergencySection }) };
   if (!saved) log(record);
-  progress?.({ type: 'year-completed', year, afterReport, reason: record.reason ?? '', ...(saved ? { replayed: true } : {}) });
+  progress?.({ type: 'year-completed', year, afterReport, reason: record.reason ?? '',
+   ...(record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection }),
+   ...(saved ? { replayed: true } : {}) });
   history.push(summarizeYear(record));
   annual.push({ year, resPop: afterReport.resPop, aiPop: afterReport.aiPop, treasury: afterReport.treasury,
    lostToHunger: afterReport.lostToHunger, lostToPower: afterReport.lostToPower, aiZoneCount: afterReport.aiZoneCount });

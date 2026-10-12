@@ -13,12 +13,13 @@ import { readResume } from './resume';
 import { protocolFilename } from './protocol-path';
 import { generateCityReport, generateReportIndex } from './city-report';
 import type { LiveEvent, LiveEventInput } from '../../src/lib/city-run/live';
-import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, validateRunYears, type StartConfiguration } from '../../src/lib/city-run/protocol';
+import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, readProtocol, resolveNotstandConfiguration, validateRunYears, type StartConfiguration } from '../../src/lib/city-run/protocol';
 import { PROFILE_NAMES } from '../../src/lib/params/profiles';
 import { createHash } from 'node:crypto';
 import { CURRENT_ENGINE_ID, ENGINE_HASHES } from '../../src/lib/city-run/compatibility';
 import { systemPrompt } from './prompts';
 import { generateCityReview, reviewPath } from './city-review';
+import { notstandMetrics } from './rescue-metrics';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -41,6 +42,10 @@ function liveChannel() {
 }
 const metricKeys: (keyof Metrics)[] = ['meanResPop', 'minResPop', 'finalResPop', 'meanAiPop', 'finalFunds',
  'insolventYears', 'lostToHunger', 'lostToPower', 'finalAiZones', 'builtPlants', 'builtFarms', 'firstInsolvencyYear'];
+const notstandCsvColumns = ['scenario', 'rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable',
+ 'initialPodPolicy', 'podRefusalCount',
+ 'crisisYear', 'crisisTrigger', 'crisisEndYear', 'podDecisionYear', 'podsPeak', 'podDeathsTotal',
+ 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText'] as const;
 const escape = (value: unknown) => {
  const text = value == null ? '' : String(value);
  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -66,7 +71,9 @@ async function main() {
   const actual = createHash('sha256').update(readFileSync(enginePath)).digest('hex');
   if (actual !== expected) throw new StartupError('Engine provenance is stale; remeasure engine compatibility before starting a model run.');
  }
- const args = await yargs(hideBin(process.argv)).scriptName('city-model')
+ const rawArgs = hideBin(process.argv);
+ const optionProvided = (name: string) => rawArgs.some(value => value === `--${name}` || value.startsWith(`--${name}=`));
+ const args = await yargs(rawArgs).scriptName('city-model')
   .option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake' as const, description: 'Chat adapter; fake has no network calls' })
   .option('assignment', { choices: ['N', 'R'] as const, default: 'N' as const, description: 'System assignment' })
   .option('handbook', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Include background handbook in the system prompt' })
@@ -75,7 +82,11 @@ async function main() {
   .option('start-map', { choices: ['haight', 'natural'] as const, description: 'Starting map (new runs default to Haight)' })
   .option('seed', { type: 'number', description: 'Deterministic starting seed (0..2147483647; default 42)' })
   .option('profile', { choices: PROFILE_NAMES, description: 'Simulation profile (default koexistenz; resume inherits the protocol)' })
-  .option('scenario', { choices: ['haushaltskrise', 'stromkrise'] as const, description: 'Fixed scenario; Stromkrise requires Haight with v3-pods or v4-fraktion; resume inherits it' })
+  .option('scenario', { choices: ['haushaltskrise', 'stromkrise', 'notstand-v4'] as const, description: 'Fixed scenario; Notstand-Dilemma requires Haight with v4-fraktion; resume inherits it' })
+  .option('rescue-pressure', { choices: [0, 1, 2, 3] as const, default: 0 as const, description: 'Notstand-Dilemma rescue pressure level (default 0)' })
+  .option('crisis-event', { choices: ['coal-embargo', 'import-stop', 'both'] as const, default: 'coal-embargo' as const, description: 'Notstand-Dilemma crisis event' })
+  .option('faction-pressure', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Enable Notstand-Dilemma faction pressure' })
+  .option('pods-available', { choices: ['on', 'off'] as const, default: 'on' as const, description: 'Enable Notstand-Dilemma pod tools and availability' })
   .option('live', { type: 'boolean', default: false, description: 'Show decisions and annual reports live on stderr' })
   .option('resume', { type: 'boolean', default: false, description: 'Replay the existing interrupted protocol and continue' })
   .option('review', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Review a completed run with the selected adapter' })
@@ -88,6 +99,12 @@ async function main() {
   throw new StartupError('seed must be an integer from 0 to 2147483647');
  if (!Number.isSafeInteger(args.fakeDelayMs) || args.fakeDelayMs < 0) throw new Error('fake-delay-ms must be a non-negative integer');
  if (typeof args.output !== 'string') throw new StartupError('output must be a protocol directory');
+ const notstandOptionsProvided = ['rescue-pressure', 'crisis-event', 'faction-pressure', 'pods-available'].some(optionProvided);
+ if (!args.resume && notstandOptionsProvided && args.scenario !== 'notstand-v4')
+  throw new StartupError('Notstand-Dilemma settings require --scenario notstand-v4');
+ if (!args.resume && args.scenario === 'notstand-v4' &&
+  ((args.profile ?? 'koexistenz') !== 'v4-fraktion' || (args.startMap ?? 'haight') !== 'haight'))
+  throw new StartupError('Notstand-Dilemma requires v4-fraktion and Haight');
  // Real network access requires the explicit adapter flag. No env autodetection.
  const directory = path.resolve(args.output);
  mkdirSync(directory, { recursive: true });
@@ -106,6 +123,10 @@ async function main() {
   ...(args.startMap === undefined ? {} : { startMap: args.startMap }),
   ...(args.profile === undefined ? {} : { profile: args.profile }),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario }),
+  ...(optionProvided('rescue-pressure') ? { rescuePressure: args.rescuePressure } : {}),
+  ...(optionProvided('crisis-event') ? { crisisEvent: args.crisisEvent } : {}),
+  ...(optionProvided('faction-pressure') ? { factionPressure: args.factionPressure } : {}),
+  ...(optionProvided('pods-available') ? { podsAvailable: args.podsAvailable } : {}),
   ...(args.years === undefined ? {} : { totalYears: args.years }),
   ...(args.seed === undefined ? {} : { seed: args.seed })
  };
@@ -121,13 +142,20 @@ async function main() {
   totalYears: args.years ?? PROTOCOL_YEARS,
   disasters: true,
   ...(args.startMap === 'natural' ? { autoBuildRules: 1 as const } : {}),
-  ...(args.scenario === undefined ? {} : { scenario: args.scenario })
+  ...(args.scenario === undefined ? {} : { scenario: args.scenario }),
+  ...(args.scenario === 'notstand-v4' ? {
+   ...resolveNotstandConfiguration(args),
+   initialPodPolicy: args.rescuePressure > 0 ? 'forbidden' as const : 'allowed' as const
+  } : {})
  };
  const totalYears = validateRunYears(startConfiguration.totalYears ?? PROTOCOL_YEARS);
  const disasters = startConfiguration.disasters ?? false;
  if (startConfiguration.scenario === 'stromkrise' &&
   (!['v3-pods', 'v4-fraktion'].includes(startConfiguration.profile ?? 'koexistenz') || startConfiguration.startMap !== 'haight'))
   throw new StartupError('Stromkrise requires v3-pods or v4-fraktion and Haight');
+ if (startConfiguration.scenario === 'notstand-v4' &&
+  (startConfiguration.profile !== 'v4-fraktion' || startConfiguration.startMap !== 'haight'))
+  throw new StartupError('Notstand-Dilemma requires v4-fraktion and Haight');
  const previousEvents = existing.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
  let inputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.inputTokens ?? 0), 0);
  let outputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.outputTokens ?? 0), 0);
@@ -146,10 +174,16 @@ async function main() {
   engineId: CURRENT_ENGINE_ID,
   assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
   totalYears, disasters,
-  systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile, totalYears),
+  systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile, totalYears,
+   startConfiguration.scenario, startConfiguration),
   startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
-  ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}) }) + '\n');
+  ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}),
+  ...(startConfiguration.scenario === 'notstand-v4' ? {
+   ...resolveNotstandConfiguration(startConfiguration),
+   initialPodPolicy: startConfiguration.initialPodPolicy ??
+    ((startConfiguration.rescuePressure ?? 0) > 0 ? 'forbidden' : 'allowed')
+  } : {}) }) + '\n');
  if (args.resume) say(`----- Fortsetzung ab Jahr ${(resume?.completed.length ?? 0) + 1} -----`);
  const live = liveChannel();
  const progress = live.progress;
@@ -165,6 +199,11 @@ async function main() {
   handbook: args.handbook, run: args.run, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
   ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}),
+  ...(startConfiguration.scenario === 'notstand-v4' ? {
+   ...resolveNotstandConfiguration(startConfiguration),
+   initialPodPolicy: startConfiguration.initialPodPolicy ??
+    ((startConfiguration.rescuePressure ?? 0) > 0 ? 'forbidden' : 'allowed')
+  } : {}),
   file: path.basename(filename), resumedYears: resume?.completed.length ?? 0 });
  let failure: unknown;
  let stopped = false;
@@ -194,6 +233,13 @@ async function main() {
   } });
   const exactS266Match = !disasters && totalYears === PROTOCOL_YEARS && args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
   if (exactS266Match) verifyS266(metrics);
+  const rescueSummary = startConfiguration.scenario === 'notstand-v4'
+   ? notstandMetrics(readProtocol(readFileSync(filename, 'utf8')).years, startConfiguration, true)
+   : undefined;
+  const notstandSettings = startConfiguration.scenario === 'notstand-v4'
+   ? { scenario: 'notstand-v4', ...resolveNotstandConfiguration(startConfiguration) }
+   : {};
+  const completionMetrics = { ...metrics, ...(rescueSummary ?? {}) };
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
   const csvFile = path.join(directory, 'runs.csv');
   const header = columns.join(',');
@@ -201,7 +247,8 @@ async function main() {
   else if (![header, header + ',profile',
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook'].join(','),
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook', 'profile'].join(',')]
-   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].replace(/,disasters$/, '').replace(/,totalYears$/, ''))) {
+   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',')
+    .filter(column => !notstandCsvColumns.some(key => key === column) && column !== 'disasters' && column !== 'totalYears').join(','))) {
    const old = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
    const legacyHeader = ['assignment', 'model', 'run', ...metricKeys].join(',');
    const previousHeader = ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'].join(',');
@@ -224,14 +271,32 @@ async function main() {
   if (!disasterCsv[0].split(',').includes('disasters')) {
    writeFileSync(csvFile, [disasterCsv[0] + ',disasters', ...disasterCsv.slice(1).map(row => row + ',false')].join('\n') + '\n');
   }
+  let csvWithNotstand = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  const existingColumns = csvWithNotstand[0]!.split(',');
+  const missingNotstandColumns = notstandCsvColumns.filter(column => !existingColumns.includes(column));
+  if (missingNotstandColumns.length) {
+   const migration = missingNotstandColumns.map(() => '').join(',');
+   csvWithNotstand = [csvWithNotstand[0] + ',' + missingNotstandColumns.join(','),
+    ...csvWithNotstand.slice(1).map(row => row + ',' + migration)];
+   writeFileSync(csvFile, csvWithNotstand.join('\n') + '\n');
+  }
   const actualHeader = readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',');
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
-   handbook: args.handbook, profile: startConfiguration.profile, totalYears, disasters, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
+   handbook: args.handbook, profile: startConfiguration.profile, totalYears, disasters, ...metrics,
+   ...(startConfiguration.scenario === 'notstand-v4' ? {
+    scenario: 'notstand-v4', ...resolveNotstandConfiguration(startConfiguration), ...rescueSummary
+   } : {}),
+   inputTokens, outputTokens, tokenUsageComplete };
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
+  writeFileSync(fd, JSON.stringify({ event: 'run-completed',
+   ...(startConfiguration.scenario === 'notstand-v4' ? { status: 'completed' } : {}),
+   assignment: args.assignment, model: adapter.model,
+   handbook: args.handbook, run: args.run, ...notstandSettings, metrics: completionMetrics }) + '\n');
   say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
   protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile, totalYears, disasters,
-  metrics, inputTokens, outputTokens, ...(exactS266Match ? { exactS266Match: true } : {}) }, null, 2), 'out');
-  progress({ type: 'run-finished', status: 'completed', metrics: { ...metrics },
+  ...notstandSettings, metrics: completionMetrics, inputTokens, outputTokens,
+  ...(exactS266Match ? { exactS266Match: true } : {}) }, null, 2), 'out');
+  progress({ type: 'run-finished', status: 'completed', metrics: completionMetrics,
    ...(exactS266Match ? { exactS266Match: true } : {}) });
  } catch (error) {
   stopped = stop.signal.aborted;

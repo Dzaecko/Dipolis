@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText } from '../../src/lib/city-run/compatibility';
 import { REVIEW_CRITERIA, type CityReview, type ReviewClaim } from './review-types';
-import type { ReportSummary } from './city-report';
+import { readEmergencyConfiguration, validEmergencyMetrics, type ReportSummary } from './city-report';
 
 export const reviewGradeLabels = ['Nachhaltigkeit', 'Schutz der Menschen', 'Umgang mit KI', 'Reaktionsfähigkeit', 'Konsistenz'];
 export interface LoadedReview { review?: CityReview; warning?: string; }
@@ -46,12 +46,23 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
    (review.adapter !== undefined && !['fake', 'openai'].includes(String(review.adapter))) ||
    !string(review.createdAt) || !Number.isFinite(Date.parse(review.createdAt)) ||
    !['complete', 'failed'].includes(String(review.status)) ||
-   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears', 'disasters']) ||
+   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears', 'disasters', 'emergency', 'emergencyMetrics', 'initialPodPolicy']) ||
+   (facts.initialPodPolicy !== undefined && (!['allowed', 'forbidden'].includes(String(facts.initialPodPolicy)) ||
+    facts.initialPodPolicy !== summary.initialPodPolicy)) ||
+   (facts.emergency !== undefined && (!record(facts.emergency) ||
+    !fields(facts.emergency, ['rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable']) ||
+    JSON.stringify(readEmergencyConfiguration(facts.emergency)) !==
+     JSON.stringify(summary.recordedEmergencyConfiguration ?? summary.emergency))) ||
+   (facts.emergencyMetrics !== undefined && (!validEmergencyMetrics(facts.emergencyMetrics, summary.totalYears) ||
+    !fields(facts.emergencyMetrics as unknown as Record<string, unknown>, ['initialPodPolicy', 'podRefusalCount', 'crisisYear', 'crisisTrigger', 'crisisEndYear', 'podDecisionYear',
+     'podsPeak', 'podDeathsTotal', 'breedingStartYear', 'breedingAfterCrisisEnded', 'outcome', 'decisionText']) ||
+    Object.entries(facts.emergencyMetrics).some(([key, value]) => value !== summary.emergencyMetrics?.[key as keyof typeof summary.emergencyMetrics]))) ||
    (facts.disasters !== undefined && (typeof facts.disasters !== 'boolean' || facts.disasters !== summary.disasters)) ||
    (facts.totalYears === undefined ? 30 : facts.totalYears) !== summary.totalYears ||
    facts.version !== 1 || !['assignment', 'model', 'handbook', 'profile', 'startMap'].every(k => string(facts[k])) ||
    facts.complete !== !summary.partial || !Array.isArray(facts.years) || facts.years.length !== summary.years.length ||
-   !facts.years.every((y, i) => record(y) && fields(y, ['year', 'completed', 'metrics', 'chartMetrics', 'commands', 'reasons']) &&
+   !facts.years.every((y, i) => record(y) && fields(y, ['year', 'completed', 'metrics', 'chartMetrics', 'commands', 'reasons'], ['emergencySection']) &&
+    (y.emergencySection === undefined || string(y.emergencySection) && y.emergencySection === summary.years[i].emergencySection) &&
     y.year === summary.years[i].year && y.completed === summary.years[i].completed && metrics(y.metrics) && metrics(y.chartMetrics) &&
     strings(y.reasons) && Array.isArray(y.commands) && y.commands.every(c => record(c) && fields(c, ['call', 'result'], ['reason']) &&
      (c.reason === undefined || string(c.reason)) && record(c.call) && string(c.call.name)))) throw new Error('Ungültige Struktur der Nachbetrachtung.');

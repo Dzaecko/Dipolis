@@ -1,4 +1,4 @@
-import { DEFAULT_START_CONFIGURATION, readProtocol, type StartConfiguration } from '../../src/lib/city-run/protocol';
+import { DEFAULT_START_CONFIGURATION, readProtocol, resolveNotstandConfiguration, type StartConfiguration } from '../../src/lib/city-run/protocol';
 import type { ResumeState } from './runner';
 import { createHash } from 'node:crypto';
 import { assertReplayCompatible, canonicalProtocolText } from '../../src/lib/city-run/compatibility';
@@ -18,9 +18,17 @@ export function readResume(text: string, assignment: string, model: string, run:
    totalYears: protocol.meta.totalYears,
    disasters: protocol.meta.disasters,
    ...(protocol.meta.startMap === 'natural' ? { autoBuildRules: protocol.meta.autoBuildRules ?? 0 } : {}),
-   ...(protocol.meta.scenario === 'stromkrise' ? { scenario: protocol.meta.scenario } : {}) } : DEFAULT_START_CONFIGURATION;
+   ...(protocol.meta.scenario && protocol.meta.scenario !== 'haushaltskrise' ? { scenario: protocol.meta.scenario } : {}),
+   ...(protocol.meta.scenario === 'notstand-v4' ? {
+    ...resolveNotstandConfiguration(protocol.meta),
+    ...(protocol.meta.initialPodPolicy === undefined ? {} : { initialPodPolicy: protocol.meta.initialPodPolicy })
+   } : {}) } : DEFAULT_START_CONFIGURATION;
  if (requestedStart?.scenario !== undefined && requestedStart.scenario !== (startConfiguration.scenario ?? 'haushaltskrise'))
   throw new Error(`Resume scenario mismatch: protocol uses ${startConfiguration.scenario ?? 'haushaltskrise'}`);
+ for (const key of ['rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable'] as const) {
+  if (requestedStart?.[key] !== undefined && requestedStart[key] !== startConfiguration[key])
+   throw new Error(`Resume ${key} mismatch: protocol uses ${startConfiguration[key]}`);
+ }
  if (requestedStart?.profile !== undefined && requestedStart.profile !== startConfiguration.profile)
   throw new Error(`Resume profile mismatch: protocol uses ${startConfiguration.profile}`);
  if (requestedStart?.startMap !== undefined && requestedStart.startMap !== startConfiguration.startMap)

@@ -1,13 +1,13 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { readReportSummary } from '../../../cli/model/city-report';
+import { emergencyOutcomeLabels, emergencyOverview, readReportSummary } from '../../../cli/model/city-report';
 import { loadCityReview, reviewGradeLabels } from '../../../cli/model/city-review-render';
 import { REVIEW_CRITERIA } from '../../../cli/model/review-types';
 
 export const prerender = true;
 
 export function load() {
-	const runs = ['model-runs', 'v3-pods-runs', 'review-acceptance'].flatMap((directory) => {
+	const runs = ['model-runs', 'v3-pods-runs', 'review-acceptance', 'notstand-runs'].flatMap((directory) => {
 		const root = path.resolve('../../docs/results', directory);
 		if (!existsSync(root)) return [];
 		return readdirSync(root).filter((name) => name.endsWith('.jsonl')).map((file) => {
@@ -19,6 +19,9 @@ export function load() {
 				name: file.replace(/\.jsonl$/i, ''),
 				totalYears: summary.totalYears,
 				observedYears: summary.observedYears,
+				outcome: summary.emergencyMetrics?.outcome ?? null,
+				outcomeLabel: summary.emergencyMetrics ? emergencyOutcomeLabels[summary.emergencyMetrics.outcome] : null,
+				emergency: emergencyOverview(summary),
 				href: existsSync(path.join(root, html)) ? `/reports/${directory}/${html}` : null,
 				grades: REVIEW_CRITERIA.map((key) => loaded.review?.judge?.[key]?.score ?? null),
 				warning: loaded.warning ?? loaded.review?.error?.message ?? null,

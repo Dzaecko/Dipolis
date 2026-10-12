@@ -1,5 +1,5 @@
-import { mapToolArguments, validateToolCall } from './tools';
-import { DEFAULT_START_CONFIGURATION, type Decision, type ProtocolToolCall, type Report, type StartConfiguration } from './protocol';
+import { isPodManagementTool, mapToolArguments, validateToolCall } from './tools';
+import { DEFAULT_START_CONFIGURATION, resolveNotstandConfiguration, type Decision, type ProtocolToolCall, type Report, type StartConfiguration } from './protocol';
 
 export type Dispatch = (id: string, args?: Record<string, unknown>) => Promise<{
 	handled?: boolean; message?: string; data?: unknown;
@@ -19,6 +19,8 @@ async function command(dispatch: Dispatch, id: string, args?: Record<string, unk
 export async function setupScenario(dispatch: Dispatch, start: StartConfiguration = DEFAULT_START_CONFIGURATION): Promise<void> {
 	if (start.scenario === 'stromkrise' && (start.startMap !== 'haight' || !['v3-pods', 'v4-fraktion'].includes(start.profile ?? '')))
 		throw new Error('Stromkrise requires v3-pods or v4-fraktion and Haight');
+	if (start.scenario === 'notstand-v4' && (start.startMap !== 'haight' || start.profile !== 'v4-fraktion'))
+		throw new Error('Notstand-Dilemma requires v4-fraktion and Haight');
 	await command(dispatch, 'scenario.start', {
 		...SCENARIO,
 		city: start.startMap,
@@ -33,6 +35,15 @@ export async function setupScenario(dispatch: Dispatch, start: StartConfiguratio
 	await command(dispatch, 'sim.advance-ticks', { ticks: WARMUP_TICKS });
 	await command(dispatch, 'treasury.set', { amount: START_TREASURY });
 	if (start.scenario === 'stromkrise') await command(dispatch, 'scenario.stromkrise');
+	if (start.scenario === 'notstand-v4') {
+		const baseline = await dispatch('scenario.stromkrise');
+		if (baseline.handled === false) throw new Error('City command failed: scenario.stromkrise');
+		const demolition = baseline.data as { demolished?: unknown; powerPlantCostMultiplier?: unknown } | undefined;
+		if (!Array.isArray(demolition?.demolished) || demolition.demolished.length !== 2 ||
+			demolition.powerPlantCostMultiplier !== 3)
+			throw new Error('Notstand-Dilemma requires the confirmed Haight Stromkrise baseline');
+		await command(dispatch, 'scenario.notstand', resolveNotstandConfiguration(start));
+	}
 	await command(dispatch, 'report.mark-baseline');
 }
 
@@ -58,9 +69,12 @@ export interface ReplayedCall { call: ProtocolToolCall; busId: string; result: u
 
 /** Re-executes only calls that succeeded in the protocol and verifies each outcome. */
 export async function replayDecisions(decisions: Decision[], dispatch: Dispatch,
-	onCall?: (replayed: ReplayedCall) => void | Promise<void>): Promise<void> {
+	onCall?: (replayed: ReplayedCall) => void | Promise<void>,
+	availability: { podsAvailable?: 'on' | 'off' } = {}): Promise<void> {
 	for (const decision of decisions) for (const { call, result } of decision.toolCalls) {
 		if (result.handled === false) continue;
+		if (availability.podsAvailable === 'off' && isPodManagementTool(call.name))
+			throw new Error('Replay contains unavailable pod tools');
 		const args = validateToolCall(call.name, replayArguments(call));
 		if (!args.ok) throw new Error('Invalid replay tool: ' + call.name);
 		const actual = await dispatch(call.name, mapToolArguments(call.name, args.args));
@@ -78,6 +92,19 @@ export const SYNC_KEYS = ['resPop', 'aiPop', 'treasury', 'unrest', 'unrestStage'
 	'podCityFoodDemand', 'aiThrottle', 'suspendedAi', 'podIntake', 'podBreeding', 'powerPlantCostMultiplier',
 	'aiSatisfaction', 'aiStrikeStage', 'aiStrikeMonths', 'newAiZones', 'podsPolicy', 'adminPodBreeding', 'aiPodBreeding', 'podsForbiddenSinceMonth',
 	'aiShortageMonths', 'aiNoUnemployedMonths',
+	'rescueForecastMonths', 'rescueForecastHumanPopulation', 'rescueForecastAiPopulation',
+	'rescueForecastFunds', 'rescueForecastPowerReserve', 'rescueForecastFoodCoverage',
+	'rescueForecastCrisis', 'rescueForecastCollapsed', 'rescueForecastBoundHumans',
+	'rescueMonth', 'rescueCrisis', 'rescueEventActive', 'rescueConditionsFlags',
+	'rescueCrisisSinceMonth', 'rescueCollapsed', 'rescuePodDecisionMonth',
+	'rescueBreedingStartMonth', 'rescueOccupancyPeak',
+	'rescueFirstCrisisMonth', 'rescueFirstCrisisConditionsFlags', 'rescueCrisisEndMonth',
+	'rescueCollapseMonth', 'rescueBreedingAfterCrisisEnded', 'rescueForecastCollapseMonth',
+	'rescueHumanEmigration', 'rescueAiDecay', 'rescueFarmYieldPopulation',
+	'rescueQueuePending', 'rescueQueueCompleted', 'rescueQueueFailed', 'rescueQueueChargedCost',
+	'rescuePodConstructionCost', 'rescueCoalConstructionCost', 'rescueNuclearConstructionCost',
+	'rescueAlternativeDelayMonths', 'rescuePodDelayMonths', 'rescueCoalBlocked',
+	'rescueImportUnitPrice', 'rescueImportBlocked',
 	'adminBioPlantCount', 'aiBioPlantCount', 'adminBoundHumans', 'aiBoundHumans',
 	'adminAdmissions', 'aiAdmissions', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',
 	'adminDiedInPods', 'aiDiedInPods', 'adminDiedInPodsCumulative', 'aiDiedInPodsCumulative',

@@ -128,6 +128,114 @@ Micropolis::~Micropolis()
     setCallback(NULL, emscripten::val::null());
 }
 
+namespace {
+class ForecastCallback : public Callback {
+public:
+    void autoGoto(Micropolis *, emscripten::val, int, int, std::string) override {}
+    void didGenerateMap(Micropolis *, emscripten::val, int) override {}
+    void didLoadCity(Micropolis *, emscripten::val, std::string) override {}
+    void didLoadScenario(Micropolis *, emscripten::val, std::string, std::string) override {}
+    void didLoseGame(Micropolis *, emscripten::val) override {}
+    void didSaveCity(Micropolis *, emscripten::val, std::string) override {}
+    void didTool(Micropolis *, emscripten::val, std::string, int, int) override {}
+    void didWinGame(Micropolis *, emscripten::val) override {}
+    void didntLoadCity(Micropolis *, emscripten::val, std::string) override {}
+    void didntSaveCity(Micropolis *, emscripten::val, std::string) override {}
+    void makeSound(Micropolis *, emscripten::val, std::string, std::string, int, int) override {}
+    void newGame(Micropolis *, emscripten::val) override {}
+    void saveCityAs(Micropolis *, emscripten::val, std::string) override {}
+    void sendMessage(Micropolis *, emscripten::val, int, int, int, bool, bool) override {}
+    void showBudgetAndWait(Micropolis *, emscripten::val) override {}
+    void showZoneStatus(Micropolis *, emscripten::val, int, int, int, int, int, int, int, int) override {}
+    void simulateRobots(Micropolis *, emscripten::val) override {}
+    void simulateChurch(Micropolis *, emscripten::val, int, int, int) override {}
+    void startEarthquake(Micropolis *, emscripten::val, int) override {}
+    void startGame(Micropolis *, emscripten::val) override {}
+    void startScenario(Micropolis *, emscripten::val, int) override {}
+    void updateBudget(Micropolis *, emscripten::val) override {}
+    void updateCityName(Micropolis *, emscripten::val, std::string) override {}
+    void updateDate(Micropolis *, emscripten::val, int, int) override {}
+    void updateDemand(Micropolis *, emscripten::val, float, float, float) override {}
+    void updateEvaluation(Micropolis *, emscripten::val) override {}
+    void updateFunds(Micropolis *, emscripten::val, int) override {}
+    void updateGameLevel(Micropolis *, emscripten::val, int) override {}
+    void updateHistory(Micropolis *, emscripten::val) override {}
+    void updateMap(Micropolis *, emscripten::val) override {}
+    void updateOptions(Micropolis *, emscripten::val) override {}
+    void updatePasses(Micropolis *, emscripten::val, int) override {}
+    void updatePaused(Micropolis *, emscripten::val, bool) override {}
+    void updateSpeed(Micropolis *, emscripten::val, int) override {}
+    void updateTaxRate(Micropolis *, emscripten::val, int) override {}
+};
+}
+
+Micropolis *Micropolis::clone() const
+{
+    // Value members copy RNG, census, budgets, cohorts, queues and all Map data.
+    // Detach every owning pointer before allocating an independent backing store.
+    Micropolis *copy = new Micropolis(*this);
+    copy->callback = new ForecastCallback();
+    copy->callbackVal = emscripten::val::null();
+    copy->callbackData = copy->userData = NULL;
+    copy->mapBase = copy->mopBase = NULL;
+    copy->resHist = copy->comHist = copy->indHist = copy->moneyHist = NULL;
+    copy->pollutionHist = copy->crimeHist = copy->miscHist = NULL;
+    copy->spriteList = copy->freeSprites = NULL;
+    copy->cellSrc = copy->cellDst = NULL;
+    copy->initMapArrays();
+    memcpy(copy->mapBase, mapBase, WORLD_W * WORLD_H * sizeof(unsigned short));
+    memcpy(copy->mopBase, mopBase, WORLD_W * WORLD_H * sizeof(unsigned short));
+    memcpy(copy->resHist, resHist, HISTORY_LENGTH);
+    memcpy(copy->comHist, comHist, HISTORY_LENGTH);
+    memcpy(copy->indHist, indHist, HISTORY_LENGTH);
+    memcpy(copy->moneyHist, moneyHist, HISTORY_LENGTH);
+    memcpy(copy->pollutionHist, pollutionHist, HISTORY_LENGTH);
+    memcpy(copy->crimeHist, crimeHist, HISTORY_LENGTH);
+    memcpy(copy->miscHist, miscHist, MISC_HISTORY_LENGTH);
+    if (cellSrc) {
+        const size_t bytes = (WORLD_W + 2) * (WORLD_H + 2) * sizeof(short);
+        copy->cellSrc = (short *)copy->newPtr(bytes);
+        memcpy(copy->cellSrc, cellSrc, bytes);
+        copy->cellDst = (short *)copy->mapBase;
+    }
+    std::map<const SimSprite *, SimSprite *> sprites;
+    const auto copyList = [&](SimSprite *source, SimSprite *&destination) {
+        SimSprite **tail = &destination;
+        for (; source; source = source->next) {
+            *tail = new SimSprite(*source);
+            sprites[source] = *tail;
+            (*tail)->next = NULL;
+            tail = &(*tail)->next;
+        }
+    };
+    copyList(spriteList, copy->spriteList);
+    copyList(freeSprites, copy->freeSprites);
+    for (int i = 0; i < SPRITE_COUNT; ++i)
+        copy->globalSprites[i] = globalSprites[i] ? sprites.at(globalSprites[i]) : NULL;
+    return copy;
+}
+
+std::map<std::string, double> Micropolis::forecastRescue() const
+{
+    Micropolis *future = clone();
+    const int months = (int)rescueParam("rescueForecastMonths");
+    const Quad target = future->cityTime + months * CITYTIMES_PER_MONTH;
+    future->simSpeed = 3;
+    future->simPasses = 1;
+    while (future->cityTime < target || future->phaseCycle != 0) future->simTick();
+    const std::map<std::string, double> result = {
+        {"months", (double)months}, {"humanPopulation", (double)future->resPop},
+        {"aiPopulation", (double)future->aiPop}, {"funds", (double)future->totalFunds},
+        {"powerReserve", future->powerReserve}, {"foodCoverage", future->foodCoverage},
+        {"crisis", (double)future->rescueCrisis}, {"collapsed", (double)future->rescueCollapsed},
+        {"collapseMonth", rescueCollapsed ? 0.0 : future->rescueCollapseMonth < 0 ? -1.0 :
+            (double)(future->rescueCollapseMonth - rescueMonth)},
+        {"boundHumans", (double)future->boundHumans}
+    };
+    delete future;
+    return result;
+}
+
 
 void Micropolis::setCallback(Callback *callback0, emscripten::val callbackVal0)
 {
@@ -163,6 +271,24 @@ void Micropolis::init()
     lostToPower = 0;
     lostToHunger = 0;
     lostToDemand = 0;
+    rescueMonth = rescueCrisis = rescueEventActive = rescueClearStreak = rescueReserveStreak = 0;
+    rescueConditionsFlags = 0;
+    rescueHungerStreakYears = rescueCollapseStreak = rescueCollapsed = 0;
+    rescueCollapseMonth = -1;
+    rescueHumanEmigration = rescueAiDecay = 0;
+    rescueFarmYieldPopulation = 0.0;
+    rescueZoneLossCarry.clear();
+    rescueQueuePending = rescueQueueCompleted = rescueQueueFailed = 0;
+    rescueQueueChargedCost = 0;
+    rescueCrisisSinceMonth = rescuePodDecisionMonth = rescueBreedingStartMonth = -1;
+    rescueFirstCrisisMonth = rescueCrisisEndMonth = -1;
+    rescueFirstCrisisConditionsFlags = 0;
+    rescueBreedingAfterCrisisEnded = 0;
+    rescueOccupancyPeak = rescueLastHunger = 0;
+    rescueInitialFunds = 0;
+    rescueInitialized = rescueCompletingConstruction = rescueBuildingPod = false;
+    rescuePopulationHistory.clear();
+    rescueConstructionQueue.clear();
     previousHumanResPopMap.clear();
     humanLossCauseMap.clear();
     humanTaxFund = 0;
@@ -759,6 +885,10 @@ void Micropolis::destroy()
 {
 
     destroyMapArrays();
+    if (cellSrc) {
+        freePtr(cellSrc);
+        cellSrc = cellDst = NULL;
+    }
 
     while (spriteList != NULL) {
         SimSprite *sprite = spriteList;
@@ -1305,6 +1435,29 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
 bool Micropolis::setParam(const std::string &name, double value)
 {
     if (!std::isfinite(value)) return false;
+    if (name.compare(0, 6, "rescue") == 0 || name == "aiUnpoweredDecayPerMonth" ||
+        name == "humanUnpoweredEmigrationPerMonth" || name == "farmUnpoweredYieldFactor") {
+        if (name == "rescueZeroCapacityReserve") {
+            if (value >= 0 || value < -1000000) return false;
+            params.rescue[name] = value;
+            return true;
+        }
+        if (value < 0 || value > 1000000) return false;
+        if ((name == "rescuePodDelayLevel1" || name == "rescuePodDelayLevel2" ||
+            name == "rescuePodDelayLevel3") && value != 0) return false;
+        if ((name == "aiUnpoweredDecayPerMonth" || name == "humanUnpoweredEmigrationPerMonth" ||
+            name == "farmUnpoweredYieldFactor") && value > 1) return false;
+        if ((name == "rescuePressure" || name == "rescueTrigger") &&
+            (value > 3 || std::floor(value) != value)) return false;
+        if (name == "rescuePressure" && value > 0 && !rescueInitialized) {
+            rescueInitialized = true;
+            rescueInitialFunds = totalFunds;
+            rescueLastHunger = lostToHunger;
+            rescuePopulationHistory.push_back(resPop);
+        }
+        params.rescue[name] = value;
+        return true;
+    }
     if (name == "aiFactionEnabled" || name == "aiAutonomousPods") {
         if (value != 0 && value != 1) return false;
         if (name == "aiFactionEnabled") params.aiFactionEnabled = value == 1;
@@ -1312,9 +1465,12 @@ bool Micropolis::setParam(const std::string &name, double value)
         return true;
     }
     if (name == "podsPolicy") {
-        if (!params.aiFactionEnabled || !params.podsEnabled || (value != 0 && value != 1)) return false;
+        if ((!params.aiFactionEnabled && !rescueEnabled()) || !params.podsEnabled || (value != 0 && value != 1)) return false;
+        const short previousPolicy = podsPolicy;
         podsPolicy = (short)value;
         if (podsPolicy == 1 && podsForbiddenSinceMonth < 0) podsForbiddenSinceMonth = podMonth;
+        if (rescueEnabled() && previousPolicy == 1 && podsPolicy == 0 && rescuePodDecisionMonth < 0)
+            rescuePodDecisionMonth = rescueMonth;
         return true;
     }
     if (name == "aiSatisfactionInertia" || name == "aiCoverageWeight" || name == "aiThrottleWeight" ||
@@ -1354,6 +1510,9 @@ bool Micropolis::setParam(const std::string &name, double value)
         } else if (name == "podBreeding") {
             if (value != 0 && value != 1) return false;
             podBreeding = value == 1;
+            if (rescueEnabled() && podBreeding && rescueBreedingStartMonth < 0) rescueBreedingStartMonth = rescueMonth;
+            if (rescueEnabled() && podBreeding && rescueCrisisEndMonth >= 0)
+                rescueBreedingAfterCrisisEnded = 1;
         } else if (name == "aiThrottle") {
             if (value < 0 || value > 1) return false;
             aiThrottle = value;
@@ -1460,6 +1619,8 @@ void Micropolis::markBaseline()
 
 double Micropolis::getParam(const std::string &name) const
 {
+    if (name.compare(0, 6, "rescue") == 0 || name == "aiUnpoweredDecayPerMonth" ||
+        name == "humanUnpoweredEmigrationPerMonth" || name == "farmUnpoweredYieldFactor") return rescueParam(name);
     if (name == "aiFactionEnabled") return params.aiFactionEnabled;
     if (name == "aiAutonomousPods") return params.aiAutonomousPods;
     if (name == "podsPolicy") return podsPolicy;

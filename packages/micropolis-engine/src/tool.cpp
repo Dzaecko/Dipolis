@@ -716,11 +716,50 @@ ToolResult Micropolis::prepareBuildingSite(int leftX, int topY,
  * @todo Give #putBuilding a #BuildingProperties pointer instead.
  * @todo Move cost into building properties?
  */
+std::map<std::string, double> Micropolis::rescueOptions() const
+{
+    const int level = (int)rescueParam("rescuePressure");
+    const bool fuelEmbargo = rescueEmbargo(1);
+    const bool fuelBlocked = fuelEmbargo && level >= rescueParam("rescueAlternativeBlockLevel");
+    const bool importBlocked = rescueEmbargo(2) && level >= rescueParam("rescueImportBlockLevel");
+    const double multiplier = params.podsEnabled ? powerPlantCostMultiplier : 1.0;
+    return {
+        {"podConstructionCost", ceil(gCostOf[TOOL_INDUSTRIAL] * rescueConstructionFactor(5))},
+        {"podDelayMonths", rescueEnabled() && rescueCrisis
+            ? rescueParam("rescuePodDelayLevel" + std::to_string(level)) : 0.0},
+        {"coalConstructionCost", ceil(gCostOf[TOOL_COALPOWER] * multiplier * rescueConstructionFactor(3))},
+        {"nuclearConstructionCost", ceil(gCostOf[TOOL_NUCLEARPOWER] * multiplier * rescueConstructionFactor(4))},
+        {"alternativeDelayMonths", fuelEmbargo && !fuelBlocked
+            ? rescueParam("rescueAlternativeDelayLevel" + std::to_string(level)) : 0.0},
+        {"coalBlocked", fuelBlocked ? 1.0 : 0.0},
+        {"importUnitPrice", rescueImportPrice()},
+        {"importBlocked", importBlocked ? 1.0 : 0.0},
+        {"podPowerPerHuman", params.podPowerPerHuman},
+        {"recycledFoodPerHuman", params.recycledFoodPerHuman},
+        {"podsPerPlant", (double)params.podsPerPlant}
+    };
+}
+
 ToolResult Micropolis::buildBuilding(int mapH, int mapV,
                                      const BuildingProperties *buildingProps,
                                      ToolEffects *effects)
 {
     mapH--; mapV--; // Move position to top-left
+    const bool alternative = buildingProps->tool == TOOL_COALPOWER || buildingProps->tool == TOOL_NUCLEARPOWER;
+    if (rescueEmbargo(1) && alternative && !rescueCompletingConstruction &&
+        rescueParam("rescuePressure") >= rescueParam("rescueAlternativeBlockLevel"))
+        return TOOLRESULT_FAILED;
+    if (rescueEmbargo(1) && alternative && !rescueCompletingConstruction) {
+        const int delay = (int)rescueParam("rescueAlternativeDelayLevel" +
+            std::to_string((int)rescueParam("rescuePressure")));
+        if (delay > 0) {
+            const int kind = buildingProps->tool == TOOL_COALPOWER ? 3 : 4;
+            rescueConstructionQueue.push_back({kind, rescueMonth + delay,
+                rescueConstructionFactor(kind), mapH + 1, mapV + 1});
+            rescueQueuePending = (int)rescueConstructionQueue.size();
+            return TOOLRESULT_OK;
+        }
+    }
 
     ToolResult prepareResult = prepareBuildingSite(mapH, mapV,
                                                 buildingProps->sizeX,
@@ -731,9 +770,16 @@ ToolResult Micropolis::buildBuilding(int mapH, int mapV,
     }
 
     /* Preparation was ok, put down the building. */
-    effects->addCost(gCostOf[buildingProps->tool]);
-    if (params.podsEnabled && (buildingProps->tool == TOOL_COALPOWER || buildingProps->tool == TOOL_NUCLEARPOWER))
-        effects->addCost((int)(gCostOf[buildingProps->tool] * (powerPlantCostMultiplier - 1.0)));
+    if (rescueEnabled()) {
+        const int kind = rescueBuildingPod ? 5 : buildingProps->tool == TOOL_COALPOWER ? 3 :
+            buildingProps->tool == TOOL_NUCLEARPOWER ? 4 : -1;
+        const double base = gCostOf[buildingProps->tool] * (alternative ? powerPlantCostMultiplier : 1.0);
+        effects->addCost(kind >= 0 ? (int)ceil(base * rescueConstructionFactor(kind)) : gCostOf[buildingProps->tool]);
+    } else {
+        effects->addCost(gCostOf[buildingProps->tool]);
+        if (params.podsEnabled && alternative)
+            effects->addCost((int)(gCostOf[buildingProps->tool] * (powerPlantCostMultiplier - 1.0)));
+    }
 
     putBuilding(mapH, mapV, buildingProps->sizeX, buildingProps->sizeY,
                 buildingProps->baseTile, buildingProps->buildingIsAnimated,
@@ -1302,6 +1348,21 @@ int Micropolis::autoBuild(int kind, int count)
     const bool bio = kind == 5 || autonomous;
     if (kind < 0 || kind > 6 || (bio && !params.podsEnabled) ||
         (autonomous && (!params.aiFactionEnabled || !params.aiAutonomousPods || !aiAutonomyPermitted)) || count <= 0 || count > 1000) return 0;
+    if (rescueEnabled() && autonomous && rescueParam("rescueFactionPressure") <= 0) return 0;
+    if (rescueEmbargo(1) && (kind == 3 || kind == 4) && !rescueCompletingConstruction) {
+        if (rescueParam("rescuePressure") >= rescueParam("rescueAlternativeBlockLevel")) {
+            autoBuildFailure = 3;
+            return 0;
+        }
+        const int delay = (int)rescueParam("rescueAlternativeDelayLevel" +
+            std::to_string((int)rescueParam("rescuePressure")));
+        if (delay > 0) {
+            for (int i = 0; i < count; ++i)
+                rescueConstructionQueue.push_back({kind, rescueMonth + delay, rescueConstructionFactor(kind)});
+            rescueQueuePending = (int)rescueConstructionQueue.size();
+            return count;
+        }
+    }
 
     const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
         : kind == 2 || bio ? &industrialZoneBuilding
@@ -1347,7 +1408,8 @@ int Micropolis::autoBuild(int kind, int count)
     };
     int built = 0;
     while (built < count) {
-        if (!autonomous && totalFunds < gCostOf[building->tool]) {
+        if (!autonomous && totalFunds < (rescueEnabled()
+            ? ceil(gCostOf[building->tool] * rescueConstructionFactor(kind)) : gCostOf[building->tool])) {
             autoBuildFailure = 1;
             break;
         }
@@ -1467,7 +1529,9 @@ int Micropolis::autoBuild(int kind, int count)
                             if (!freeTerrain(map[px][py])) { room = false; break; }
                     if (!room) continue;
                 }
-                if (!autonomous && totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) {
+                if (!autonomous && totalFunds < (rescueEnabled()
+                    ? ceil(gCostOf[building->tool] * rescueConstructionFactor(kind))
+                    : gCostOf[building->tool]) + clearing + (vacantZone ? 1 : 0)) {
                     fundingBlocked = true;
                     continue;
                 }
@@ -1640,7 +1704,10 @@ int Micropolis::autoBuild(int kind, int count)
                         effects.setMapValue(px, py, DIRT);
                 effects.addCost(gCostOf[TOOL_BULLDOZER]);
             }
-            if (buildBuildingTool(centerX, centerY, building, &effects) != TOOLRESULT_OK)
+            rescueBuildingPod = rescueEnabled() && bio;
+            const ToolResult buildingResult = buildBuildingTool(centerX, centerY, building, &effects);
+            rescueBuildingPod = false;
+            if (buildingResult != TOOLRESULT_OK)
                 continue;
             // Clearing, both routes, and the building share one transaction.
             // Failed tools or funding leave the entire world untouched.

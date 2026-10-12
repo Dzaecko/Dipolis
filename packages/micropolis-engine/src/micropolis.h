@@ -943,6 +943,7 @@ public:
  * @todo Micropolis::crimeMaxX and Micropolis::crimeMaxY seem unused.
  */
 struct MicropolisParams {
+    std::map<std::string, double> rescue;
     short aiPowerPerPop = 2;
     float aiReserveLow = 0.05f;
     float aiReserveHigh = 0.15f;
@@ -1010,6 +1011,9 @@ public:
     Micropolis();
 
     ~Micropolis();
+    Micropolis *clone() const;
+    std::map<std::string, double> forecastRescue() const;
+    std::map<std::string, double> rescueOptions() const;
 
     void setCallback(Callback *callback, emscripten::val callbackVal);
 
@@ -1066,6 +1070,40 @@ public:
     Quad lostToPower = 0;
     Quad lostToHunger = 0;
     Quad lostToDemand = 0;
+    int rescueMonth = 0, rescueCrisis = 0, rescueEventActive = 0;
+    int rescueConditionsFlags = 0;
+    int rescueCrisisSinceMonth = -1, rescueClearStreak = 0, rescueReserveStreak = 0;
+    int rescueFirstCrisisMonth = -1, rescueCrisisEndMonth = -1;
+    int rescueFirstCrisisConditionsFlags = 0;
+    int rescueBreedingAfterCrisisEnded = 0;
+    int rescueHungerStreakYears = 0, rescueCollapseStreak = 0, rescueCollapsed = 0;
+    int rescueCollapseMonth = -1;
+    Quad rescueHumanEmigration = 0, rescueAiDecay = 0;
+    double rescueFarmYieldPopulation = 0.0;
+    std::map<int, double> rescueZoneLossCarry;
+    void updateRescueUnpoweredZones();
+    double farmFoodPopulation() const;
+    int rescuePodDecisionMonth = -1, rescueBreedingStartMonth = -1;
+    Quad rescueOccupancyPeak = 0;
+    double rescueInitialFunds = 0;
+    Quad rescueLastHunger = 0;
+    bool rescueInitialized = false;
+    std::vector<int> rescuePopulationHistory;
+    struct RescueConstruction { int kind, dueMonth; double costFactor; int x = -1, y = -1; };
+    std::vector<RescueConstruction> rescueConstructionQueue;
+    int rescueQueuePending = 0, rescueQueueCompleted = 0, rescueQueueFailed = 0;
+    Quad rescueQueueChargedCost = 0;
+    bool rescueCompletingConstruction = false, rescueBuildingPod = false;
+    double rescueCompletionCostFactor = 1.0;
+    double rescueParam(const std::string &name) const;
+    bool rescueEnabled() const;
+    bool rescueEmbargo(int flag) const;
+    bool rescueImportsEnabled() const;
+    double rescueImportPrice() const;
+    double rescueFuelOutputFactor() const;
+    double rescueConstructionFactor(int kind) const;
+    void updateRescue();
+    void resetRescue();
 
     /** Population assigned to AI-owned residential zones. */
     short aiPop;
@@ -2160,9 +2198,9 @@ public:
 
 private:
 
-    short *cellSrc;
+    short *cellSrc = NULL;
 
-    short *cellDst;
+    short *cellDst = NULL;
 
 
     void simInit();

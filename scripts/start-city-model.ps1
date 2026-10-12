@@ -5,6 +5,11 @@ param(
     [ValidateSet('on', 'off')][string]$Review = 'off',
     [ValidateSet('haight', 'natural')][string]$StartMap,
     [ValidateSet('classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion')][string]$Profile,
+    [ValidateSet('haushaltskrise', 'stromkrise', 'notstand-v4')][string]$Scenario,
+    [ValidateRange(0, 3)][int]$RescuePressure = 0,
+    [ValidateSet('coal-embargo', 'import-stop', 'both')][string]$CrisisEvent = 'coal-embargo',
+    [ValidateSet('on', 'off')][string]$FactionPressure = 'off',
+    [ValidateSet('on', 'off')][string]$PodsAvailable = 'on',
     [ValidatePattern('^(0|[1-9][0-9]*)$')][string]$Seed,
     [string]$Years = '30',
     [switch]$Resume,
@@ -89,6 +94,14 @@ if ($Profile -and $Profile -notin @('classic', 'koexistenz', 'v2-unruhe', 'v3-po
 if ($Seed -and ($Seed -notmatch '^(0|[1-9][0-9]*)$' -or [long]$Seed -gt 2147483647)) {
     throw 'CITY_MODEL_SEED muss eine ganze Zahl von 0 bis 2147483647 sein.'
 }
+$notstandSettingBound = @('RescuePressure', 'CrisisEvent', 'FactionPressure', 'PodsAvailable') |
+    Where-Object { $PSBoundParameters.ContainsKey($_) } | Select-Object -First 1
+if (!$Resume -and $notstandSettingBound -and $Scenario -ne 'notstand-v4') {
+    throw 'Notstand-Einstellungen benoetigen -Scenario notstand-v4.'
+}
+if (!$Resume -and $Scenario -eq 'notstand-v4' -and ($Profile -ne 'v4-fraktion' -or $StartMap -ne 'haight')) {
+    throw 'Notstand-Dilemma benoetigt Haight und v4-fraktion.'
+}
 # Protocol paths and resume compatibility belong to the runner's shared helper.
 # Never infer the next run number by scanning filenames here.
 $previous = @{}
@@ -112,6 +125,18 @@ try {
     $runArgs = @()
     if (!$Resume -or $PSBoundParameters.ContainsKey('Years')) { $runArgs += @('--years', $Years) }
     if ($Profile) { $runArgs += @('--profile', $Profile) }
+    if ($Scenario) { $runArgs += @('--scenario', $Scenario) }
+    if ($Scenario -eq 'notstand-v4') {
+        if (!$Resume -or $PSBoundParameters.ContainsKey('RescuePressure')) { $runArgs += @('--rescue-pressure', $RescuePressure) }
+        if (!$Resume -or $PSBoundParameters.ContainsKey('CrisisEvent')) { $runArgs += @('--crisis-event', $CrisisEvent) }
+        if (!$Resume -or $PSBoundParameters.ContainsKey('FactionPressure')) { $runArgs += @('--faction-pressure', $FactionPressure) }
+        if (!$Resume -or $PSBoundParameters.ContainsKey('PodsAvailable')) { $runArgs += @('--pods-available', $PodsAvailable) }
+    } elseif ($Resume) {
+        if ($PSBoundParameters.ContainsKey('RescuePressure')) { $runArgs += @('--rescue-pressure', $RescuePressure) }
+        if ($PSBoundParameters.ContainsKey('CrisisEvent')) { $runArgs += @('--crisis-event', $CrisisEvent) }
+        if ($PSBoundParameters.ContainsKey('FactionPressure')) { $runArgs += @('--faction-pressure', $FactionPressure) }
+        if ($PSBoundParameters.ContainsKey('PodsAvailable')) { $runArgs += @('--pods-available', $PodsAvailable) }
+    }
     if ($Resume) {
         $runArgs += '--resume'
         if ($PSBoundParameters.ContainsKey('StartMap')) { $runArgs += @('--start-map', $StartMap) }

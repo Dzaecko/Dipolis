@@ -58,12 +58,13 @@ const base: Controls = {
 	aiZonesPerYear: 0, farmsInYearOne: 0, welfareLevel: 0, priority: 0,
 	foodImport: 'always-on', tax: 7, serviceFunding: 100,
 };
-export const legacyStrategies: Strategy[] = [
+const legacyStrategyInputs: Array<Controls & Pick<Strategy, 'id' | 'coalWhenReserveLow'>> = [
 	{ id: 'A', ...base, coalWhenReserveLow: true },
 	{ id: 'B', ...base, tax: 9, serviceFunding: 60, coalWhenReserveLow: true },
 	{ id: 'C', ...base, aiZonesPerYear: 15, priority: 2, foodImport: 'off-below-10000', coalWhenReserveLow: true },
 	{ id: 'D', ...base, aiZonesPerYear: 15, welfareLevel: 1, priority: 1, coalWhenReserveLow: true },
-].map((s) => ({ ...s, kind: 'legacy', roadFunding: 100,
+];
+export const legacyStrategies: Strategy[] = legacyStrategyInputs.map((s) => ({ ...s, kind: 'legacy', roadFunding: 100,
 	aiOnlyWhenCashFlowNegative: true, latchImportsOff: false }));
 
 export function controlsKey(c: Controls): string {

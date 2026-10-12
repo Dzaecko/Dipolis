@@ -63,6 +63,33 @@ function reviewSidecar(file: string, overrides: Partial<CityReview> = {}): CityR
 }
 
 describe('Nachbetrachtung reporting', () => {
+ it('generates a dedicated two-of-three overview without touching the default index', () => {
+  const dir = temp();
+  const files = ['level-0', 'level-1', 'unrelated'].map(name =>
+   protocol(dir, [{ event: 'run-started', model: name }, annual(1)], `${name}.jsonl`));
+  files.forEach(file => generateCityReport(file));
+  const defaultIndex = generateReportIndex(dir), original = readFileSync(defaultIndex.htmlPath, 'utf8');
+  const selected = generateReportIndex(dir, { protocolFiles: files.slice(0, 2).map(file => path.basename(file)),
+   outputFilename: 'notstand-series.html' });
+  expect(selected.htmlPath).toBe(path.join(dir, 'notstand-series.html'));
+  expect(selected.summaries.map(summary => summary.id)).toEqual(['level-0', 'level-1']);
+  expect(selected.errors).toEqual([]);
+  const html = readFileSync(selected.htmlPath, 'utf8');
+  expect(html).toContain('level-0.html');
+  expect(html).toContain('level-1.html');
+  expect(html).not.toContain('unrelated');
+  expect(payload(html).runs.map((run: { id: string }) => run.id)).toEqual(['level-0', 'level-1']);
+  expect(readFileSync(defaultIndex.htmlPath, 'utf8')).toBe(original);
+  expect(generateReportIndex(dir, { protocolFiles: [], outputFilename: 'empty.html' }).summaries).toEqual([]);
+ });
+ it.each(['..\\escape.html', '../escape.html', 'C:\\escape.html', 'series.json', '.html', 'series.html:stream'])
+  ('rejects invalid overview output leaf %s', outputFilename => {
+   expect(() => generateReportIndex(temp(), { outputFilename })).toThrow('HTML leaf filename');
+  });
+ it.each(['..\\escape.jsonl', '../escape.jsonl', 'C:\\escape.jsonl', 'series.html'])
+  ('rejects invalid overview protocol basename %s', filename => {
+   expect(() => generateReportIndex(temp(), { protocolFiles: [filename] })).toThrow('JSONL basenames');
+  });
  it('shows enabled disasters and historical disabled defaults in reports and index', () => {
   const dir = temp();
   for (const [name, flag, enabled] of [['historical', {}, false], ['enabled', { disasters: true }, true],

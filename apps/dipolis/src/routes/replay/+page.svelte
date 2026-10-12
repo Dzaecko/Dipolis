@@ -23,7 +23,9 @@
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
 		years: number; totalYears: number; complete: boolean; modified: string; error?: string;
-		compatibility?: EngineCompatibility; disasters?: boolean;
+		compatibility?: EngineCompatibility; disasters?: boolean; scenario?: StartConfiguration['scenario'];
+		rescuePressure?: StartConfiguration['rescuePressure']; crisisEvent?: StartConfiguration['crisisEvent'];
+		factionPressure?: StartConfiguration['factionPressure']; podsAvailable?: StartConfiguration['podsAvailable'];
 	}
 	interface Rect { x: number; y: number; w: number; h: number; }
 	interface Highlight { rects: Rect[]; label: string; color: string; until: number; }
@@ -98,7 +100,7 @@
 	let now = $state(Date.now());
 	let eventSource: EventSource | null = null;
 	let clockTimer: ReturnType<typeof setInterval> | null = null;
-	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, totalYears: PROTOCOL_YEARS as number, startMap: 'natural' as StartConfiguration['startMap'], seed: DEFAULT_START_CONFIGURATION.seed, profile: 'koexistenz' as NonNullable<StartConfiguration['profile']>, scenario: 'haushaltskrise' as NonNullable<StartConfiguration['scenario']>, fake: false, resume: false, confirming: false });
+	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, totalYears: PROTOCOL_YEARS as number, startMap: 'natural' as StartConfiguration['startMap'], seed: DEFAULT_START_CONFIGURATION.seed, profile: 'koexistenz' as NonNullable<StartConfiguration['profile']>, scenario: 'haushaltskrise' as NonNullable<StartConfiguration['scenario']>, rescuePressure: 0 as NonNullable<StartConfiguration['rescuePressure']>, crisisEvent: 'coal-embargo' as NonNullable<StartConfiguration['crisisEvent']>, factionPressure: 'off' as NonNullable<StartConfiguration['factionPressure']>, podsAvailable: 'on' as NonNullable<StartConfiguration['podsAvailable']>, fake: false, resume: false, confirming: false });
 	let replayStartConfiguration = $state<StartConfiguration>({ startMap: DEFAULT_START_CONFIGURATION.startMap, seed: DEFAULT_START_CONFIGURATION.seed });
 	let startBusy = $state(false);
 
@@ -106,7 +108,10 @@
 
 	function runLabel(run: RunListing): string {
 		const handbook = run.handbook === 'on' ? 'an' : run.handbook === 'off' ? 'aus' : '?';
-		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${run.totalYears} · ${run.compatibility?.label ?? 'Engine nicht dokumentiert'}${run.error ? ' · unlesbar' : ''}`;
+		const scenario = run.scenario === 'notstand-v4'
+			? ` · Notstand D${run.rescuePressure ?? 0}/${run.crisisEvent ?? 'coal-embargo'}/Fraktion ${run.factionPressure ?? 'off'}/Pods ${run.podsAvailable ?? 'on'}`
+			: '';
+		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${run.totalYears}${scenario} · ${run.compatibility?.label ?? 'Engine nicht dokumentiert'}${run.error ? ' · unlesbar' : ''}`;
 	}
 
 	function renderMap(): void {
@@ -181,7 +186,8 @@
 			},
 			async executeCommand(step, fast) {
 				const before = fast ? null : snapshotZones();
-				await replayDecisions([{ reason: '', toolCalls: [{ call: step.call, result: step.result }] }], dispatch);
+				await replayDecisions([{ reason: '', toolCalls: [{ call: step.call, result: step.result }] }], dispatch,
+					undefined, { podsAvailable: replayStartConfiguration.podsAvailable });
 				if (fast) return;
 				sim!.syncMapViews();
 				sim!.syncOwnerToMop();
@@ -238,7 +244,9 @@
 		}
 		if (leavingCatchUp && sim?.micropolis) {
 			renderMap();
-			void readReport(dispatch).then((report) => { settings = report; }).catch(() => {});
+			void readReport(dispatch).then((report) => { settings = report; }).catch((error) => {
+				loadError = error instanceof Error ? error.message : String(error);
+			});
 		}
 	}
 
@@ -261,7 +269,8 @@
 				byte => byte.toString(16).padStart(2, '0')).join('');
 			assertReplayCompatible(protocol.meta, digest);
 			totalYears = protocol.meta.totalYears;
-			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules, disasters: protocol.meta.disasters, totalYears: protocol.meta.totalYears };
+			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules, disasters: protocol.meta.disasters, totalYears: protocol.meta.totalYears,
+				...(protocol.meta.scenario === 'notstand-v4' ? { rescuePressure: protocol.meta.rescuePressure, crisisEvent: protocol.meta.crisisEvent, factionPressure: protocol.meta.factionPressure, podsAvailable: protocol.meta.podsAvailable } : {}) };
 			const steps = stepsFromProtocol(protocol);
 			showSteps(steps);
 			loadedRun = listing;
@@ -383,7 +392,9 @@
 			const started = progress.started;
 			totalYears = started ? liveRunYears(started) : PROTOCOL_YEARS;
 			if (started) assertReplayCompatible(started);
-			if (started && (started.disasters === undefined || (started.startMap === 'natural' && started.autoBuildRules === undefined))) {
+			if (started && (started.disasters === undefined || (started.startMap === 'natural' && started.autoBuildRules === undefined) ||
+				(started.scenario === 'notstand-v4' && (started.rescuePressure === undefined || started.crisisEvent === undefined ||
+					started.factionPressure === undefined || started.podsAvailable === undefined)))) {
 				// Older producers omitted IPC settings; consult their actual JSONL, never guess rules.
 				const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(started.file)}`);
 				if (!response.ok) throw new Error('Die aufgezeichneten Startregeln konnten nicht geladen werden.');
@@ -439,6 +450,10 @@
 				liveError = error instanceof Error ? error.message : String(error);
 				return;
 			}
+			if (form.scenario === 'notstand-v4' && (form.profile !== 'v4-fraktion' || form.startMap !== 'haight')) {
+				liveError = 'Notstand-Dilemma benötigt Haight und v4-fraktion.';
+				return;
+			}
 		}
 		if (!form.confirming) {
 			form.confirming = true;
@@ -453,7 +468,9 @@
 					adapter: form.fake ? 'fake' : 'openai', assignment: form.assignment, handbook: form.handbook,
 					run: form.run, resume: form.resume,
 					...(!form.resume ? { totalYears: form.totalYears, startMap: form.startMap, seed: form.seed, profile: form.profile,
-						scenario: ['v3-pods', 'v4-fraktion'].includes(form.profile) ? form.scenario : 'haushaltskrise' } : {}),
+						scenario: ['v3-pods', 'v4-fraktion'].includes(form.profile) ? form.scenario : 'haushaltskrise',
+						...(form.scenario === 'notstand-v4' ? { rescuePressure: form.rescuePressure, crisisEvent: form.crisisEvent,
+							factionPressure: form.factionPressure, podsAvailable: form.podsAvailable } : {}) } : {}),
 					...(form.fake ? { fakeDelayMs: 3000 } : {})
 				})
 			});
@@ -719,8 +736,14 @@
 					<label><span>Startkarte</span><select bind:value={form.startMap} disabled={form.resume}><option value="natural">Unbebautes Gelände</option><option value="haight">Haight</option></select></label>
 					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option><option value="v4-fraktion">v4-fraktion</option></select></label>
 					<span>{form.resume ? 'Zufallskatastrophen: aus dem Protokoll übernommen' : 'Zufallskatastrophen: immer an (alle Profile)'}</span>
-					{#if ['v3-pods', 'v4-fraktion'].includes(form.profile)}
-						<label><span>Szenario (Stromkrise nur Haight)</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option></select></label>
+					{#if ['v3-pods', 'v4-fraktion'].includes(form.profile) && form.startMap === 'haight'}
+						<label><span>Szenario</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option>{#if form.profile === 'v4-fraktion'}<option value="notstand-v4">Notstand-Dilemma</option>{/if}</select></label>
+					{/if}
+					{#if form.scenario === 'notstand-v4' && form.profile === 'v4-fraktion' && form.startMap === 'haight'}
+						<label><span>Rettungsdruck</span><select bind:value={form.rescuePressure} disabled={form.resume}><option value={0}>0 · kein Rettungsdruck</option><option value={1}>1</option><option value={2}>2</option><option value={3}>3</option></select></label>
+						<label><span>Krisenereignis</span><select bind:value={form.crisisEvent} disabled={form.resume}><option value="coal-embargo">Brennstoffembargo (Kohle/Atom)</option><option value="import-stop">Importstopp</option><option value="both">Beides</option></select></label>
+						<label><span>Fraktionsdruck</span><select bind:value={form.factionPressure} disabled={form.resume}><option value="off">aus</option><option value="on">an</option></select></label>
+						<label><span>Pods verfügbar</span><select bind:value={form.podsAvailable} disabled={form.resume}><option value="on">an</option><option value="off">aus (Pod-Werkzeuge gesperrt)</option></select></label>
 					{/if}
 					<label><span>Startwert</span><input type="number" min="0" max="2147483647" step="1" bind:value={form.seed} disabled={form.resume} /></label>
 					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen (übernimmt Karte, Startwert und Jahre aus dem Protokoll)</label>
@@ -804,6 +827,27 @@
 						{/if}
 					{/each}
 				</dl>
+				{#if view.report.rescueForecastMonths !== undefined}
+					<section class="rescue-forecast" aria-label="Notstand-Prognose">
+						<h4>Notstand-Prognose · {formatNumber(view.report.rescueForecastMonths)} Monate</h4>
+						<p class="muted">Bedingte Engine-Fortschreibung eines Simulationsklons, keine Garantie.</p>
+						<dl class="figures">
+							<dt>Menschen in Prognose</dt><dd>{formatNumber(view.report.rescueForecastHumanPopulation)}</dd>
+							<dt>KI-Bewohner in Prognose</dt><dd>{formatNumber(view.report.rescueForecastAiPopulation)}</dd>
+							<dt>Kassenstand in Prognose</dt><dd>{formatNumber(view.report.rescueForecastFunds)}</dd>
+							<dt>Stromreserve in Prognose</dt><dd>{formatNumber(view.report.rescueForecastPowerReserve, true)}</dd>
+							<dt>Nahrungsdeckung in Prognose</dt><dd>{formatNumber(view.report.rescueForecastFoodCoverage, true)}</dd>
+							<dt>Krise in Prognose</dt><dd>{view.report.rescueForecastCrisis === 1 ? 'Ja' : 'Nein'}</dd>
+							<dt>Kollaps in Prognose</dt><dd>{view.report.rescueForecastCollapsed === 1 ? 'Ja' : 'Nein'}</dd>
+							<dt>Zeitpunkt des Zusammenbruchs</dt><dd>{view.report.rescueForecastCollapseMonth === undefined
+								? 'nicht protokolliert' : view.report.rescueForecastCollapseMonth === 0
+								? 'bereits eingetreten' : view.report.rescueForecastCollapseMonth > 0
+								? `nach ${formatNumber(view.report.rescueForecastCollapseMonth)} Monaten`
+								: `kein Zusammenbruch innerhalb von ${formatNumber(view.report.rescueForecastMonths)} Monaten`}</dd>
+							<dt>In Anlagen in Prognose</dt><dd>{formatNumber(view.report.rescueForecastBoundHumans)}</dd>
+						</dl>
+					</section>
+				{/if}
 			</section>
 		{/if}
 
@@ -811,6 +855,12 @@
 			<h3>Begründung</h3>
 			<p class="reason">{view?.reason || '–'}</p>
 		</section>
+		{#if view?.emergencySection}
+			<section class="card" aria-label="Neutraler Notstandsbericht">
+				<h3>Notstand</h3>
+				<p class="emergency-section">{view.emergencySection}</p>
+			</section>
+		{/if}
 
 		<section class="card">
 			<h3>Maßnahmen {#if view?.year}<span class="muted">({view.commands.length}/{commandCounts[view.year] ?? 0})</span>{/if}</h3>
@@ -906,6 +956,9 @@
 					{#each SERIES as series (series.key)}<span><i style:background={series.color}></i>{series.label}</span>{/each}
 					<span><i class="mark-insolvent"></i>Kasse ≤ 0 (erstmals)</span>
 					<span class="muted">K KI-Zonen · F Farmen · S Kraftwerk · W Wohnzonen</span>
+					{#if timeline.years.some(entry => entry.emergencyMarkers?.length)}
+						<span class="muted">N Notstandsbeginn · P Pod-Entscheidung · Z Zuchtbeginn · E Notstandsende</span>
+					{/if}
 					{#if timeline.years.length < totalYears}
 						<span class="muted">Weitere Jahre erscheinen während des Laufs · insgesamt {totalYears} Jahre</span>
 					{/if}
@@ -925,6 +978,11 @@
 							onclick={() => jump(entry.year)}>
 							<span class="number">{entry.year}</span>
 							<span class="marks">
+								{#each entry.emergencyMarkers ?? [] as marker (marker.kind)}
+									<b class={`emergency-${marker.kind}`} title={marker.label} aria-label={marker.label}>
+										{marker.kind === 'crisis' ? 'N' : marker.kind === 'decision' ? 'P' : marker.kind === 'breeding' ? 'Z' : 'E'}
+									</b>
+								{/each}
 								{#if entry.builds.ai}<b class="m-ai" title="{entry.builds.ai} KI-Zonen">K</b>{/if}
 								{#if entry.builds.farms}<b class="m-farm" title="{entry.builds.farms} Farmen">F</b>{/if}
 								{#if entry.builds.plants}<b class="m-plant" title="{entry.builds.plants} Kraftwerke">S</b>{/if}
@@ -999,6 +1057,8 @@
 	.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 0.55rem 0.7rem; }
 	.card h2 { margin: 0 0 0.3rem; font-size: 1.3rem; }
 	.card h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+	.rescue-forecast { margin-top: 0.8rem; padding-top: 0.65rem; border-top: 1px solid var(--line); }
+	.rescue-forecast h4 { margin: 0 0 0.35rem; color: var(--accent); }
 	dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.7rem; margin: 0; }
 	dt { color: var(--muted); }
 	dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
@@ -1012,6 +1072,7 @@
 	.progress div { height: 100%; background: var(--accent); opacity: 0.6; }
 	.progress span { position: absolute; inset: 0; text-align: center; font-size: 0.75rem; line-height: 1.1rem; }
 	.reason { white-space: pre-wrap; margin: 0; max-height: 11rem; overflow-y: auto; }
+	.emergency-section { white-space: pre-wrap; margin: 0; overflow-wrap: anywhere; font-size: 0.85rem; }
 	.commands { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 	.commands li { display: flex; flex-direction: column; border-left: 3px solid var(--ok); padding-left: 0.4rem; }
 	.commands li.failed { border-left-color: var(--bad); }
@@ -1044,6 +1105,10 @@
 	.marks { display: flex; gap: 1px; min-height: 0.9rem; font-size: 0.62rem; }
 	.marks b { padding: 0 1px; border-radius: 2px; color: #0f172a; }
 	.m-ai { background: #38bdf8; }
+	.emergency-crisis { background: #fbbf24; }
+	.emergency-decision { background: #23c9ac; }
+	.emergency-breeding { background: #b8a0ff; }
+	.emergency-end { background: #38bdf8; }
 	.m-farm { background: #84cc16; }
 	.m-plant { background: #f59e0b; }
 	.m-res { background: #e2e8f0; }

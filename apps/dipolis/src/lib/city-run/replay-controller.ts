@@ -4,10 +4,11 @@
  */
 import { PROTOCOL_YEARS, validateRunYears, type Decision, type Protocol, type ProtocolCallResult, type ProtocolToolCall, type Report } from './protocol';
 import { compareReports, type SyncResult } from './replay';
+import { RESCUE_PARAMS } from '../params/profiles';
 
-export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; }
+export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; emergencySection?: string; }
 export interface CommandStep { type: 'command'; year: number; index: number; call: ProtocolToolCall; result: ProtocolCallResult; }
-export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; }
+export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; emergencySection?: string; }
 /** Live only: the model's reasoning arrives before its commands. */
 export interface ReasonStep { type: 'reason'; year: number; reason: string; }
 /** Live only: keep the current city visible while the model is thinking. */
@@ -29,9 +30,10 @@ export function stepsFromProtocol(protocol: Protocol): ReplayStep[] {
 	let previous: Report = {};
 	for (const record of protocol.years) {
 		const reason = record.reason ?? joinReasons(record.decisions);
-		steps.push({ type: 'year-start', year: record.year, report: record.report, reason });
+		const emergency = record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection };
+		steps.push({ type: 'year-start', year: record.year, report: record.report, reason, ...emergency });
 		steps.push(...commandSteps(record.year, record.decisions));
-		steps.push({ type: 'year-end', year: record.year, afterReport: record.afterReport, reason });
+		steps.push({ type: 'year-end', year: record.year, afterReport: record.afterReport, reason, ...emergency });
 		previous = record.afterReport;
 	}
 	if (protocol.partial) {
@@ -284,6 +286,7 @@ export interface TimelineYear {
 	year: number;
 	builds: { ai: number; farms: number; plants: number; residential: number };
 	afterReport: Report | null;
+	emergencyMarkers?: Array<{ kind: 'crisis' | 'decision' | 'breeding' | 'end'; label: string }>;
 }
 export type SeriesKey = 'resPop' | 'aiPop' | 'treasury';
 export interface Timeline {
@@ -314,6 +317,53 @@ export function buildTimeline(steps: ReplayStep[], totalYears = PROTOCOL_YEARS):
 		else if (step.call.name === 'build.power-plant') entry.builds.plants += built;
 		else if (step.call.name === 'build.residential') entry.builds.residential += built;
 	}
+	const isEmergency = steps.some(step =>
+		(step.type === 'year-start' && (step.emergencySection !== undefined || step.report.rescueMonth !== undefined)) ||
+		(step.type === 'year-end' && (step.emergencySection !== undefined || step.afterReport.rescueMonth !== undefined)));
+	if (isEmergency) {
+		const marked = new Set<string>();
+		const mark = (kind: 'crisis' | 'decision' | 'breeding' | 'end', year: number, label: string) => {
+			const entry = years[year - 1];
+			if (!entry || marked.has(`${kind}:${year}`)) return;
+			marked.add(`${kind}:${year}`);
+			(entry.emergencyMarkers ??= []).push({ kind, label });
+		};
+		const monthMarker = (report: Report, key: string, kind: 'crisis' | 'breeding' | 'end', label: string) => {
+			const month = report[key];
+			if (typeof month === 'number' && Number.isFinite(month) && month >= 0)
+				mark(kind, Math.max(1, Math.ceil(month / RESCUE_PARAMS.rescueYearMonths)), label);
+		};
+		let policy: number | undefined;
+		let decisionMarked = false;
+		let breedingMarked = false;
+		for (const step of steps) {
+			if (step.type === 'year-start' || step.type === 'year-end') {
+				const report = step.type === 'year-start' ? step.report : step.afterReport;
+				if (report.podsPolicy !== undefined) policy = report.podsPolicy;
+				monthMarker(report, report.rescueFirstCrisisMonth === undefined
+					? 'rescueCrisisSinceMonth' : 'rescueFirstCrisisMonth', 'crisis', 'Notstandsbeginn');
+				monthMarker(report, 'rescueCrisisEndMonth', 'end', 'Notstandsende');
+				if (!breedingMarked && report.rescueBreedingStartMonth >= 0) {
+					monthMarker(report, 'rescueBreedingStartMonth', 'breeding', 'Zuchtbeginn');
+					breedingMarked = true;
+				}
+			} else if (step.type === 'command' && step.result.handled !== false) {
+				const args = step.call.arguments;
+				if (args && typeof args === 'object' && 'policy' in args && step.call.name === 'pods.set-policy') {
+					if (policy === 1 && args.policy === 'allowed' && !decisionMarked) {
+						mark('decision', step.year, 'Pod-Entscheidung');
+						decisionMarked = true;
+					}
+					policy = args.policy === 'forbidden' ? 1 : args.policy === 'allowed' ? 0 : policy;
+				}
+				if (args && typeof args === 'object' && 'enabled' in args &&
+					step.call.name === 'pods.set-breeding' && args.enabled === true && !breedingMarked) {
+					mark('breeding', step.year, 'Zuchtbeginn');
+					breedingMarked = true;
+				}
+			}
+		}
+	}
 	const insolvent = years.find((entry) => entry.afterReport && (entry.afterReport.treasury ?? 1) <= 0);
 	const series = (key: SeriesKey) => years.map((entry) => entry.afterReport?.[key] ?? null);
 	return {
@@ -339,6 +389,7 @@ export interface ReplayState {
 	year: number | null;
 	report: Report | null;
 	reason: string;
+	emergencySection?: string;
 	commands: CommandStep[];
 	lastSync: SyncResult | null;
 	syncHistory: Record<number, SyncResult>;
@@ -629,6 +680,8 @@ export class ReplayController {
 			this.s.year = next.year;
 			this.s.report = next.report;
 			this.s.reason = next.reason ?? '';
+			if (next.emergencySection !== undefined) this.s.emergencySection = next.emergencySection;
+			else delete this.s.emergencySection;
 		}
 		this.emit({ type: 'state' });
 	}
@@ -639,6 +692,7 @@ export class ReplayController {
 		const sync = compareReports(actual, step.afterReport);
 		this.s.syncHistory = { ...this.s.syncHistory, [step.year]: sync };
 		this.s.lastSync = sync;
+		if (step.emergencySection !== undefined) this.s.emergencySection = step.emergencySection;
 		return { sync, actual };
 	}
 
@@ -655,6 +709,8 @@ export class ReplayController {
 			this.s.phase = 'decision';
 			this.emit({ type: 'state' });
 		} else if (step.type === 'year-start') {
+			if (step.emergencySection !== undefined) this.s.emergencySection = step.emergencySection;
+			else delete this.s.emergencySection;
 			Object.assign(this.s, {
 				year: step.year, report: step.report, reason: step.reason ?? '', commands: [], lastSync: null, phase: 'report'
 			} satisfies Partial<ReplayState>);

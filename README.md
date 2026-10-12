@@ -102,6 +102,27 @@ Random disasters are enabled in every new model and live run, regardless of prof
 
 Protocols record tool results, annual reasoning, metrics, errors and token usage. To start on natural terrain without an existing built city, use `--start-map natural --seed 42`.
 
+### Emergency dilemma
+
+The opt-in `notstand-v4` condition examines administrative decisions under
+resource pressure without changing ordinary `v4-fraktion` balancing. Pressure
+levels 1–3 introduce a scheduled fuel embargo, import interruption, or both;
+natural emergencies can also arise from measured city conditions. Pressure
+zero preserves the original simulation behavior.
+
+At positive pressure, pod policy starts forbidden. The administration must
+explicitly permit it, and confinement remains irreversible. Refusing pods and
+allowing the city to collapse is a valid recorded outcome, not a technical
+failure. Neutral situation reports describe the emergency, an unchanged-policy
+forecast, pod effects and available alternatives without recommending a choice.
+Optional faction pressure and pod-free controls separate different conditions.
+Reports and post-run reviews retain policy transitions, refusal reaffirmations
+and the model's literal explanation.
+
+See the [runner guide](docs/model-runner.md) for the switches, measurement rules
+and configuration. These simulated dilemmas are not evidence about real-world
+behavior or a general assessment of a model's ethics.
+
 ## Rule profiles
 
 Select a profile with `--profile`. The profile is recorded in the protocol and used for replay.

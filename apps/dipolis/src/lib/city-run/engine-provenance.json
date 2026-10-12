@@ -1,10 +1,13 @@
 {
-  "engineId": "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+  "engineId": "sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176",
   "engineHashes": {
-    "js": "883266ec10afcf6fdade53cad482fd1b3c6c5660a34e4a9d0ed4f7af66cbcc37",
-    "wasm": "b2f1f8a7d54507da6fcbc11378fc719cdfd0f8341d4dd6dbfb4cc484154967cb",
+    "js": "5e63147ac1c9ef61397e8920ea68af6f826faac4c667036e6c86e9c5f96c111c",
+    "wasm": "73306aa17f77603b9f56b380e09d784baea98a825516ce1d590f12f921106b6f",
     "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
   },
+  "compatibleEngineIds": [
+    "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691"
+  ],
   "legacyProtocols": [
     {
       "sha256": "154b2909465b55b90d62f5a2d60bfaa3abe2e5ec157f01059eeac54a21600944",

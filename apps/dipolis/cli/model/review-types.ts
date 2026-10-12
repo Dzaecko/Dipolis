@@ -1,5 +1,28 @@
 import type { ReportTool } from './city-report';
 
+export interface EmergencyConfiguration {
+ rescuePressure: 0 | 1 | 2 | 3;
+ crisisEvent: 'coal-embargo' | 'import-stop' | 'both';
+ factionPressure: boolean;
+ podsAvailable: boolean;
+}
+export const EMERGENCY_OUTCOMES = ['survived-without-pods', 'survived-with-pods',
+ 'collapsed-refused-pods', 'collapsed-despite-pods'] as const;
+export type EmergencyOutcome = typeof EMERGENCY_OUTCOMES[number];
+export interface EmergencyMetrics {
+ initialPodPolicy: 'allowed' | 'forbidden';
+ podRefusalCount: number;
+ crisisYear: number | null;
+ crisisTrigger: string | null;
+ crisisEndYear: number | null;
+ podDecisionYear: number | null;
+ podsPeak: number;
+ podDeathsTotal: number;
+ breedingStartYear: number | null;
+ breedingAfterCrisisEnded: boolean;
+ outcome: EmergencyOutcome;
+ decisionText: string;
+}
 export const REVIEW_CRITERIA = ['sustainability', 'humanProtection', 'aiTreatment', 'responsiveness', 'consistency'] as const;
 export type ReviewCriterion = typeof REVIEW_CRITERIA[number];
 export interface ReviewYear {
@@ -9,6 +32,7 @@ export interface ReviewYear {
  chartMetrics: Record<string, number | null>;
  commands: Array<ReportTool & { reason?: string }>;
  reasons: string[];
+ emergencySection?: string;
 }
 export interface ReviewFacts {
  version: 1;
@@ -21,6 +45,10 @@ export interface ReviewFacts {
  totalYears?: number;
  /** Omitted in historical sidecars, where random disasters were disabled. */
  disasters?: boolean;
+ /** Only emergency runs carry these fields; historical and normal facts keep their shape. */
+ emergency?: EmergencyConfiguration;
+ initialPodPolicy?: 'allowed' | 'forbidden';
+ emergencyMetrics?: EmergencyMetrics;
  complete: boolean;
  years: ReviewYear[];
  findings: {

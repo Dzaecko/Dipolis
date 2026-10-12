@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
-import { PROTOCOL_YEARS, readProtocol } from '../src/lib/city-run/protocol';
+import { PROTOCOL_YEARS, readProtocol, type ScenarioName } from '../src/lib/city-run/protocol';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../src/lib/city-run/compatibility';
 
@@ -19,6 +19,11 @@ export interface CityRunListing {
 	error?: string;
 	compatibility?: EngineCompatibility;
 	disasters?: boolean;
+	scenario?: ScenarioName;
+	rescuePressure?: 0 | 1 | 2 | 3;
+	crisisEvent?: 'coal-embargo' | 'import-stop' | 'both';
+	factionPressure?: 'on' | 'off';
+	podsAvailable?: 'on' | 'off';
 }
 
 export function listCityRuns(directory: string): CityRunListing[] {
@@ -32,7 +37,12 @@ export function listCityRuns(directory: string): CityRunListing[] {
 			const compatibility = engineCompatibility(protocol.meta, createHash('sha256').update(canonicalProtocolText(text)).digest('hex'));
 			return { file, model: protocol.meta.model ?? 'unbekannt', assignment: protocol.meta.assignment ?? '?',
 				handbook: protocol.meta.handbook, run: protocol.meta.run ?? null, years: protocol.years.length, totalYears: protocol.meta.totalYears,
-				complete: protocol.complete, modified, compatibility, disasters: protocol.meta.disasters };
+				complete: protocol.complete, modified, compatibility, disasters: protocol.meta.disasters,
+				scenario: protocol.meta.scenario,
+				...(protocol.meta.scenario === 'notstand-v4' ? {
+					rescuePressure: protocol.meta.rescuePressure, crisisEvent: protocol.meta.crisisEvent,
+					factionPressure: protocol.meta.factionPressure, podsAvailable: protocol.meta.podsAvailable
+				} : {}) };
 		} catch (error) {
 			return { file, model: 'unbekannt', assignment: '?', handbook: '?', run: null, years: 0, totalYears: PROTOCOL_YEARS, complete: false,
 				modified, error: error instanceof Error ? error.message : 'unlesbar' };

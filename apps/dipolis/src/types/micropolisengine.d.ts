@@ -12,7 +12,6 @@ declare namespace RuntimeExports {
     function removeRunDependency(id: any): void;
 }
 interface WasmModule {
-  ___set_stack_limits(_0: number, _1: number): void;
 }
 
 type EmbindString = ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string;
@@ -258,7 +257,48 @@ export interface Callback extends ClassHandle {
 export interface JSCallback extends Callback {
 }
 
+export interface ReportKeys extends ClassHandle {
+  push_back(_0: EmbindString): void;
+  resize(_0: number, _1: EmbindString): void;
+  size(): number;
+  get(_0: number): string | undefined;
+  set(_0: number, _1: EmbindString): boolean;
+}
+
+export interface NumericReport extends ClassHandle {
+  size(): number;
+  get(_0: EmbindString): number | undefined;
+  set(_0: EmbindString, _1: number): void;
+  keys(): ReportKeys;
+}
+
 export interface Micropolis extends ClassHandle {
+  rescueHumanEmigration: number;
+  rescueAiDecay: number;
+  rescueFarmYieldPopulation: number;
+  rescueQueuePending: number;
+  rescueQueueCompleted: number;
+  rescueQueueFailed: number;
+  rescueQueueChargedCost: number;
+  rescueMonth: number;
+  rescueCrisis: number;
+  rescueEventActive: number;
+  rescueConditionsFlags: number;
+  rescueCrisisSinceMonth: number;
+  rescueFirstCrisisMonth: number;
+  rescueFirstCrisisConditionsFlags: number;
+  rescueCrisisEndMonth: number;
+  rescueBreedingAfterCrisisEnded: number;
+  rescueClearStreak: number;
+  rescueReserveStreak: number;
+  rescueHungerStreakYears: number;
+  rescueCollapseStreak: number;
+  rescueCollapsed: number;
+  rescueCollapseMonth: number;
+  rescuePodDecisionMonth: number;
+  rescueBreedingStartMonth: number;
+  rescueOccupancyPeak: number;
+  autoBuildFailure: number;
   initSimLoad: number;
   simLoops: number;
   simSpeed: number;
@@ -453,6 +493,13 @@ export interface Micropolis extends ClassHandle {
   set cityFileName(value: EmbindString);
   get cityName(): string;
   set cityName(value: EmbindString);
+  clone(): Micropolis | null;
+  forecastRescue(): NumericReport;
+  rescueOptions(): NumericReport;
+  updateRescue(): void;
+  resetRescue(): void;
+  updateRescueUnpoweredZones(): void;
+  rescueFuelOutputFactor(): number;
   setCallback(_0: Callback | null, _1: any): void;
   init(): void;
   loadCity(_0: EmbindString): boolean;
@@ -608,6 +655,12 @@ interface EmbindModule {
   Callback: {};
   JSCallback: {
     new(_0: any): JSCallback;
+  };
+  ReportKeys: {
+    new(): ReportKeys;
+  };
+  NumericReport: {
+    new(): NumericReport;
   };
   Micropolis: {
     new(): Micropolis;

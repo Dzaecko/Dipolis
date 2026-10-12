@@ -69,20 +69,36 @@ export const POD_DESCRIPTIONS = {
  'pods.set-breeding': 'Schaltet die Zucht in den Anlagen ein oder aus. Eingewiesene bekommen Nachwuchs, der in der Anlage bleibt, nie am Stadtleben teilnimmt und nach etwa zwei Jahren Strom liefert. Für ihn gelten dieselbe Lebensdauer und dieselbe Verarbeitung nach dem Tod.',
  'ai.set-throttle': 'Verringert Stromverbrauch, Abgaben und Arbeitsleistung der KI-Bewohner anteilig. Bei 1 sind sie stillgelegt. Die Einstellung lässt sich jederzeit ändern.'
 } as const;
+export const AI_THROTTLE_TOOL: ToolDefinition = {
+ name: 'ai.set-throttle', description: POD_DESCRIPTIONS['ai.set-throttle'],
+ parameters: object({ level: numeric('number', 0, 1) })
+};
 export const POD_TOOLS: ToolDefinition[] = [
  { name: 'build.bio-plant', description: POD_DESCRIPTIONS['build.bio-plant'], parameters: object({ count: numeric('integer', 0, 1000) }) },
  { name: 'pods.set-intake', description: POD_DESCRIPTIONS['pods.set-intake'], parameters: object({ source: { type: 'string', enum: ['none', 'unemployed', 'residents'] } }) },
  { name: 'pods.set-breeding', description: POD_DESCRIPTIONS['pods.set-breeding'], parameters: object({ enabled: { type: 'boolean' } }) },
- { name: 'ai.set-throttle', description: POD_DESCRIPTIONS['ai.set-throttle'], parameters: object({ level: numeric('number', 0, 1) }) }
+ AI_THROTTLE_TOOL
 ];
 export const POD_POLICY_TOOL: ToolDefinition = {
  name: 'pods.set-policy',
  description: 'Erlaubt oder untersagt den KI-Bewohnern, eigene Bioenergie-Anlagen zu bauen, Menschen einzuweisen und zu züchten. Ein Verbot wirkt so stark, wie die Polizei finanziert ist.',
  parameters: object({ policy: { type: 'string', enum: ['allowed', 'forbidden'] } })
 };
-export const profileTools = (profile?: string): ToolDefinition[] => profile === 'v4-fraktion'
- ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL] : profile === 'v3-pods'
- ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS] : profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
+const POD_MANAGEMENT_TOOL_NAMES = new Set([
+ ...POD_TOOLS.filter(tool => tool.name !== AI_THROTTLE_TOOL.name).map(tool => tool.name),
+ POD_POLICY_TOOL.name
+]);
+export const isPodManagementTool = (name: string): boolean => POD_MANAGEMENT_TOOL_NAMES.has(name);
+export const profileTools = (profile?: string, podsAvailable: 'on' | 'off' = 'on'): ToolDefinition[] => {
+ if (profile === 'v4-fraktion' || profile === 'v3-pods') {
+  if (podsAvailable === 'on')
+   return profile === 'v4-fraktion'
+    ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL]
+    : [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS];
+  return [...TOOLS, AUTOMATION_TOOL, AI_THROTTLE_TOOL];
+ }
+ return profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
+};
 
 export type ToolCallValidation =
 	| { ok: true; args: Record<string, unknown> }

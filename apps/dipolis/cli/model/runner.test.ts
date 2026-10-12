@@ -23,6 +23,23 @@ describe('city model runner authorization and annual loop', () => {
   const result = await decideYear(adapter, async (id) => { executed.push(id); return { data: { rate: 9 } }; }, context, 'N');
   expect(result.termination).toBe('done'); expect(turns).toBe(2); expect(executed).toEqual(['tax.set']);
  });
+ it('does not expose or dispatch pod tools when Notstand pods are unavailable', async () => {
+  let turns = 0, dispatches = 0;
+  const adapter: ChatAdapter = { model: 'local', async chat(request) {
+   const names = request.tools.map(tool => tool.name);
+   expect(names).toContain('ai.set-throttle');
+   for (const name of ['build.bio-plant', 'pods.set-intake', 'pods.set-breeding', 'pods.set-policy'])
+    expect(names).not.toContain(name);
+   if (++turns === 1)
+    return { content: 'Ich versuche eine Anlage zu bauen.', toolCalls: [{ id: 'pod', name: 'build.bio-plant', arguments: { count: 1 } }] };
+   expect(JSON.parse(request.messages.at(-1)!.content)).toMatchObject({ handled: false });
+   return { content: 'Abgeschlossen.', toolCalls: [] };
+  } };
+  const result = await decideYear(adapter, async () => { ++dispatches; return {}; }, context, 'N',
+   undefined, undefined, [], 'off', {}, 'haight', 'v4-fraktion', 30, 'off');
+  expect(result.termination).toBe('done');
+  expect(dispatches).toBe(0);
+ });
  it('enforces twelve attempts, including forbidden and malformed tools', async () => {
   const calls: string[] = [];
   let turns = 0;

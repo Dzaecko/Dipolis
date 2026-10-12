@@ -143,6 +143,23 @@
       },
       "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true, "close": false },
       "problemMatcher": []
+    },
+    {
+      "label": "Notstand-Dilemma: Serie (Scheinlauf)",
+      "type": "shell",
+      "command": "corepack",
+      "args": [
+        "pnpm", "--filter", "dipolis", "exec", "tsx", "cli/entry.ts", "sim", "series",
+        "--scenario", "notstand-v4", "--levels", "0,1,2,3",
+        "--adapter", "fake", "--assignment", "N", "--handbook", "off",
+        "--run", { "value": "${input:cityModelRun}", "quoting": "strong" },
+        "--years", { "value": "${input:cityModelYears}", "quoting": "strong" },
+        "--seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
+        "--crisis-event", "coal-embargo", "--faction-pressure", "off", "--pods-available", "on"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true },
+      "problemMatcher": []
     }
   ],
   "inputs": [

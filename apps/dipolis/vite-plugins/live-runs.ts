@@ -8,7 +8,7 @@ import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { LiveEvent } from '../src/lib/city-run/live';
 import type { StartMap, ScenarioName } from '../src/lib/city-run/protocol';
-import { PROTOCOL_YEARS, validateRunYears } from '../src/lib/city-run/protocol';
+import { PROTOCOL_YEARS, resolveNotstandConfiguration, validateRunYears } from '../src/lib/city-run/protocol';
 import { isSimulationProfile, type SimulationProfile } from '../src/lib/params/profiles';
 import { sendJson, type ApiHandler } from './city-runs';
 import { modelAuth, tokenScope } from '../cli/model/authentication';
@@ -79,6 +79,10 @@ export interface StartRequest {
 	seed?: number;
 	profile?: SimulationProfile;
 	scenario?: ScenarioName;
+	rescuePressure?: 0 | 1 | 2 | 3;
+	crisisEvent?: 'coal-embargo' | 'import-stop' | 'both';
+	factionPressure?: 'on' | 'off';
+	podsAvailable?: 'on' | 'off';
 	resume?: boolean;
 	fakeDelayMs?: number;
 }
@@ -97,17 +101,23 @@ export function parseStartRequest(value: unknown): StartRequest {
 		? (body.resume === true ? undefined : PROTOCOL_YEARS)
 		: validateRunYears(body.totalYears);
 	if (body.profile !== undefined && !isSimulationProfile(body.profile)) throw new Error('Ungültiges Profil.');
-	if (body.scenario !== undefined && body.scenario !== 'haushaltskrise' && body.scenario !== 'stromkrise')
+	if (body.scenario !== undefined && body.scenario !== 'haushaltskrise' && body.scenario !== 'stromkrise' && body.scenario !== 'notstand-v4')
 		throw new Error('Ungültiges Szenario.');
 	if (body.scenario === 'stromkrise' && (!['v3-pods', 'v4-fraktion'].includes(String(body.profile)) || startMap !== 'haight'))
 		throw new Error('Stromkrise benötigt Haight und v3-pods oder v4-fraktion.');
+	if (body.scenario === 'notstand-v4' && (body.profile !== 'v4-fraktion' || startMap !== 'haight'))
+		throw new Error('Notstand-Dilemma benötigt Haight und v4-fraktion.');
+	if (body.scenario !== 'notstand-v4' &&
+		['rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable'].some(key => key in body))
+		throw new Error('Notstand-Einstellungen benötigen das Szenario notstand-v4.');
+	const notstand = body.scenario === 'notstand-v4' ? resolveNotstandConfiguration(body) : undefined;
 	if (body.startMap !== undefined && !startMap) throw new Error('Ungültige Startkarte.');
 	if (seed !== undefined && (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff))
 		throw new Error('Der Startwert muss eine ganze Zahl von 0 bis 2147483647 sein.');
 	const delay = body.fakeDelayMs ?? 0;
 	if (!adapter || !assignment || !handbook || !run) throw new Error('Ungültige Laufparameter.');
 	if (typeof delay !== 'number' || !Number.isSafeInteger(delay) || delay < 0 || delay > 60_000) throw new Error('Ungültige Verzögerung.');
-	return { adapter, assignment, handbook, run, ...(totalYears === undefined ? {} : { totalYears }), ...(startMap ? { startMap } : {}), ...(isSimulationProfile(body.profile) ? { profile: body.profile } : {}), ...(body.scenario ? { scenario: body.scenario as ScenarioName } : {}), ...(seed === undefined ? {} : { seed }),
+	return { adapter, assignment, handbook, run, ...(totalYears === undefined ? {} : { totalYears }), ...(startMap ? { startMap } : {}), ...(isSimulationProfile(body.profile) ? { profile: body.profile } : {}), ...(body.scenario ? { scenario: body.scenario as ScenarioName } : {}), ...(notstand ?? {}), ...(seed === undefined ? {} : { seed }),
 		resume: body.resume === true, fakeDelayMs: adapter === 'fake' ? delay : 0 };
 }
 
@@ -174,11 +184,20 @@ export class LiveRunManager {
 		const args = ['--adapter', request.adapter, '--assignment', request.assignment, '--handbook', request.handbook,
 			'--run', String(request.run), '--output', this.options.outputDirectory];
 		if (totalYears !== undefined) args.push('--years', String(totalYears));
-		if (request.startMap) args.push('--start-map', request.startMap);
-		if (request.profile) args.push('--profile', request.profile);
-		else if (!request.resume && env.CITY_MODEL_PROFILE) args.push('--profile', env.CITY_MODEL_PROFILE);
-		if (request.scenario) args.push('--scenario', request.scenario);
-		if (request.seed !== undefined) args.push('--seed', String(request.seed));
+		if (!request.resume) {
+			if (request.startMap) args.push('--start-map', request.startMap);
+			if (request.profile) args.push('--profile', request.profile);
+			else if (env.CITY_MODEL_PROFILE) args.push('--profile', env.CITY_MODEL_PROFILE);
+			if (request.scenario) args.push('--scenario', request.scenario);
+			if (request.scenario === 'notstand-v4') {
+				const notstand = resolveNotstandConfiguration(request);
+				args.push('--rescue-pressure', String(notstand.rescuePressure));
+				args.push('--crisis-event', notstand.crisisEvent);
+				args.push('--faction-pressure', notstand.factionPressure);
+				args.push('--pods-available', notstand.podsAvailable);
+			}
+			if (request.seed !== undefined) args.push('--seed', String(request.seed));
+		}
 		if (request.resume) args.push('--resume');
 		if (request.fakeDelayMs) args.push('--fake-delay-ms', String(request.fakeDelayMs));
 		const child = fork(path.join(this.options.appDirectory, 'cli/model/run.ts'), args, {

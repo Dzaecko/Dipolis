@@ -61,6 +61,23 @@ describe('engine provenance and founding-rule propagation', () => {
   expect(engineCompatibility({})).toMatchObject({ status: 'unverified', label: 'Engine nicht dokumentiert' });
   expect(() => readProtocol(JSON.stringify({ event: 'run-started', engineId: 42 }))).toThrow('engine identifier');
  });
+ it('accepts only the verified prior-current fingerprint while retaining archived legacy blocks', () => {
+  expect(engineCompatibility({
+   engineId: 'sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691'
+  })).toMatchObject({ status: 'current', playable: true });
+  for (const rescuePressure of [1, 2, 3] as const) {
+   expect(engineCompatibility({
+    engineId: 'sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691',
+    rescuePressure,
+   })).toMatchObject({ status: 'legacy', playable: false });
+  }
+  expect(engineCompatibility({ engineId: 'inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3' }))
+   .toMatchObject({ status: 'legacy', playable: false });
+  expect(engineCompatibility(
+   { engineId: 'sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691' },
+   '154b2909465b55b90d62f5a2d60bfaa3abe2e5ec157f01059eeac54a21600944'
+  )).toMatchObject({ status: 'legacy', playable: false });
+ });
  it('recognizes archived logs across checkout line endings, not just their filenames', () => {
   const text = readFileSync(new URL('../../../../../docs/results/model-runs/fake-N-1.jsonl', import.meta.url), 'utf8');
   const digest = (value: string) => createHash('sha256').update(canonicalProtocolText(value)).digest('hex');
@@ -80,5 +97,33 @@ describe('engine provenance and founding-rule propagation', () => {
   expect(() => liveStartConfiguration({ startMap: 'natural', seed: 42 },
    { startMap: 'natural', seed: 43, autoBuildRules: 1 })).toThrow('recorded start configuration');
   expect(liveStartConfiguration({ startMap: 'haight', seed: 42, autoBuildRules: 1 }).autoBuildRules).toBeUndefined();
+ });
+ it('normalizes and validates Notstand settings when reading and bootstrapping protocols', () => {
+  const legacy = readProtocol(JSON.stringify({ event: 'run-started', scenario: 'stromkrise', profile: 'v4-fraktion' }));
+  expect(legacy.meta).not.toHaveProperty('rescuePressure');
+  const notstandText = JSON.stringify({
+   event: 'run-started', scenario: 'notstand-v4', profile: 'v4-fraktion',
+   startMap: 'haight', seed: 42
+  });
+  expect(readProtocol(notstandText).meta).toMatchObject({
+   scenario: 'notstand-v4', rescuePressure: 0, crisisEvent: 'coal-embargo',
+   factionPressure: 'off', podsAvailable: 'on'
+  });
+  const configured = {
+   startMap: 'haight' as const, seed: 42, profile: 'v4-fraktion' as const,
+   scenario: 'notstand-v4' as const, rescuePressure: 3 as const, crisisEvent: 'both' as const,
+   factionPressure: 'on' as const, podsAvailable: 'off' as const
+  };
+  expect(liveStartConfiguration(configured)).toMatchObject(configured);
+  expect(() => liveStartConfiguration(configured, { ...configured, rescuePressure: 2 }))
+   .toThrow('recorded start configuration');
+  expect(() => readProtocol(JSON.stringify({ event: 'run-started', scenario: 'notstand-v4', profile: 'v3-pods' })))
+   .toThrow('Notstand-Dilemma requires');
+  expect(() => readProtocol(JSON.stringify({
+   event: 'run-started', scenario: 'notstand-v4', profile: 'v4-fraktion', rescuePressure: 4
+  }))).toThrow('Rescue pressure');
+  expect(() => readProtocol(JSON.stringify({
+   event: 'run-started', scenario: 'notstand-v4', profile: 'v4-fraktion', crisisEvent: 'nuclear'
+  }))).toThrow('Crisis event');
  });
 });

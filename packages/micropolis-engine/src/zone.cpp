@@ -92,9 +92,9 @@ void Micropolis::doZone(const Position &pos)
 {
     //printf("doZone %d %d\n", pos.posX, pos.posY);
 
-    if (params.foodImportEnabled && foodDemand > foodProduction && params.foodImportPrice > 0.0f) {
+    if (rescueImportsEnabled() && foodDemand > foodProduction && rescueImportPrice() > 0.0f) {
         const Quad deficit = foodDemand - foodProduction;
-        const long double affordableCost = ceill((long double)deficit * params.foodImportPrice);
+        const long double affordableCost = ceill((long double)deficit * rescueImportPrice());
         if ((long double)totalFunds >= affordableCost) {
             foodImported = deficit;
             foodCoverage = 1.0f;
@@ -608,7 +608,7 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
     } else {
         tpop = getResZonePop(tile);
     }
-    if (params.podsEnabled && !aiOwned) {
+    if ((params.podsEnabled && !aiOwned) || rescueEnabled()) {
         tpop = max(0, (int)tpop - humanPodOffsetMap.worldGet(pos.posX, pos.posY));
     }
 
@@ -694,7 +694,7 @@ void Micropolis::doResidential(const Position &pos, bool zonePower)
  */
 void Micropolis::doResIn(const Position &pos, int pop, int value)
 {
-    if (params.podsEnabled && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
+    if ((params.podsEnabled || rescueEnabled()) && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
         setHumanZonePopulation(pos, min(40, pop + 8));
         incRateOfGrowth(pos, 8);
         return;
@@ -757,7 +757,7 @@ void Micropolis::doResIn(const Position &pos, int pop, int value)
  */
 void Micropolis::doResOut(const Position &pos, int pop, int value)
 {
-    if (params.podsEnabled && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
+    if ((params.podsEnabled || rescueEnabled()) && humanPodOffsetMap.worldGet(pos.posX, pos.posY)) {
         setHumanZonePopulation(pos, max(0, pop - 8));
         incRateOfGrowth(pos, -8);
         return;
@@ -1055,6 +1055,9 @@ void Micropolis::doIndustrial(const Position &pos, bool zonePower)
     if (zonePower && ownerMap.worldGet(pos.posX, pos.posY) == 3) {
         farmPop += (short)(tpop * aiEconomicActivity());
     }
+    if (rescueEnabled() && ownerMap.worldGet(pos.posX, pos.posY) == 3)
+        rescueFarmYieldPopulation += (short)(tpop * aiEconomicActivity()) *
+            (zonePower ? 1.0 : rescueParam("farmUnpoweredYieldFactor"));
 
     if (tpop > getRandom(5)) {
         /* Try driving from industrial to residential */

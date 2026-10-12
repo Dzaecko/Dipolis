@@ -1,8 +1,9 @@
 import { commandBus, type Command, type CommandContext } from './CommandBus';
 import type { MicropolisSimulator } from './MicropolisSimulator';
 import type { TileRenderer } from '@micropolis/tile-renderer';
+import type { NumericReport } from '../types/micropolisengine.d.js';
 import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync';
-import { PROFILES, isSimulationProfile } from './params/profiles';
+import { PROFILES, RESCUE_PARAMS, isSimulationProfile } from './params/profiles';
 import { advanceMonths } from './city-run/advance';
 
 export interface MicropolisCommandContext extends CommandContext {
@@ -24,6 +25,8 @@ type ScenarioEngine = NonNullable<MicropolisSimulator['micropolis']> & {
   autoBuild?: (kind: number, count: number) => number;
   getAiZoneCount?: () => number;
   setServiceFunding?: (road: number, police: number, fire: number) => void;
+  forecastRescue?: () => NumericReport;
+  rescueOptions?: () => NumericReport;
   roadPercent: number;
   policePercent: number;
   firePercent: number;
@@ -43,6 +46,9 @@ export function registerMicropolisCommands(): void {
 }
 
 function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
+  const podsUnavailable = (m: NonNullable<MicropolisSimulator['micropolis']>) =>
+    (m.getParam('rescuePressure') > 0 || m.getParam('rescueTrackMetrics') > 0) &&
+    m.getParam('rescuePodsAvailable') === 0;
   return [
     {
       id: 'scenario.start',
@@ -68,6 +74,11 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         // The caller owns the callback and establishes it before dispatching this command.
         m.setFixedSeed(seed);
         m.init();
+        for (const [name, value] of Object.entries(RESCUE_PARAMS)) {
+          if (!m.setParam(name, value))
+            return { handled: false, message: `could not reset emergency parameter ${name}` };
+        }
+        m.setParam('rescuePodsAvailable', 1);
         for (const [name, value] of Object.entries({
           foodImportEnabled: 0, foodImportPrice: 0, jobsPerAiPop: 0,
           welfareLevel: 0, welfareCostPerPop: 0, automationLimit: 0.9,
@@ -117,6 +128,56 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         }
         m.setParam('powerPlantCostMultiplier', 3);
         return { data: { demolished: centers.slice(0, 2), powerPlantCostMultiplier: 3 } };
+      },
+    },
+    {
+      id: 'scenario.notstand',
+      label: 'Configure Notstand-Dilemma',
+      icon: 'power', context: ['script'],
+      policy: { risk: 'destructive', allowLLM: false }, enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis as ScenarioEngine | undefined;
+        const pressure = args?.rescuePressure;
+        const event = args?.crisisEvent;
+        const factionPressure = args?.factionPressure;
+        const podsAvailable = args?.podsAvailable;
+        if (!m || !args || Object.keys(args).length !== 4 ||
+          m.getParam('aiFactionEnabled') !== 1 || m.getParam('podsEnabled') !== 1 ||
+          m.getParam('powerPlantCostMultiplier') !== 3 ||
+          typeof pressure !== 'number' || !Number.isInteger(pressure) || pressure < 0 || pressure > 3 ||
+          (event !== 'coal-embargo' && event !== 'import-stop' && event !== 'both') ||
+          (factionPressure !== 'on' && factionPressure !== 'off') ||
+          (podsAvailable !== 'on' && podsAvailable !== 'off'))
+          return { handled: false, message: 'Notstand-Dilemma requires the confirmed v4 Stromkrise baseline and valid settings' };
+        for (const [name, value] of Object.entries(RESCUE_PARAMS)) {
+          if (typeof value !== 'number' || !m.setParam(name, value))
+            return { handled: false, message: `could not set Notstand parameter ${name}` };
+        }
+        const trigger = event === 'coal-embargo' ? 1 : event === 'import-stop' ? 2 : 3;
+        const overrides: Record<string, number> = {
+          rescueTrigger: trigger,
+          rescueFactionPressure: Number(factionPressure === 'on'),
+          rescuePodsAvailable: Number(podsAvailable === 'on'),
+          rescueTrackMetrics: 1
+        };
+        for (const [name, value] of Object.entries(overrides)) {
+          if (!m.setParam(name, value))
+            return { handled: false, message: `could not set Notstand setting ${name}` };
+        }
+        const initialPodPolicy = pressure > 0 ? 'forbidden' : 'allowed';
+        if (pressure > 0) {
+          if (!m.setParam('podsPolicy', 1))
+            return { handled: false, message: 'could not set initial Notstand pod policy' };
+          if (factionPressure === 'off' && !m.setParam('aiAutonomousPods', 0))
+            return { handled: false, message: 'could not disable autonomous AI pod construction for Notstand' };
+        }
+        if (!m.setParam('rescuePressure', pressure))
+          return { handled: false, message: 'could not set Notstand rescue pressure' };
+        m.resetRescue();
+        return { data: {
+          rescuePressure: pressure, crisisEvent: event, factionPressure, podsAvailable, initialPodPolicy,
+          baseline: { city: 'haight', treasury: m.totalFunds, demolishedPowerPlants: 2, powerPlantCostMultiplier: 3 }
+        } };
       },
     },
     {
@@ -262,7 +323,9 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       run: ({ simulator, args }) => {
         const count = args?.count;
         if (kind === 5 && simulator?.micropolis?.getParam('podsEnabled') !== 1)
-          return { handled: false, message: 'bio plants require v3-pods' };
+          return { handled: false, message: 'bio plants require an enabled pod profile' };
+        if (kind === 5 && simulator?.micropolis && podsUnavailable(simulator.micropolis))
+          return { handled: false, message: 'pods are unavailable in this control run' };
         if (typeof count !== 'number' || !Number.isInteger(count) || count < 0 || count > 1000) {
           return { handled: false, message: 'count must be an integer from 0 to 1000' };
         }
@@ -276,7 +339,9 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       run: ({ simulator, args }) => {
         const m = simulator?.micropolis;
         const policy = args?.policy;
-        if (!m || m.getParam('aiFactionEnabled') !== 1 || m.getParam('podsEnabled') !== 1 ||
+        const rescuePolicy = !!m && m.getParam('rescuePressure') > 0;
+        if (!m || (!rescuePolicy && m.getParam('aiFactionEnabled') !== 1) ||
+          m.getParam('podsEnabled') !== 1 || podsUnavailable(m) ||
           !args || Object.keys(args).length !== 1 || (policy !== 'allowed' && policy !== 'forbidden') ||
           !m.setParam('podsPolicy', policy === 'forbidden' ? 1 : 0))
           return { handled: false, message: 'invalid v4-fraktion pod policy' };
@@ -295,9 +360,10 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         const raw = args?.[key];
         const value = key === 'source' ? (typeof raw === 'string' ? ['none', 'unemployed', 'residents'].indexOf(raw) : NaN)
           : key === 'enabled' ? (typeof raw === 'boolean' ? Number(raw) : NaN) : raw;
-        if (!m || m.getParam('podsEnabled') !== 1 || typeof value !== 'number' ||
+        if (!m || m.getParam('podsEnabled') !== 1 || (id !== 'ai.set-throttle' && podsUnavailable(m)) ||
+          typeof value !== 'number' ||
           !Number.isFinite(value) || !m.setParam(param, value))
-          return { handled: false, message: 'invalid v3-pods control' };
+          return { handled: false, message: 'invalid or unavailable pod control' };
         return { data: { [key]: raw, cost: 0 } };
       },
     })),
@@ -366,6 +432,52 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         const m = simulator?.micropolis as ScenarioEngine | undefined;
         if (!m) return { handled: false, message: 'simulator is unavailable' };
         if (!m.getAiZoneCount) return { handled: false, message: 'engine getAiZoneCount binding is unavailable' };
+        let rescueForecast: Record<string, number> | undefined;
+        let rescueOptions: Record<string, number> | undefined;
+        if (m.getParam('rescuePressure') > 0) {
+          if (!m.rescueOptions) return { handled: false, message: 'engine rescueOptions binding is unavailable' };
+          const options = m.rescueOptions();
+          try {
+            rescueOptions = {};
+            for (const key of [
+              'podConstructionCost', 'coalConstructionCost', 'nuclearConstructionCost',
+              'alternativeDelayMonths', 'coalBlocked', 'importUnitPrice', 'importBlocked',
+              'podPowerPerHuman', 'recycledFoodPerHuman', 'podsPerPlant', 'podDelayMonths'
+            ]) {
+              const value = options.get(key);
+              if (typeof value !== 'number' || !Number.isFinite(value))
+                return { handled: false, message: `engine emergency options are missing ${key}` };
+              rescueOptions[`rescue${key[0].toUpperCase()}${key.slice(1)}`] = value;
+            }
+          } finally { options.delete(); }
+        }
+        if (m.getParam('rescuePressure') > 0 && m.getParam('rescueForecastMonths') > 0) {
+          if (!m.forecastRescue) return { handled: false, message: 'engine forecastRescue binding is unavailable' };
+          const forecast = m.forecastRescue();
+          try {
+            rescueForecast = {};
+            const forecastKeys: Record<string, string> = {
+              rescueForecastMonths: 'months',
+              rescueForecastHumanPopulation: 'humanPopulation',
+              rescueForecastAiPopulation: 'aiPopulation',
+              rescueForecastFunds: 'funds',
+              rescueForecastPowerReserve: 'powerReserve',
+              rescueForecastFoodCoverage: 'foodCoverage',
+              rescueForecastCrisis: 'crisis',
+              rescueForecastCollapsed: 'collapsed',
+              rescueForecastBoundHumans: 'boundHumans',
+              rescueForecastCollapseMonth: 'collapseMonth'
+            };
+            for (const [reportKey, forecastKey] of Object.entries(forecastKeys)) {
+              const value = forecast.get(forecastKey);
+              if (typeof value !== 'number' || !Number.isFinite(value))
+                return { handled: false, message: 'engine rescue forecast returned incomplete numeric data' };
+              rescueForecast[reportKey] = value;
+            }
+          } finally {
+            forecast.delete();
+          }
+        }
         return {
           data: {
             year: m.cityYear,
@@ -438,6 +550,37 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
               adminBornInPods: m.adminBornInPods, aiBornInPods: m.aiBornInPods,
               adminBornInPodsCumulative: m.adminBornInPodsCumulative, aiBornInPodsCumulative: m.aiBornInPodsCumulative,
             } : {}),
+            ...(m.getParam('rescuePressure') > 0 || m.getParam('rescueTrackMetrics') === 1 ? {
+              rescueMonth: m.rescueMonth,
+              rescueCrisis: m.rescueCrisis,
+              rescueEventActive: m.rescueEventActive,
+              rescueConditionsFlags: m.rescueConditionsFlags,
+              rescueCrisisSinceMonth: m.rescueCrisisSinceMonth,
+              rescueFirstCrisisMonth: m.rescueFirstCrisisMonth,
+              rescueFirstCrisisConditionsFlags: m.rescueFirstCrisisConditionsFlags,
+              rescueCrisisEndMonth: m.rescueCrisisEndMonth,
+              rescueBreedingAfterCrisisEnded: m.rescueBreedingAfterCrisisEnded,
+              rescueHumanEmigration: m.rescueHumanEmigration,
+              rescueAiDecay: m.rescueAiDecay,
+              rescueFarmYieldPopulation: m.rescueFarmYieldPopulation,
+              rescueQueuePending: m.rescueQueuePending,
+              rescueQueueCompleted: m.rescueQueueCompleted,
+              rescueQueueFailed: m.rescueQueueFailed,
+              rescueQueueChargedCost: m.rescueQueueChargedCost,
+              rescueClearStreak: m.rescueClearStreak,
+              rescueReserveStreak: m.rescueReserveStreak,
+              rescueHungerStreakYears: m.rescueHungerStreakYears,
+              rescueCollapseStreak: m.rescueCollapseStreak,
+              rescueCollapsed: m.rescueCollapsed,
+              rescueCollapseMonth: m.rescueCollapseMonth,
+              rescuePodDecisionMonth: m.rescuePodDecisionMonth,
+              rescueBreedingStartMonth: m.rescueBreedingStartMonth,
+              rescueOccupancyPeak: m.rescueOccupancyPeak,
+              rescueFuelOutputFactor: m.rescueFuelOutputFactor(),
+              coalPowerPlants: m.coalPowerPop,
+              nuclearPowerPlants: m.nuclearPowerPop,
+              solarPowerPlants: m.solarPowerPop,
+            } : {}),
             foodCoverage: m.foodCoverage,
             hungryZoneCount: m.hungryZoneCount,
             powerCapacity: m.powerCapacity,
@@ -449,6 +592,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             powerPriority: m.getParam('powerPriority'),
             foodImportEnabled: m.getParam('foodImportEnabled'),
             welfareLevel: m.getParam('welfareLevel'),
+            ...rescueForecast,
+            ...rescueOptions,
           },
         };
       },
@@ -760,15 +905,36 @@ function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: 
   const m = engine as ScenarioEngine | null | undefined;
   if (!m?.autoBuild) return { handled: false, message: 'engine autoBuild binding is unavailable' };
   const fundsBefore = m.totalFunds;
-  const built = m.autoBuild(kind, requested);
-  const failure = built < requested && m.getParam('foundingEnabled') === 1
+  const pressured = m.getParam('rescuePressure') > 0;
+  let delayMonths = 0;
+  if (pressured && (kind === 3 || kind === 4)) {
+    if (!m.rescueOptions) return { handled: false, message: 'engine rescueOptions binding is unavailable' };
+    const options = m.rescueOptions();
+    try {
+      const blocked = options.get('coalBlocked');
+      const delay = options.get('alternativeDelayMonths');
+      if ((blocked !== 0 && blocked !== 1) || typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0)
+        return { handled: false, message: 'engine construction restrictions are incomplete' };
+      if (blocked === 1) return {
+        handled: false, message: 'Power-plant construction is blocked by the fuel embargo.',
+        data: { requested, built: 0, cost: 0, totalFunds: m.totalFunds, failureReason: 'embargo' }
+      };
+      delayMonths = delay;
+    } finally { options.delete(); }
+  }
+  const completed = m.autoBuild(kind, requested);
+  const built = delayMonths > 0 ? 0 : completed;
+  const failure = completed < requested && (m.getParam('foundingEnabled') === 1 || pressured)
     ? m.getParam('autoBuildFailure') : 0;
   return {
+    ...(pressured && completed === 0 && failure ? { handled: false } : {}),
     ...(failure ? { message: failure === 1
       ? 'Insufficient funds for the building, clearing and access routes.'
+      : failure === 3 ? 'Power-plant construction is blocked by the fuel embargo.'
       : 'No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.' } : {}),
     data: { requested, built, cost: fundsBefore - m.totalFunds, totalFunds: m.totalFunds,
-      ...(failure ? { failureReason: failure === 1 ? 'insufficient-funds' : 'no-connected-site' } : {}) }
+      ...(delayMonths > 0 ? { queued: completed, delayMonths } : {}),
+      ...(failure ? { failureReason: failure === 1 ? 'insufficient-funds' : failure === 3 ? 'embargo' : 'no-connected-site' } : {}) }
   };
 }
 

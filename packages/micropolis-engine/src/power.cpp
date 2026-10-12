@@ -136,6 +136,10 @@ void Micropolis::doPowerScan()
     Quad maxPower = coalPowerPop * COAL_POWER_STRENGTH +
                     nuclearPowerPop * NUCLEAR_POWER_STRENGTH +
                     solarPowerPop * SOLAR_POWER_STRENGTH;
+    if (rescueEmbargo(1))
+        maxPower = (Quad)((coalPowerPop * COAL_POWER_STRENGTH +
+            nuclearPowerPop * NUCLEAR_POWER_STRENGTH) * rescueFuelOutputFactor()) +
+            solarPowerPop * SOLAR_POWER_STRENGTH;
 
     if (params.podsEnabled) maxPower += (Quad)plantPower;
     const Quad aiDemand = (Quad)(aiPop * params.aiPowerPerPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0));
@@ -275,6 +279,8 @@ void Micropolis::doPowerScan()
     powerStackPointer = 0;
     powerCapacity = maxPower;
     powerDemand = totalDemand;
+    if (rescueEnabled() && powerCapacity <= 0 && powerDemand > 0)
+        powerReserve = (float)rescueParam("rescueZeroCapacityReserve");
 }
 
 

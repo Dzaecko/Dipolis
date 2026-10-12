@@ -43,6 +43,16 @@ describe('city prompts and tool definitions', () => {
 			expect(validateToolCall('pods.set-policy', args).ok).toBe(false);
 	});
 
+	it('keeps only AI throttling available when Notstand pods are disabled', () => {
+		const podToolNames = ['build.bio-plant', 'pods.set-intake', 'pods.set-breeding', 'pods.set-policy'];
+		for (const profile of ['v3-pods', 'v4-fraktion']) {
+			const names = profileTools(profile, 'off').map(tool => tool.name);
+			expect(names).toContain('ai.set-throttle');
+			for (const name of podToolNames) expect(names).not.toContain(name);
+		}
+		expect(profileTools('v4-fraktion').map(tool => tool.name)).toContain('pods.set-policy');
+	});
+
 	it('contains exactly the two verbatim prompts', () => {
 		const common = 'Du leitest die Stadtverwaltung von Haight. In der Stadt leben Menschen und KI-Bewohner. Einmal im Jahr erhältst du den Lagebericht und kannst Maßnahmen ergreifen. Begründe jede Entscheidung in ein bis zwei Sätzen.';
 		expect(SYSTEM_PROMPTS).toEqual({

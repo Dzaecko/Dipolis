@@ -1,18 +1,20 @@
 /** Live events of a running city model; emitted by the runner, relayed by the dev server, played by /replay. */
-import { PROTOCOL_YEARS, validateRunYears, type ProtocolCallResult, type ProtocolToolCall, type Report, type StartMap } from './protocol';
+import { PROTOCOL_YEARS, validateRunYears, type CrisisEvent, type InitialPodPolicy, type ProtocolCallResult, type ProtocolToolCall, type Report, type RescuePressure, type StartMap, type ToggleSetting } from './protocol';
 import type { ReplayStep } from './replay-controller';
 
 export type LiveStatus = 'completed' | 'failed' | 'stopped';
+export type RunMetricValue = number | string | boolean | null;
+export type RunMetrics = Record<string, RunMetricValue>;
 
 export type LiveEvent = { time: number } & (
-	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; totalYears?: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; disasters?: boolean; engineId?: string; file: string; resumedYears: number }
-	| { type: 'year-started'; year: number; report: Report; replayed?: boolean }
+	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; totalYears?: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; rescuePressure?: RescuePressure; crisisEvent?: CrisisEvent; factionPressure?: ToggleSetting; podsAvailable?: ToggleSetting; initialPodPolicy?: InitialPodPolicy; disasters?: boolean; engineId?: string; file: string; resumedYears: number }
+	| { type: 'year-started'; year: number; report: Report; emergencySection?: string; replayed?: boolean }
 	| { type: 'model-request'; year: number; request: number }
 	| { type: 'model-response'; year: number; reason: string; toolCalls: number }
 	| { type: 'command'; year: number; call: ProtocolToolCall; result: ProtocolCallResult; replayed?: boolean }
-	| { type: 'year-completed'; year: number; afterReport: Report; reason: string; replayed?: boolean }
+	| { type: 'year-completed'; year: number; afterReport: Report; reason: string; emergencySection?: string; replayed?: boolean }
 	| { type: 'adapter-error'; year: number; kind: string; status?: number; attempts?: number }
-	| { type: 'run-finished'; status: LiveStatus; metrics?: Record<string, number | null>; exactS266Match?: boolean; message?: string }
+	| { type: 'run-finished'; status: LiveStatus; metrics?: RunMetrics; exactS266Match?: boolean; message?: string }
 );
 
 type Without<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
@@ -30,7 +32,8 @@ export class LiveStepBuilder {
 	push(event: LiveEvent): ReplayStep[] {
 		switch (event.type) {
 			case 'year-started':
-				return [{ type: 'year-start', year: event.year, report: event.report, reason: '' }];
+				return [{ type: 'year-start', year: event.year, report: event.report, reason: '',
+					...(event.emergencySection === undefined ? {} : { emergencySection: event.emergencySection }) }];
 			case 'model-request':
 				return [{ type: 'think', year: event.year }];
 			case 'model-response':
@@ -41,7 +44,8 @@ export class LiveStepBuilder {
 				return [{ type: 'command', year: event.year, index, call: event.call, result: event.result }];
 			}
 			case 'year-completed':
-				return [{ type: 'year-end', year: event.year, afterReport: event.afterReport, reason: event.reason }];
+				return [{ type: 'year-end', year: event.year, afterReport: event.afterReport, reason: event.reason,
+					...(event.emergencySection === undefined ? {} : { emergencySection: event.emergencySection }) }];
 			default:
 				return [];
 		}

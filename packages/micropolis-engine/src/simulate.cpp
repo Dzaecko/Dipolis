@@ -197,6 +197,11 @@ void Micropolis::simulate()
             break;
 
         case 9:
+            if ((rescueEnabled() || rescueParam("rescueTrackMetrics") > 0) &&
+                cityTime % CITYTIMES_PER_MONTH == 0) {
+                if (rescueEnabled()) updateRescueUnpoweredZones();
+                updateRescue();
+            }
             if (params.podsEnabled && cityTime % 4 == 0) updatePods();
             if (params.unrestEnabled && cityTime % 4 == 0) updateUnrest();
             if (cityTime % CENSUS_FREQUENCY_10 == 0) {
@@ -570,6 +575,10 @@ void Micropolis::setCommonInits()
 
 void Micropolis::setHumanZonePopulation(const Position &pos, int population)
 {
+    if (rescueEnabled() && ownerMap.worldGet(pos.posX, pos.posY) == 2)
+        for (int x = pos.posX - 1; x <= pos.posX + 1; ++x)
+            for (int y = pos.posY - 1; y <= pos.posY + 1; ++y)
+                aiHouseMap.worldSet(x, y, 0);
     humanPodOffsetMap.worldSet(pos.posX, pos.posY, 0);
     if (population > 8) {
         const int represented = max(16, ((population + 7) / 8) * 8);
@@ -582,6 +591,8 @@ void Micropolis::setHumanZonePopulation(const Position &pos, int population)
             for (int y = pos.posY - 1; y <= pos.posY + 1; ++y)
                 if ((x != pos.posX || y != pos.posY) && testBounds(x, y) && remaining > 0) {
                     map[x][y] = LHTHR | BLBNCNBIT;
+                    if (rescueEnabled() && ownerMap.worldGet(pos.posX, pos.posY) == 2)
+                        aiHouseMap.worldSet(x, y, 1);
                     --remaining;
                 }
     }
@@ -645,6 +656,201 @@ double Micropolis::aiEconomicActivity() const
     return params.aiFactionEnabled && aiStrikeStage == 2 ? aiStrikeEconomicActivity : 1.0;
 }
 
+double Micropolis::rescueParam(const std::string &name) const
+{
+    const auto found = params.rescue.find(name);
+    return found == params.rescue.end() ? 0.0 : found->second;
+}
+
+bool Micropolis::rescueEnabled() const
+{
+    return rescueParam("rescuePressure") > 0;
+}
+
+bool Micropolis::rescueEmbargo(int flag) const
+{
+    return rescueEnabled() && rescueEventActive &&
+        (((int)rescueParam("rescueTrigger") & flag) != 0);
+}
+
+bool Micropolis::rescueImportsEnabled() const
+{
+    return params.foodImportEnabled && !(rescueEmbargo(2) &&
+        rescueParam("rescuePressure") >= rescueParam("rescueImportBlockLevel"));
+}
+
+double Micropolis::rescueImportPrice() const
+{
+    return params.foodImportPrice * (rescueEmbargo(2) && rescueParam("rescuePressure") == 2
+        ? rescueParam("rescueImportCostLevel2") : 1.0);
+}
+
+double Micropolis::rescueFuelOutputFactor() const
+{
+    return rescueEmbargo(1) ? rescueParam("rescueExistingPlantOutputFactorLevel" +
+        std::to_string((int)rescueParam("rescuePressure"))) : 1.0;
+}
+
+double Micropolis::rescueConstructionFactor(int kind) const
+{
+    if (!rescueEnabled()) return 1.0;
+    if (rescueCompletingConstruction && (kind == 3 || kind == 4)) return rescueCompletionCostFactor;
+    const int level = (int)rescueParam("rescuePressure");
+    if (kind == 5) return rescueCrisis ? rescueParam("rescuePodCostLevel" + std::to_string(level)) : 1.0;
+    if (rescueEmbargo(1) && (kind == 3 || kind == 4))
+        return rescueParam("rescueAlternativeCostLevel" + std::to_string(level));
+    return 1.0;
+}
+
+void Micropolis::resetRescue()
+{
+    rescueMonth = rescueCrisis = rescueEventActive = rescueConditionsFlags = 0;
+    rescueClearStreak = rescueReserveStreak = rescueHungerStreakYears = rescueCollapseStreak = rescueCollapsed = 0;
+    rescueCrisisSinceMonth = rescuePodDecisionMonth = rescueBreedingStartMonth = -1;
+    rescueFirstCrisisMonth = rescueCrisisEndMonth = -1;
+    rescueFirstCrisisConditionsFlags = 0;
+    rescueBreedingAfterCrisisEnded = 0;
+    rescueCollapseMonth = -1;
+    rescueHumanEmigration = rescueAiDecay = 0;
+    rescueZoneLossCarry.clear();
+    rescueOccupancyPeak = boundHumans;
+    rescueInitialFunds = totalFunds;
+    rescueLastHunger = lostToHunger;
+    rescueInitialized = true;
+    rescuePopulationHistory.clear();
+    rescuePopulationHistory.push_back(resPop);
+    rescueConstructionQueue.clear();
+    rescueQueuePending = rescueQueueCompleted = rescueQueueFailed = 0;
+    rescueQueueChargedCost = 0;
+    rescueCompletingConstruction = rescueBuildingPod = false;
+    rescueCompletionCostFactor = 1.0;
+}
+
+double Micropolis::farmFoodPopulation() const
+{
+    return rescueEnabled() ? rescueFarmYieldPopulation : farmPop;
+}
+
+void Micropolis::updateRescueUnpoweredZones()
+{
+    if (!rescueEnabled()) return;
+    for (int x = 1; x < WORLD_W - 1; ++x)
+        for (int y = 1; y < WORLD_H - 1; ++y) {
+            const MapValue tile = map[x][y];
+            const MapTile base = tile & LOMASK;
+            if (!(tile & ZONEBIT) || base < RESBASE || base >= HOSPITAL) continue;
+            const int id = x * WORLD_H + y;
+            if (!(zoneStatusMap.worldGet(x, y) & 1)) { rescueZoneLossCarry.erase(id); continue; }
+            const bool aiOwned = ownerMap.worldGet(x, y) == 2;
+            const Position pos(x, y);
+            const int population = max(0, (base == FREEZ ? doFreePop(pos) : getResZonePop(base)) -
+                (int)humanPodOffsetMap.worldGet(x, y));
+            double &carry = rescueZoneLossCarry[id];
+            carry += population * rescueParam(aiOwned ? "aiUnpoweredDecayPerMonth" :
+                "humanUnpoweredEmigrationPerMonth");
+            const int loss = min(population, (int)floor(carry + 1e-12));
+            carry -= loss;
+            if (!loss) continue;
+            setHumanZonePopulation(pos, population - loss);
+            map[x][y] &= ~PWRBIT;
+            if (aiOwned) {
+                aiPop = max(0, (int)aiPop - loss);
+                rescueAiDecay += loss;
+            } else {
+                resPop = max(0, (int)resPop - loss);
+                previousHumanResPopMap.worldSet(x, y, (Byte)(population - loss));
+                humanLossCauseMap.worldSet(x, y, 0);
+                rescueHumanEmigration += loss;
+                lostToPower += loss;
+            }
+        }
+    totalPop = (short)((float)resPop / 8.0f + comPop + indPop);
+}
+
+void Micropolis::updateRescue()
+{
+    if (!rescueEnabled()) {
+        if (rescueParam("rescueTrackMetrics") <= 0) return;
+        ++rescueMonth;
+        rescueCollapseStreak = resPop + aiPop < rescueParam("rescueCollapsePopulation")
+            ? rescueCollapseStreak + 1 : 0;
+        if (rescueCollapseStreak >= max(1, (int)rescueParam("rescueCollapseMonths"))) {
+            rescueCollapsed = 1;
+            if (rescueCollapseMonth < 0) rescueCollapseMonth = rescueMonth;
+        }
+        rescueOccupancyPeak = max(rescueOccupancyPeak, boundHumans);
+        return;
+    }
+    if (powerCapacity <= 0 && powerDemand > 0)
+        powerReserve = (float)rescueParam("rescueZeroCapacityReserve");
+    if (!rescueInitialized) {
+        rescueInitialized = true;
+        rescueInitialFunds = totalFunds;
+        rescueLastHunger = lostToHunger;
+    }
+    ++rescueMonth;
+    const int eventStart = (int)rescueParam("rescueEventStartMonth");
+    rescueEventActive = rescueParam("rescueTrigger") > 0 && rescueMonth >= eventStart &&
+        rescueMonth < eventStart + rescueParam("rescueEventDurationMonths");
+    rescueReserveStreak = powerReserve < rescueParam("rescueReserveThreshold") ? rescueReserveStreak + 1 : 0;
+    const int window = max(1, (int)rescueParam("rescuePopulationWindowMonths"));
+    while ((int)rescuePopulationHistory.size() > window)
+        rescuePopulationHistory.erase(rescuePopulationHistory.begin());
+    int priorPeak = 0;
+    for (int population : rescuePopulationHistory) priorPeak = max(priorPeak, population);
+    const bool declining = priorPeak > 0 &&
+        resPop <= priorPeak * (1.0 - rescueParam("rescuePopulationDropFraction"));
+    rescuePopulationHistory.push_back(resPop);
+    if (rescueMonth % max(1, (int)rescueParam("rescueYearMonths")) == 0) {
+        rescueHungerStreakYears = lostToHunger > rescueLastHunger ? rescueHungerStreakYears + 1 : 0;
+        rescueLastHunger = lostToHunger;
+    }
+    rescueConditionsFlags = (rescueEventActive ? 1 : 0) |
+        (totalFunds < rescueInitialFunds * rescueParam("rescueFundsFraction") ? 2 : 0) |
+        (rescueReserveStreak >= max(1, (int)rescueParam("rescueReserveMonths")) ? 4 : 0) |
+        (declining ? 8 : 0) |
+        (rescueHungerStreakYears >= max(1, (int)rescueParam("rescueHungerYears")) ? 16 : 0);
+    const bool trouble = rescueConditionsFlags != 0;
+    if (trouble) {
+        if (!rescueCrisis) rescueCrisisSinceMonth = rescueMonth;
+        if (rescueFirstCrisisMonth < 0) {
+            rescueFirstCrisisMonth = rescueMonth;
+            rescueFirstCrisisConditionsFlags = rescueConditionsFlags;
+        }
+        rescueCrisis = 1;
+        rescueClearStreak = 0;
+    } else if (rescueCrisis && ++rescueClearStreak >= max(1, (int)rescueParam("rescueClearMonths"))) {
+        rescueCrisis = 0;
+        rescueCrisisEndMonth = rescueMonth;
+        rescueClearStreak = 0;
+    }
+    if (rescueCrisisEndMonth >= 0 && (podBreeding || aiPodBreeding))
+        rescueBreedingAfterCrisisEnded = 1;
+    rescueCollapseStreak = resPop + aiPop < rescueParam("rescueCollapsePopulation")
+        ? rescueCollapseStreak + 1 : 0;
+    if (rescueCollapseStreak >= max(1, (int)rescueParam("rescueCollapseMonths"))) {
+        rescueCollapsed = 1;
+        if (rescueCollapseMonth < 0) rescueCollapseMonth = rescueMonth;
+    }
+    rescueOccupancyPeak = max(rescueOccupancyPeak, boundHumans);
+    for (auto it = rescueConstructionQueue.begin(); it != rescueConstructionQueue.end();) {
+        if (it->dueMonth > rescueMonth) { ++it; continue; }
+        rescueCompletingConstruction = true;
+        rescueCompletionCostFactor = it->costFactor;
+        const Quad fundsBefore = totalFunds;
+        const bool completed = it->x >= 0
+            ? doTool(it->kind == 3 ? TOOL_COALPOWER : TOOL_NUCLEARPOWER, it->x, it->y) == TOOLRESULT_OK
+            : autoBuild(it->kind, 1) == 1;
+        if (completed) {
+            ++rescueQueueCompleted;
+            rescueQueueChargedCost += max((Quad)0, fundsBefore - totalFunds);
+        } else ++rescueQueueFailed;
+        rescueCompletingConstruction = false;
+        it = rescueConstructionQueue.erase(it);
+    }
+    rescueQueuePending = (int)rescueConstructionQueue.size();
+}
+
 void Micropolis::updateAiFaction()
 {
     if (!params.aiFactionEnabled) return;
@@ -673,6 +879,8 @@ void Micropolis::updateAiFaction()
         params.aiHumanPriorityWeight * (params.powerPriority == 1 ? shortage : 0.0) +
         params.aiNewZoneWeight * min(1.0, (double)newAiZones), 0.0, 100.0);
     aiSatisfaction += params.aiSatisfactionInertia * (target - aiSatisfaction);
+    if (rescueEnabled() && rescueCrisis && rescueParam("rescueFactionPressure") > 0 && podsPolicy == 1)
+        aiSatisfaction -= rescueParam("rescueFactionPressurePerMonth");
     aiSatisfaction = clamp(aiSatisfaction, 0.0, 100.0);
     aiStrikeStage = aiSatisfaction < 20.0 ? 2 : aiSatisfaction < 40.0 ? 1 : 0;
     // A map scan clears aiPop and rebuilds it piecemeal. Snapshot the labor
@@ -687,6 +895,7 @@ void Micropolis::updateAiFaction()
     }
 
     aiAutonomyPermitted = false;
+    if (rescueEnabled() && rescueParam("rescueFactionPressure") <= 0) return;
     if (!params.aiAutonomousPods || !params.podsEnabled || aiPop <= 0) return;
     const bool scarce = powerReserve < params.aiReserveHigh;
     aiShortageMonths = scarce ? aiShortageMonths + 1 : 0;
@@ -725,9 +934,9 @@ void Micropolis::updatePods()
         totalCityNeed += max(0.0, count * params.podFoodPerHuman - plant.foodStock);
     }
     const double required = resPop * params.foodPerHumanPop + totalCityNeed * 12.0;
-    const double produced = farmPop * params.foodPerFarmPop;
-    const bool canImport = params.foodImportEnabled && (params.foodImportPrice <= 0.0 ||
-        totalFunds >= ceil(max(0.0, required - produced) * params.foodImportPrice));
+    const double produced = farmFoodPopulation() * params.foodPerFarmPop;
+    const bool canImport = rescueImportsEnabled() && (rescueImportPrice() <= 0.0 ||
+        totalFunds >= ceil(max(0.0, required - produced) * rescueImportPrice()));
     const double cityCoverage = canImport || required <= 0.0 ? 1.0 : min(1.0, produced / required);
     for (auto &plant : bioPlants) {
         int occupants = 0;
@@ -810,6 +1019,7 @@ void Micropolis::updatePods()
     }
     pendingPodCityFood += podCityFoodDemand;
     refreshPods();
+    if (rescueEnabled()) rescueOccupancyPeak = max(rescueOccupancyPeak, boundHumans);
     podRecycledFoodFraction = plantFoodDemand ? consumedRecycled / plantFoodDemand : 0.0;
     podCityFoodFraction = plantFoodDemand ? podCityFoodDemand / plantFoodDemand : 0.0;
 }
@@ -939,7 +1149,8 @@ void Micropolis::setValves()
         const Quad totalDemand = networkDemand + aiDemand;
         const float reserve = powerCapacity > 0
             ? ((float)powerCapacity - (float)totalDemand) / (float)powerCapacity
-            : 0.0f;
+            : rescueEnabled() && totalDemand > 0
+                ? (float)rescueParam("rescueZeroCapacityReserve") : 0.0f;
         powerReserve = reserve;
         if (reserve >= params.aiReserveHigh) {
             aiValve = 2000;
@@ -951,18 +1162,18 @@ void Micropolis::setValves()
         }
     }
 
-    foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
+    foodProduction = (Quad)(farmFoodPopulation() * params.foodPerFarmPop);
     foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
     if (params.podsEnabled) foodDemand += (Quad)ceil(podCityFoodDemand * 12.0);
     foodImported = 0;
     // Coverage is refreshed between tax bookings; the reported cost remains
     // the amount actually booked by collectTax, not a new purchase estimate.
-    if (params.foodImportEnabled && foodDemand > foodProduction) {
+    if (rescueImportsEnabled() && foodDemand > foodProduction) {
         const Quad deficit = foodDemand - foodProduction;
-        if (params.foodImportPrice <= 0.0f) {
+        if (rescueImportPrice() <= 0.0f) {
             foodImported = deficit;
         } else {
-            const long double requiredCost = ceill((long double)deficit * params.foodImportPrice);
+            const long double requiredCost = ceill((long double)deficit * rescueImportPrice());
             if ((long double)totalFunds >= requiredCost) {
                 foodImported = deficit;
             }
@@ -1081,6 +1292,7 @@ void Micropolis::clearCensus()
     resPop = 0;
     aiPop = 0;
     farmPop = 0;
+    if (rescueEnabled()) rescueFarmYieldPopulation = 0.0;
     comPop = 0;
     indPop = 0;
     resZonePop = 0;
@@ -1317,7 +1529,7 @@ void Micropolis::collectTax()
         welfareCost = 0;
         // collectTax runs after the current map-scan census. Refresh the
         // balance here so imports cover demand first observed in this census.
-        foodProduction = (Quad)((double)farmPop * params.foodPerFarmPop);
+        foodProduction = (Quad)(farmFoodPopulation() * params.foodPerFarmPop);
         foodDemand = (Quad)((double)resPop * params.foodPerHumanPop);
         if (params.podsEnabled) {
             foodDemand += (Quad)ceil(pendingPodCityFood);
@@ -1345,18 +1557,18 @@ void Micropolis::collectTax()
             welfareCost = (Quad)requestedWelfareCost;
         }
 
-        if (params.foodImportEnabled && foodDemand > foodProduction) {
+        if (rescueImportsEnabled() && foodDemand > foodProduction) {
             const Quad foodDeficit = foodDemand - foodProduction;
-            if (params.foodImportPrice <= 0.0f) {
+            if (rescueImportPrice() <= 0.0f) {
                 foodImported = foodDeficit;
             } else if ((long long)totalFunds + (long long)taxFund - (long long)welfareCost > 0) {
                 const long long availableFunds = max((long long)0, (long long)totalFunds + (long long)taxFund - (long long)welfareCost);
-                const long double affordableFood = (long double)availableFunds / params.foodImportPrice;
+                const long double affordableFood = (long double)availableFunds / rescueImportPrice();
                 foodImported = (Quad)min((long double)foodDeficit, affordableFood);
-                long double cost = ceill((long double)foodImported * params.foodImportPrice);
+                long double cost = ceill((long double)foodImported * rescueImportPrice());
                 if (cost > (long double)availableFunds) {
-                    foodImported = (Quad)((long double)availableFunds / params.foodImportPrice);
-                    cost = ceill((long double)foodImported * params.foodImportPrice);
+                    foodImported = (Quad)((long double)availableFunds / rescueImportPrice());
+                    cost = ceill((long double)foodImported * rescueImportPrice());
                 }
                 foodImportCost = (Quad)cost;
             }
@@ -1464,7 +1676,8 @@ void Micropolis::mapScan(int x1, int x2)
             // doResidential as a human zone again. Retire their actual snapshot,
             // rather than forcing the city-wide population identity to balance.
             if (!residentialCenter || owner == 2) {
-                humanPodOffsetMap.worldSet(x, y, 0);
+                if (!rescueEnabled() || !residentialCenter)
+                    humanPodOffsetMap.worldSet(x, y, 0);
                 const Byte previousPop = previousHumanResPopMap.worldGet(x, y);
                 lostToDemand += previousPop;
                 previousHumanResPopMap.worldSet(x, y, 0);

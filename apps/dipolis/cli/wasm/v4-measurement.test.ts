@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { autonomousPlantGate, bulldozeEmptyAutonomousPlants, fixedYearCommands, measureV4, preflightEvidence, V4_BASELINE,
  V4_FIELDS, v4Csv, v4SummaryRow, type MeasurementSession } from '../../../../scripts/measure-v4-fraktion';
 import type { Report } from '../../src/lib/city-run/protocol';
-import { CURRENT_ENGINE_ID } from '../../src/lib/city-run/compatibility';
+import { engineCompatibility } from '../../src/lib/city-run/compatibility';
 
 const directories: string[] = [];
 afterEach(() => directories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -176,10 +176,12 @@ describe('fixed v4-fraktion measurement', () => {
   expect(coal.some(command => command.year === 1 && command.month === 1)).toBe(true);
   expect(coal.some(command => command.year === 30 && command.month === 12)).toBe(true);
  });
- it('persists the actual packaged-engine A-D horizons and proves post-stichtag construction', () => {
+ it('preserves the verified original-engine A-D horizons and proves post-stichtag construction', () => {
   const file = fileURLToPath(new URL('../../../../docs/results/v4-fraktion-stromkrise.json', import.meta.url));
   const actual = JSON.parse(readFileSync(file, 'utf8'));
-  expect(actual.status).toBe('complete'); expect(actual.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(actual.status).toBe('complete');
+  expect(engineCompatibility({ engineId: actual.engineId, rescuePressure: 0 }))
+   .toMatchObject({ status: 'current', playable: true });
   expect(actual.preflight).toMatchObject({ passed: true, completedMonths: 120, baselineAiPlantCount: 0 });
   expect(actual.preflight.constructionEvidence[0]).toEqual({
    monthIndex: 26, previousCount: 0, count: 1, increase: 1 });

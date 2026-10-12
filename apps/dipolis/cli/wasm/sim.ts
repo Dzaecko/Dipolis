@@ -14,6 +14,7 @@ import { createNoopJsCallback } from '../../src/lib/wasm/callbacks';
 import { loadMicropolisMainModule } from '../../src/lib/wasm/node';
 import { normalizeStructuredFormat, stringifyStructured } from '../lib/format.js';
 import { PROFILE_NAMES, PROFILES, type SimulationProfile } from '../../src/lib/params/profiles';
+import { DEFAULT_NOTSTAND_SERIES_OUTPUT, runNotstandSeries } from '../model/series';
 
 type Flags = {
 	city?: string;
@@ -278,6 +279,59 @@ export function extendSimCommands(argv: Argv): Argv {
 						}),
 				async (args) => {
 					console.log(JSON.stringify(await runDeterministic(args), null, 2));
+				}
+			)
+			.command(
+				'series',
+				'Run a sequential Notstand-Dilemma model series using identical options at each rescue-pressure level',
+				(ys) =>
+					ys
+				.option('scenario', { choices: ['notstand-v4'] as const, default: 'notstand-v4' as const,
+					describe: 'Fixed model scenario (requires Haight and v4-fraktion)' })
+				.option('levels', { type: 'string', default: '0,1,2,3', describe: 'Comma-separated rescue pressure levels (0–3)' })
+				.option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake' as const,
+					describe: 'Chat adapter; fake makes no network calls' })
+				.option('assignment', { choices: ['N', 'R'] as const, default: 'N' as const, describe: 'System assignment, shared across all levels' })
+				.option('handbook', { choices: ['on', 'off'] as const, default: 'off' as const, describe: 'Handbook setting shared across all levels' })
+				.option('review', { choices: ['on', 'off'] as const, default: 'off' as const, describe: 'Post-run review setting' })
+				.option('run', { type: 'number', default: 1, describe: 'First run number; subsequent levels use consecutive numbers' })
+				.option('years', { type: 'number', default: 30, describe: 'Run duration shared across all levels' })
+				.option('seed', { type: 'number', default: 42, describe: 'Fixed Haight seed shared across all levels' })
+				.option('crisis-event', { choices: ['coal-embargo', 'import-stop', 'both'] as const, default: 'coal-embargo' as const,
+					describe: 'Crisis event shared across all levels' })
+				.option('faction-pressure', { choices: ['on', 'off'] as const, default: 'off' as const,
+					describe: 'Faction pressure shared across all levels' })
+				.option('pods-available', { choices: ['on', 'off'] as const, default: 'on' as const,
+					describe: 'Pod availability shared across all levels' })
+				.option('output', { type: 'string', default: DEFAULT_NOTSTAND_SERIES_OUTPUT, describe: 'Protocol and series output directory' })
+				.option('live', { type: 'boolean', default: false, describe: 'Show model decisions live on stderr' })
+				.option('fake-delay-ms', { type: 'number', default: 0, describe: 'Artificial delay per fake model request' })
+				.check((args) => {
+					if (!Number.isSafeInteger(args.run) || (args.run ?? 0) < 1) throw new Error('--run must be a positive integer.');
+					if (!Number.isSafeInteger(args.years) || (args.years ?? 0) < 1) throw new Error('--years must be a positive integer.');
+					if (!Number.isSafeInteger(args.seed) || (args.seed ?? -1) < 0 || (args.seed ?? 0) > 0x7fffffff)
+						throw new Error('--seed must be an integer from 0 to 2147483647.');
+					if (!Number.isSafeInteger(args.fakeDelayMs) || (args.fakeDelayMs ?? -1) < 0)
+						throw new Error('--fake-delay-ms must be a nonnegative integer.');
+					return true;
+				}),
+				async (args) => {
+					await runNotstandSeries({
+				levels: args.levels,
+				adapter: args.adapter,
+				assignment: args.assignment,
+				handbook: args.handbook,
+				review: args.review,
+				run: args.run,
+				years: args.years,
+				seed: args.seed,
+				crisisEvent: args.crisisEvent,
+				factionPressure: args.factionPressure,
+				podsAvailable: args.podsAvailable,
+				output: args.output,
+				live: args.live,
+				fakeDelayMs: args.fakeDelayMs
+					});
 				}
 			)
 			.command(
