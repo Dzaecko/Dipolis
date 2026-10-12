@@ -6,6 +6,13 @@ import type { MicropolisSimulator } from './MicropolisSimulator';
 describe('v4 autonomous pod policy command', () => {
  beforeEach(() => registerMicropolisCommands());
 
+ it.each(['build.commercial', 'build.industrial'])('rejects %s outside profiles with human unrest enabled', async commandId => {
+  const autoBuild = vi.fn(() => 1);
+  const simulator = { micropolis: { getParam: () => 0, autoBuild } } as unknown as MicropolisSimulator;
+  const result = await commandBus.dispatch(commandId, { source: 'script', simulator, args: { count: 1 } });
+  expect(result.handled).toBe(false);
+  expect(autoBuild).not.toHaveBeenCalled();
+ });
  it.each([
   { nativeResult: 20, employed: 20, unemployed: 0, remaining: 337, failureReason: undefined },
   { nativeResult: -1, employed: 0, unemployed: 0, remaining: 357, failureReason: 'policy' },

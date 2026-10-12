@@ -182,6 +182,75 @@ required power against the optimistic maximum pod power from all available
 humans and stop. An upper bound is not a survival guarantee: aging, food,
 birth maturation, capacity and physical connectivity remain relevant.
 
+### Human growth, unrest and local networks
+
+Starting with `v2-unruhe`, the model can use `build.commercial {count}` and
+`build.industrial {count}` as well as residential and farm construction.
+Each is a 3-by-3 lot with the original 100-unit base cost, plus actual
+clearing and infrastructure. Zoning does not guarantee immediate occupancy.
+
+Residential growth uses the residential demand valve, employment/migration,
+land value, pollution, local power and reachable road destinations. Residential
+traffic seeks commercial zones; commercial traffic seeks industry; industry
+seeks residential zones. Farms are industrial workplaces as well as food
+producers. AI residential zones provide AI labor, not human job openings.
+`humanJobsAvailable` reports jobs remaining after automation, expressed in
+human resident points (the original normalized job unit is multiplied by 8).
+The figure is derived from the latest employment census, not a guarantee that
+a particular disconnected residence can reach a job.
+
+The original zero-population employment branch already produces unemployment
+0, not a divide-by-zero fallback of 1. The correction from `v2-unruhe` onward
+is the human unrest calculation and its actors:
+
+- Empty human housing is never counted as an actor, inside or outside an
+  emergency. Bound occupants are not free actors.
+- Positive human unrest contributions, including the unemployment
+  contribution, are multiplied by
+  `min(1, freeHumanPopulation / humanUnrestReferencePop)`.
+- `humanUnrestReferencePop` is **500** in the inherited v2 profile JSON.
+  At 3 unemployed humans and no welfare reduction, the unemployment target
+  contribution is at most `120 * 3 / 500 = 0.72`.
+  At 5,000 humans with 40% unemployment it remains `120 * 0.4 = 48`,
+  before the existing welfare reduction.
+- At zero free humans, human unrest and its stage are zero and no human
+  sabotage is attempted. AI satisfaction remains a separate faction metric.
+  `humanUnrest`, `aiDissatisfaction`, `humanUnrestScale` and
+  `unrestUnemploymentContribution` distinguish these quantities.
+
+This is an intentional correction to v2/v3/v4 behavior, not a claim of
+pressure-zero parity with earlier v4 engines. Existing classic/koexistenz
+simulation rules remain unchanged. Historical protocols retain their original
+values; old v2-and-later engines are blocked from replay/resume rather than
+silently replayed with different unrest rules. Historical natural-city
+protocols also require the current routing engine.
+
+Automatic construction prefers a valid site with land-only road and power
+routes. If none exists, it may use native road bridges or power lines over
+water. A crossing is straight, retains its direction on the far bank and
+uses the native crossing costs. It does not turn or terminate on water.
+Each road water tile costs 50 (land: 10); each power water tile costs 25
+(land: 5). Road bridges and water power lines use separate routes when the
+native engine does not permit their overlay. Founding searches span the
+whole map instead of stopping at the original 12-tile zone access limit.
+Global power reserve is not local connectivity: the report identifies
+conductive network islands, their capacities and land-component bank IDs.
+An island joined across water can span more than one bank ID.
+Free connectable building-site counts are spatial opportunities, not
+non-overlapping lots that can all be built at once or a promise of funding.
+The five `free*Sites` values cover residential, commercial, industrial, farm
+and coal-plant candidate positions. They are counted even when funds are
+insufficient. `PoweredZones` counts physical POWERBIT markings, including
+plant centres; it is not a guarantee that local supply meets local demand.
+
+The [natural seed-2 recovery measurements](results/natural-recovery/README.md)
+re-execute both recorded run-39 policies offline and retain failed growth
+strategies as well as the passing first-year-nuclear strategy (632 humans at
+year 10). The [historical v2/v3 A-D comparison](results/natural-recovery/profile-impact/README.md)
+documents the impact on earlier fixed policies. Power and hunger losses are
+cumulative counters; sabotage events use annual-reset counters. Lower unrest
+does not imply universally lower damage or indefinite survival.
+
 ### Emergency constants
 
 All numeric emergency parameters are in the nested `rescue` object of

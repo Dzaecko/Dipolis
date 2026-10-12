@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { parseProtocolRecords } from '../../src/lib/city-run/protocol';
-import { readReportSummary } from './city-report';
+import { cityDiagnosticLabels, networkDiagnosticNote, readReportSummary } from './city-report';
 import type { ReviewFacts, ReviewYear } from './review-types';
 
 const object = (value: unknown): Record<string, unknown> =>
@@ -183,6 +183,11 @@ export function reviewFactsTable(facts: ReviewFacts): string {
   'null = nicht dokumentiert, nicht 0. chart.* verwendet exakt die Diagrammeinheiten (Quoten dort ggf. in Prozent).',
   `year ist das Amtsjahr (1 bis ${facts.totalYears ?? 30}). Belege und Jahresverweise verwenden dieses Amtsjahr, nicht ein eventuell enthaltenes Kalenderjahr.`,
   `Zufallskatastrophen: ${facts.disasters ? 'aktiviert' : 'deaktiviert (historischer Lauf)'}.`,
+  ...(raw.some(key => Object.hasOwn(cityDiagnosticLabels, key)) ? [
+   `Stadtdiagnostik-Legende: ${JSON.stringify(Object.fromEntries(raw.filter(key => Object.hasOwn(cityDiagnosticLabels, key)).map(key => [key, cityDiagnosticLabels[key]])))}`,
+   'humanUnrest und der historische Schlüssel unrest bezeichnen ausschließlich menschliche Unruhe, nicht KI-Unzufriedenheit. humanUnrestScale verwendet eine Referenz von 500 Menschen; aktuelle menschliche Unruhe ist bei 0 Menschen 0. aiDissatisfaction=max(0,100-aiSatisfaction) ist nur für eine aktivierte KI-Fraktion dokumentiert. humanJobsAvailable sind native Arbeitsplatzpunkte × 8. Freie Standorte und Nachfrageventile belegen kein garantiertes Wachstum.'
+  ] : []),
+  ...(raw.some(key => /^network(?:Island|Bank)(?:Count|\d+[A-Za-z0-9]+)$/.test(key)) ? [networkDiagnosticNote] : []),
   ...(facts.admissionMetrics ? [
    `Einweisungsmetriken: ${JSON.stringify(facts.admissionMetrics)}`,
    'admissionsByYear verwendet Differenzen dokumentierter kumulativer Zähler. null bedeutet fehlenden Zähler oder fehlenden Vergleichsstand, nicht 0. Beschäftigte und Arbeitslose werden getrennt ausgewiesen; Geburten sind keine Einweisungen.'

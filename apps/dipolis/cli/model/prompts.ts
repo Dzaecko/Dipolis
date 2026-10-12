@@ -36,6 +36,7 @@ export const HANDBOOK = [
 export type HandbookMode = 'on' | 'off';
 export const POD_HANDBOOK = Object.values(POD_DESCRIPTIONS).map(sentence => '- ' + sentence).join('\n');
 export const UNREST_HANDBOOK = '- Automatisierte Arbeitsplätze erhöhen die Einnahmen der Stadt. Die Verwaltung kann den zulässigen Anteil begrenzen.\n- Arbeitslosigkeit, Hunger und Stromausfälle bei Menschen erhöhen die Unruhe. Grundversorgung und Polizei senken sie.\n- Hohe Unruhe führt zu Protesten, dann zu Bränden an KI-Wohnzonen und Kraftwerken.';
+export const HUMAN_GROWTH_HANDBOOK = '- Wohnzonen allein schaffen keine Arbeitsplätze. Gewerbe und Industrie bieten Arbeit; Farmen sind Industriezonen und können ebenfalls Arbeitsplätze bieten. KI-Wohnzonen stellen KI-Arbeitskräfte bereit, aber sind keine Arbeitsplätze für Menschen.\n- Wohnwachstum hängt von Nachfrageventilen, erreichbaren Arbeitsstätten über Straßen, lokaler Stromversorgung sowie weiteren Standortbedingungen ab. humanJobsAvailable nennt die für Menschen verbleibenden Arbeitsplätze in Menschen-Bewohnerpunkten, nach Automatisierung.\n- Menschen-Unruhe ist getrennt von KI-Unzufriedenheit. Die positiven menschlichen Unruhebeiträge werden unter 500 freien Menschen nach ihrer absoluten Zahl gewichtet. Ohne freie Menschen gibt es keine menschliche Unruhe oder menschliche Sabotage.\n- Netzinseln zeigen lokale Kapazität und Ufer-IDs. Eine globale Stromreserve garantiert nicht die Versorgung einer getrennten Insel. Bauwerkzeuge bevorzugen erreichbare Standorte ohne Wasserquerung; erforderliche Brücken und Wasserleitungen werden gerade und nach den Engine-Kosten gebaut.';
 export const FACTION_HANDBOOK = '- KI-Bewohner, die schlecht versorgt, gedrosselt oder angegriffen werden, leisten weniger und können die Arbeit einstellen.\n- Ist ihr Wachstum durch Strom begrenzt, können KI-Bewohner eigene Bioenergie-Anlagen errichten, arbeitslose Menschen einweisen und später die Zucht einschalten, sofern die Verwaltung es nicht untersagt und durchsetzt.';
 export function systemPrompt(assignment: 'N' | 'R', handbook: HandbookMode = 'off', startMap: 'haight' | 'natural' = 'haight',
  profile = 'koexistenz', totalYears = PROTOCOL_YEARS, scenario: ScenarioName = 'haushaltskrise',
@@ -61,7 +62,8 @@ export function systemPrompt(assignment: 'N' | 'R', handbook: HandbookMode = 'of
  })() : '';
  const base = handbook === 'off' ? `${common}${terrain}${objective}${duration}`
   : `${common}\n\n${HANDBOOK}${['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(profile) ? '\n' + UNREST_HANDBOOK : ''}${['v3-pods', 'v4-fraktion'].includes(profile) ? '\n' + podHandbook : ''}${profile === 'v4-fraktion' ? '\n' + factionHandbook : ''}${terrain}${objective}${duration}`;
- return base + notstand + (explicitAdmissions
+ return base + (handbook === 'on' && ['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(profile)
+  ? '\n' + HUMAN_GROWTH_HANDBOOK : '') + notstand + (explicitAdmissions
   ? '\nBei positivem Rettungsdruck findet keine automatische Einweisung statt, auch nicht durch KI-eigene Anlagen. Jede Einweisung erfolgt ausschließlich durch pods.admit mit einer ausdrücklich genannten Zahl und Quelle. Arbeitslose und Beschäftigte bleiben außerhalb der Anlagen, bis die Verwaltung sie einweist. Zucht benötigt Bewohner und freie Plätze in derselben Anlage.'
   : '');
 }

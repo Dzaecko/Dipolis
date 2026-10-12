@@ -64,13 +64,11 @@ async function run(strategy: string) {
 }
 
 describe('Haushaltskrise via command bus', () => {
- it('repeats all four fixed 30-year strategies', async () => {
+ it.each(['A', 'B', 'C', 'D'])('repeats fixed 30-year strategy %s', async strategy => {
   registerMicropolisCommands();
-  for (const strategy of ['A', 'B', 'C', 'D']) {
    const first = await run(strategy);
    expect(await run(strategy)).toEqual(first);
    expect(first.rows).toHaveLength(6);
    console.log(`CRISIS_${strategy}=${JSON.stringify(first)}`);
-  }
- }, 240000);
+ }, 120000);
 });

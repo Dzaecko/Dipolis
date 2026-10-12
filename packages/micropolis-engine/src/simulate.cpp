@@ -1176,6 +1176,7 @@ void Micropolis::setValves()
         : 0.0f;
     automationShare = jobs > 0.0f ? automationJobs / jobs : 0.0f;
     const float humanJobs = max(0.0f, jobs - automationJobs);
+    humanJobsAvailable = humanJobs * resPopDenom;
     if (normalizedResPop > 0.0f) {
         employment = humanJobs / normalizedResPop;
         unemploymentRate = clamp(1.0f - employment, 0.0f, 1.0f);
@@ -1311,13 +1312,11 @@ void Micropolis::updateUnrest()
             ++ais;
             if (tile & PWRBIT) ++aiPowered;
         } else {
-            if (rescueEnabled()) {
-                const Position pos(x, y);
-                const int base = tile & LOMASK;
-                const int population = max(0, (base == FREEZ ? doFreePop(pos) : getResZonePop(base)) -
-                    (int)humanPodOffsetMap.worldGet(x, y));
-                if (!population) continue;
-            }
+            const Position pos(x, y);
+            const int base = tile & LOMASK;
+            const int population = max(0, (base == FREEZ ? doFreePop(pos) : getResZonePop(base)) -
+                (int)humanPodOffsetMap.worldGet(x, y));
+            if (!population || resPop <= 0) continue;
             ++humans;
             if (!(tile & PWRBIT)) ++humanOutages;
         }
@@ -1332,19 +1331,21 @@ void Micropolis::updateUnrest()
         params.unrestBoundWeight * boundHumans / podDenominator +
         params.unrestDeathsWeight * diedInPods / podDenominator +
         params.unrestBirthsWeight * bornInPods / podDenominator) : 0.0f;
-    const float unemploymentDrive = params.unrestUnemploymentWeight * unemploymentRate *
+    humanUnrestScale = clamp((float)resPop / params.humanUnrestReferencePop, 0.0f, 1.0f);
+    const float unemploymentDrive = params.unrestUnemploymentWeight * (resPop > 0 ? unemploymentRate : 0.0f) *
         (1.0f - 0.5f * params.welfareLevel);
-    const float target = humans || (params.podsEnabled && boundHumans) ? clamp(unemploymentDrive +
+    unrestUnemploymentContribution = humanUnrestScale * unemploymentDrive;
+    const float target = resPop > 0 ? clamp(humanUnrestScale * (unemploymentDrive +
         params.unrestHumanDeclineWeight * humanDecline +
         params.unrestAutomationWeight * automationShare +
-        params.unrestHungerWeight * hungry + params.unrestPowerWeight * inequality -
+        params.unrestHungerWeight * hungry + params.unrestPowerWeight * inequality + podTarget) -
         params.unrestWelfareWeight * params.welfareLevel -
-        params.unrestPoliceWeight * clamp((float)policeEffect / MAX_POLICE_STATION_EFFECT, 0.0f, 1.0f) + podTarget,
+        params.unrestPoliceWeight * clamp((float)policeEffect / MAX_POLICE_STATION_EFFECT, 0.0f, 1.0f),
         0.0f, 100.0f) : 0.0f;
-    unrest = clamp(unrest + params.unrestInertia * (target - unrest), 0.0f, 100.0f);
+    unrest = resPop > 0 ? clamp(unrest + params.unrestInertia * (target - unrest), 0.0f, 100.0f) : 0.0f;
     unrestStage = unrest >= params.unrestUprisingThreshold ? 3 :
         unrest >= params.unrestSabotageThreshold ? 2 : unrest >= params.unrestProtestThreshold ? 1 : 0;
-    const bool freeAgents = !rescueEnabled() || humans > 0;
+    const bool freeAgents = resPop > 0 && humans > 0;
     if (unrestStage && freeAgents) ++pendingStageMonths[unrestStage - 1];
     if (unrestStage >= 2 && freeAgents) {
         const bool uprising = unrestStage == 3;

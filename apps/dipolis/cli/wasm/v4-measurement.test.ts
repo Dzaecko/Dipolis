@@ -180,8 +180,8 @@ describe('fixed v4-fraktion measurement', () => {
   const file = fileURLToPath(new URL('../../../../docs/results/v4-fraktion-stromkrise.json', import.meta.url));
   const actual = JSON.parse(readFileSync(file, 'utf8'));
   expect(actual.status).toBe('complete');
-  expect(engineCompatibility({ engineId: actual.engineId, rescuePressure: 0 }))
-   .toMatchObject({ status: 'current', playable: true });
+  expect(engineCompatibility({ engineId: actual.engineId, profile: 'v4-fraktion', rescuePressure: 0 }))
+   .toMatchObject({ status: 'legacy', playable: false });
   expect(actual.preflight).toMatchObject({ passed: true, completedMonths: 120, baselineAiPlantCount: 0 });
   expect(actual.preflight.constructionEvidence[0]).toEqual({
    monthIndex: 26, previousCount: 0, count: 1, increase: 1 });

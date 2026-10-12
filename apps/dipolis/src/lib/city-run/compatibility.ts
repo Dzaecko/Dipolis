@@ -12,12 +12,15 @@ export interface EngineCompatibility {
  playable: boolean;
  explanation: string;
 }
-type CompatibilityMeta = Pick<ProtocolMeta, 'engineId'> & Partial<Pick<ProtocolMeta, 'rescuePressure'>>;
+type CompatibilityMeta = Pick<ProtocolMeta, 'engineId'> & Partial<Pick<ProtocolMeta, 'rescuePressure'>> & {
+ profile?: string; startMap?: string;
+};
 
 /** A digest identifies immutable historical protocols without modifying their records. */
 export function engineCompatibility(meta: CompatibilityMeta, protocolSha256?: string): EngineCompatibility {
  const legacy = provenance.legacyProtocols.find(entry => entry.sha256 === protocolSha256);
- const compatibleLegacy = compatibleEngineIds.includes(meta.engineId ?? '') && (meta.rescuePressure ?? 0) === 0;
+ const compatibleLegacy = compatibleEngineIds.includes(meta.engineId ?? '') && (meta.rescuePressure ?? 0) === 0 &&
+  ['classic', 'koexistenz'].includes(meta.profile ?? 'koexistenz') && (meta.startMap ?? 'haight') === 'haight';
  if (legacy || (meta.engineId && meta.engineId !== CURRENT_ENGINE_ID &&
   !compatibleLegacy)) return {
   status: 'legacy', label: 'alte Engine', engineId: legacy?.engineId ?? meta.engineId, playable: false,

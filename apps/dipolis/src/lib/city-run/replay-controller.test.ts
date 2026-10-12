@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readProtocol, type Report } from './protocol';
 import {
-	KEY_FIGURES, settingsFromReport, ReplayController, StepQueue, TICKS_PER_YEAR, buildLabel, buildTimeline, describeCommand, frameTicks,
+	KEY_FIGURES, settingsFromReport, ReplayController, StepQueue, TICKS_PER_YEAR, buildLabel, buildFootprintSize, buildTimeline, describeCommand, frameTicks,
 	staticSteps, stepsFromProtocol, type AdvanceOptions, type CommandStep, type ReplayClock, type ReplayEvent,
 	type ReplayExecutor, type ReplayState, type ReplayStep
 } from './replay-controller';
@@ -13,6 +13,17 @@ const call = (id: string, name: string, args: unknown, data?: unknown, handled =
 });
 
 describe('v4 faction replay surfaces', () => {
+	it.each([
+		['build.commercial', 'Gewerbezonen'], ['build.industrial', 'Industriezonen']
+	])('highlights and labels %s lots in live and replay views', (name, label) => {
+		expect(buildFootprintSize(name)).toBe(3);
+		expect(buildLabel({ id: name, name, arguments: { count: 2 } }, 2)).toBe(`+2 ${label}`);
+		const timeline = buildTimeline([{
+			type: 'command', year: 1, index: 0, call: { id: name, name, arguments: { count: 2 } },
+			result: { handled: true, data: { built: 2 } }
+		}]);
+		expect(timeline.years[0].builds[name === 'build.commercial' ? 'commercial' : 'industrial']).toBe(2);
+	});
 	it('shows exact admission receipts and synchronizes optional employment breakdowns', () => {
 		const command = { id: 'admit', name: 'pods.admit', arguments: { count: 20, source: 'any' } };
 		expect(describeCommand(command, { data: { admitted: 20, employed: 20, unemployed: 0, remainingSlots: 337 } }))
@@ -118,9 +129,9 @@ describe('timeline', () => {
 	it('marks builds, first insolvent year and series', () => {
 		const timeline = buildTimeline(stepsFromProtocol(readProtocol(protocolText())), 4);
 		expect(timeline.availableYears).toBe(3);
-		expect(timeline.years[0]!.builds).toEqual({ ai: 2, farms: 0, plants: 0, residential: 0 });
+		expect(timeline.years[0]!.builds).toEqual({ ai: 2, farms: 0, plants: 0, residential: 0, commercial: 0, industrial: 0 });
 		// The rejected farm call does not count.
-		expect(timeline.years[1]!.builds).toEqual({ ai: 0, farms: 0, plants: 1, residential: 0 });
+		expect(timeline.years[1]!.builds).toEqual({ ai: 0, farms: 0, plants: 1, residential: 0, commercial: 0, industrial: 0 });
 		expect(timeline.firstInsolventYear).toBe(2);
 		expect(timeline.series.resPop).toEqual([10, 20, null, null]);
 		expect(timeline.series.treasury).toEqual([400, -200, null, null]);

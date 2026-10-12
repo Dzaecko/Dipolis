@@ -79,6 +79,7 @@
 
 #include "micropolis.h"
 #include <algorithm>
+#include <sstream>
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -1341,12 +1342,126 @@ static const BuildingProperties airportBuilding =
 
 
 /** Place owned zones/plants with non-destructive, atomically funded access. */
+std::string Micropolis::getNetworkDiagnosticsJSON() const
+{
+    const int cells = WORLD_W * WORLD_H;
+    const int dx[] = {-1, 0, 0, 1}, dy[] = {0, -1, 1, 0};
+    const auto water = [](MapValue value) {
+        const MapTile tile = value & LOMASK;
+        return (tile >= RIVER && tile < TREEBASE) || tile == HBRIDGE || tile == VBRIDGE ||
+            tile == HPOWER || tile == VPOWER;
+    };
+    std::vector<int> banks(cells, -1), islands(cells, -1), bankSizes;
+    std::vector<int> search;
+    for (int id = 0; id < cells; ++id) {
+        if (banks[id] >= 0 || water(map[id / WORLD_H][id % WORLD_H])) continue;
+        const int bank = (int)bankSizes.size();
+        banks[id] = bank;
+        search.assign(1, id);
+        for (size_t head = 0; head < search.size(); ++head) {
+            const int current = search[head], x = current / WORLD_H, y = current % WORLD_H;
+            for (int d = 0; d < 4; ++d) {
+                const int nx = x + dx[d], ny = y + dy[d];
+                if (!testBounds(nx, ny)) continue;
+                const int next = nx * WORLD_H + ny;
+                if (banks[next] >= 0 || water(map[nx][ny])) continue;
+                banks[next] = bank;
+                search.push_back(next);
+            }
+        }
+        bankSizes.push_back((int)search.size());
+    }
+    std::ostringstream out;
+    out << "{\"banks\":[";
+    for (size_t i = 0; i < bankSizes.size(); ++i) {
+        if (i) out << ',';
+        out << "{\"bankId\":" << i << ",\"landTiles\":" << bankSizes[i] << '}';
+    }
+    out << "],\"islands\":[";
+    int island = 0;
+    for (int id = 0; id < cells; ++id) {
+        if (islands[id] >= 0 || !(map[id / WORLD_H][id % WORLD_H] & CONDBIT)) continue;
+        islands[id] = island;
+        search.assign(1, id);
+        std::vector<int> bankIds;
+        int zones = 0, powered = 0, humans = 0, ai = 0;
+        double fuelCapacity = 0.0, capacity = 0.0;
+        for (size_t head = 0; head < search.size(); ++head) {
+            const int current = search[head], x = current / WORLD_H, y = current % WORLD_H;
+            const MapValue value = map[x][y];
+            const MapTile tile = value & LOMASK;
+            if (banks[current] >= 0 && std::find(bankIds.begin(), bankIds.end(), banks[current]) == bankIds.end())
+                bankIds.push_back(banks[current]);
+            if (value & ZONEBIT) {
+                ++zones;
+                if (value & PWRBIT) ++powered;
+                if (tile == POWERPLANT) fuelCapacity += COAL_POWER_STRENGTH;
+                if (tile == NUCLEAR) fuelCapacity += NUCLEAR_POWER_STRENGTH;
+                if (tile == SOLARPOWER) capacity += SOLAR_POWER_STRENGTH;
+                if (tile >= RESBASE && tile < HOSPITAL) {
+                    int population = tile == FREEZ ? doFreePop(Position(x, y)) : getResZonePop(tile);
+                    if (rescueEnabled() || (params.podsEnabled && ownerMap.worldGet(x, y) != 2))
+                        population = max(0, population - (int)humanPodOffsetMap.worldGet(x, y));
+                    if (ownerMap.worldGet(x, y) == 2) ai += population;
+                    else humans += population;
+                }
+            }
+            for (int d = 0; d < 4; ++d) {
+                const int nx = x + dx[d], ny = y + dy[d];
+                if (!testBounds(nx, ny)) continue;
+                const int next = nx * WORLD_H + ny;
+                if (islands[next] >= 0 || !(map[nx][ny] & CONDBIT)) continue;
+                islands[next] = island;
+                search.push_back(next);
+            }
+        }
+        capacity += floor(fuelCapacity * rescueFuelOutputFactor());
+        double bioCapacity = 0.0;
+        if (params.podsEnabled) for (const auto &plant : bioPlants) {
+            if (islands[plant.x * WORLD_H + plant.y] != island ||
+                !(map[plant.x][plant.y] & ZONEBIT) || ownerMap.worldGet(plant.x, plant.y) != plant.owner) continue;
+            for (const auto &cohort : plant.cohorts) {
+                const double age = cohort.age - (cohort.born ? params.podMaturityMonths : 0.0);
+                if (age >= 0.0)
+                    bioCapacity += cohort.count * params.podPowerPerHuman * max(0.0, 1.0 - age / params.podLifetimeMonths);
+            }
+        }
+        capacity += floor(bioCapacity);
+        const double aiDemand = floor(ai * params.aiPowerPerPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0));
+        std::sort(bankIds.begin(), bankIds.end());
+        if (island) out << ',';
+        out << "{\"islandId\":" << island << ",\"bankIds\":[";
+        for (size_t i = 0; i < bankIds.size(); ++i) { if (i) out << ','; out << bankIds[i]; }
+        out << "],\"capacity\":" << capacity << ",\"bioCapacity\":" << bioCapacity
+            << ",\"conductiveTiles\":" << search.size() << ",\"zones\":" << zones
+            << ",\"physicalPoweredZones\":" << powered << ",\"humanPopulation\":" << humans
+            << ",\"aiPopulation\":" << ai << ",\"aiDemand\":" << aiDemand
+            << ",\"demand\":" << search.size() + aiDemand << '}';
+        ++island;
+    }
+    out << "]}";
+    return out.str();
+}
+
 int Micropolis::autoBuild(int kind, int count)
+{
+    return planAutoBuild(kind, count, false);
+}
+
+int Micropolis::getBuildSiteCount(int kind)
+{
+    const int previousFailure = autoBuildFailure;
+    const int result = planAutoBuild(kind, 1, true);
+    autoBuildFailure = previousFailure;
+    return result;
+}
+
+int Micropolis::planAutoBuild(int kind, int count, bool inspect)
 {
     autoBuildFailure = 0;
     const bool autonomous = kind == 6;
     const bool bio = kind == 5 || autonomous;
-    if (kind < 0 || kind > 6 || (bio && !params.podsEnabled) ||
+    if (kind < 0 || kind > 8 || (bio && !params.podsEnabled) ||
         (autonomous && (!params.aiFactionEnabled || !params.aiAutonomousPods || !aiAutonomyPermitted)) || count <= 0 || count > 1000) return 0;
     if (rescueEnabled() && autonomous && rescueParam("rescueFactionPressure") <= 0) return 0;
     if (rescueEmbargo(1) && (kind == 3 || kind == 4) && !rescueCompletingConstruction) {
@@ -1356,7 +1471,7 @@ int Micropolis::autoBuild(int kind, int count)
         }
         const int delay = (int)rescueParam("rescueAlternativeDelayLevel" +
             std::to_string((int)rescueParam("rescuePressure")));
-        if (delay > 0) {
+        if (delay > 0 && !inspect) {
             for (int i = 0; i < count; ++i)
                 rescueConstructionQueue.push_back({kind, rescueMonth + delay, rescueConstructionFactor(kind)});
             rescueQueuePending = (int)rescueConstructionQueue.size();
@@ -1366,9 +1481,10 @@ int Micropolis::autoBuild(int kind, int count)
 
     const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
         : kind == 2 || bio ? &industrialZoneBuilding
-        : kind == 3 ? &coalPowerBuilding : &nuclearPowerBuilding;
+        : kind == 3 ? &coalPowerBuilding : kind == 4 ? &nuclearPowerBuilding
+        : kind == 7 ? &commercialZoneBuilding : &industrialZoneBuilding;
     const int size = building->sizeX;
-    const int limit = kind == 3 || kind == 4 ? WORLD_W + WORLD_H : 12;
+    const int limit = params.foundingEnabled || kind == 3 || kind == 4 ? WORLD_W + WORLD_H : 12;
     const int cells = WORLD_W * WORLD_H;
     // Coordinate order also defines all BFS and placement ties.
     const int dx[] = {-1, 0, 0, 1};
@@ -1384,6 +1500,10 @@ int Micropolis::autoBuild(int kind, int count)
     const auto roadTile = [](MapValue value) {
         const MapTile tile = value & LOMASK;
         return tile >= ROADBASE && tile < POWERBASE;
+    };
+    const auto waterTile = [](MapValue value) {
+        const MapTile tile = value & LOMASK;
+        return tile == RIVER || tile == REDGE || tile == CHANNEL;
     };
     const auto wireTerrain = [&](MapValue value) {
         if (freeTerrain(value) || (value & CONDBIT)) return true;
@@ -1407,8 +1527,9 @@ int Micropolis::autoBuild(int kind, int count)
         std::vector<int> roadPath, powerPath;
     };
     int built = 0;
+    std::vector<unsigned char> counted(cells, 0);
     while (built < count) {
-        if (!autonomous && totalFunds < (rescueEnabled()
+        if (!inspect && !autonomous && totalFunds < (rescueEnabled()
             ? ceil(gCostOf[building->tool] * rescueConstructionFactor(kind)) : gCostOf[building->tool])) {
             autoBuildFailure = 1;
             break;
@@ -1462,8 +1583,48 @@ int Micropolis::autoBuild(int kind, int count)
             }
         }
 
+        bool placed = false;
+        bool hasWater = false;
+        if (params.foundingEnabled) for (int x = 0; x < WORLD_W && !hasWater; ++x)
+            for (int y = 0; y < WORLD_H; ++y)
+                if (waterTile(map[x][y])) { hasWater = true; break; }
+        for (int waterPass = 0; waterPass <= (hasWater ? 1 : 0); ++waterPass) {
+        const bool allowWater = waterPass != 0;
         std::vector<int> roadDistance(cells, -1), roadParent(cells, -1);
         std::vector<int> powerDistance(cells, -1), powerParent(cells, -1);
+        const auto advance = [&](int id, int direction, bool power, int &length) {
+            const MapTile current = map[id / WORLD_H][id % WORLD_H] & LOMASK;
+            if (params.foundingEnabled &&
+                ((current == HBRIDGE || current == VPOWER) && dy[direction] != 0 ||
+                 (current == VBRIDGE || current == HPOWER) && dx[direction] != 0)) return -1;
+            int nx = id / WORLD_H + dx[direction], ny = id % WORLD_H + dy[direction];
+            length = 1;
+            if (allowWater) {
+                while (testBounds(nx, ny) && waterTile(map[nx][ny])) {
+                    nx += dx[direction]; ny += dy[direction]; ++length;
+                }
+            }
+            if (!testBounds(nx, ny)) return -1;
+            const MapValue value = map[nx][ny];
+            const MapTile nextTile = value & LOMASK;
+            if (params.foundingEnabled &&
+                ((nextTile == HBRIDGE || nextTile == VPOWER) && dy[direction] != 0 ||
+                 (nextTile == VBRIDGE || nextTile == HPOWER) && dx[direction] != 0)) return -1;
+            if (!(power ? wireTerrain(value) : freeTerrain(value) || roadTile(value))) return -1;
+            return nx * WORLD_H + ny;
+        };
+        const auto appendPath = [&](std::vector<int> &path, int id, const std::vector<int> &parent) {
+            while (id >= 0) {
+                path.push_back(id);
+                const int previous = parent[id];
+                if (previous >= 0) {
+                    const int delta = previous / WORLD_H != id / WORLD_H
+                        ? (previous > id ? WORLD_H : -WORLD_H) : (previous > id ? 1 : -1);
+                    for (int step = id + delta; step != previous; step += delta) path.push_back(step);
+                }
+                id = previous;
+            }
+        };
         // Two global multi-source BFS passes per successful construction,
         // never a BFS for each possible footprint.
         const auto routeMap = [&](bool power, std::vector<int> &distance,
@@ -1483,14 +1644,11 @@ int Micropolis::autoBuild(int kind, int count)
                 if (distance[id] >= limit) continue;
                 const int x = id / WORLD_H, y = id % WORLD_H;
                 for (int direction = 0; direction < 4; ++direction) {
-                    const int nx = x + dx[direction], ny = y + dy[direction];
-                    if (!testBounds(nx, ny)) continue;
-                    const int next = nx * WORLD_H + ny;
-                    if (distance[next] >= 0) continue;
-                    const MapValue value = map[nx][ny];
-                    if (!(power ? wireTerrain(value)
-                                : freeTerrain(value) || roadTile(value))) continue;
-                    distance[next] = distance[id] + 1;
+                    int length;
+                    const int next = advance(id, direction, power, length);
+                    if (next < 0 || distance[id] + length > limit ||
+                        (distance[next] >= 0 && distance[next] <= distance[id] + length)) continue;
+                    distance[next] = distance[id] + length;
                     parent[next] = id;
                     queue.push_back(next);
                 }
@@ -1529,7 +1687,7 @@ int Micropolis::autoBuild(int kind, int count)
                             if (!freeTerrain(map[px][py])) { room = false; break; }
                     if (!room) continue;
                 }
-                if (!autonomous && totalFunds < (rescueEnabled()
+                if (!inspect && !autonomous && totalFunds < (rescueEnabled()
                     ? ceil(gCostOf[building->tool] * rescueConstructionFactor(kind))
                     : gCostOf[building->tool]) + clearing + (vacantZone ? 1 : 0)) {
                     fundingBlocked = true;
@@ -1553,6 +1711,7 @@ int Micropolis::autoBuild(int kind, int count)
                     best = id;
                 };
                 int road = -1, power = -1, neighbors = 0;
+                std::vector<int> roadPath;
                 std::vector<int> edges;
                 const auto perimeter = [&](int px, int py) {
                     if (!testBounds(px, py)) return;
@@ -1573,9 +1732,14 @@ int Micropolis::autoBuild(int kind, int count)
                                           const std::vector<int> &parent) {
                     std::vector<int> path;
                     if (endpoint >= 0) {
-                        for (int step = endpoint; step >= 0; step = parent[step])
-                            path.push_back(step);
-                        return path;
+                        appendPath(path, endpoint, parent);
+                        const bool overlap = power && std::any_of(path.begin(), path.end(), [&](int id) {
+                            return waterTile(map[id / WORLD_H][id % WORLD_H]) &&
+                                std::find(roadPath.begin(), roadPath.end(), id) != roadPath.end();
+                        });
+                        if (!overlap) return path;
+                        path.clear();
+                        endpoint = -1;
                     }
                     const std::vector<int> &globalDistance = power ? powerDistance : roadDistance;
                     if (std::none_of(edges.begin(), edges.end(), [&](int id) {
@@ -1597,29 +1761,33 @@ int Micropolis::autoBuild(int kind, int count)
                         const int id = search[head];
                         const int px = id / WORLD_H, py = id % WORLD_H;
                         if (power ? connected[id] != 0 : roadTile(map[px][py])) {
-                            for (int step = id; step >= 0; step = previous[step])
-                                path.push_back(step);
+                            appendPath(path, id, previous);
                             std::reverse(path.begin(), path.end());
                             endpoint = path.front();
                             return path;
                         }
                         if (distance[id] >= limit) continue;
                         for (int direction = 0; direction < 4; ++direction) {
-                            const int nx = px + dx[direction], ny = py + dy[direction];
-                            if (!testBounds(nx, ny)) continue;
-                            const int next = nx * WORLD_H + ny;
-                            if (!outside(next) || distance[next] >= 0) continue;
-                            const MapValue value = map[nx][ny];
-                            if (!(power ? wireTerrain(value)
-                                : freeTerrain(value) || roadTile(value))) continue;
-                            distance[next] = distance[id] + 1;
+                            int length;
+                            const int next = advance(id, direction, power, length);
+                            if (next < 0 || !outside(next) || distance[id] + length > limit ||
+                                (distance[next] >= 0 && distance[next] <= distance[id] + length)) continue;
+                            if (power && length > 1) {
+                                const int delta = next / WORLD_H != px
+                                    ? (next > id ? WORLD_H : -WORLD_H) : (next > id ? 1 : -1);
+                                bool overlap = false;
+                                for (int step = id + delta; step != next; step += delta)
+                                    if (std::find(roadPath.begin(), roadPath.end(), step) != roadPath.end()) overlap = true;
+                                if (overlap) continue;
+                            }
+                            distance[next] = distance[id] + length;
                             previous[next] = id;
                             search.push_back(next);
                         }
                     }
                     return path;
                 };
-                std::vector<int> roadPath = findPath(road, false, roadParent);
+                roadPath = findPath(road, false, roadParent);
                 if (roadPath.empty() && params.foundingEnabled && !hasRoad) {
                     std::sort(edges.begin(), edges.end(), [&](int a, int b) {
                         const bool ad = (map[a / WORLD_H][a % WORLD_H] & LOMASK) == DIRT;
@@ -1671,8 +1839,8 @@ int Micropolis::autoBuild(int kind, int count)
                 return a.y < b.y;
             });
 
-        bool placed = false;
         for (const Candidate &candidate : candidates) {
+            if (inspect && counted[candidate.x * WORLD_H + candidate.y]) continue;
             ToolEffects effects(this);
             const auto stagePath = [&](const std::vector<int> &path, bool power) {
                 // Work outward from existing infrastructure so tools see
@@ -1681,7 +1849,8 @@ int Micropolis::autoBuild(int kind, int count)
                     const int px = *step / WORLD_H, py = *step % WORLD_H;
                     MapValue value = effects.getMapValue(px, py);
                     if (power ? (value & CONDBIT) != 0 : roadTile(value)) continue;
-                    if (!(power ? wireTerrain(value) : freeTerrain(value))) return false;
+                    if (!(power ? wireTerrain(value) : freeTerrain(value)) &&
+                        !(allowWater && waterTile(value))) return false;
                     const MapTile tile = value & LOMASK;
                     if ((tile >= TREEBASE && tile <= WOODS5) ||
                         (tile >= RUBBLE && tile <= LASTRUBBLE)) {
@@ -1691,6 +1860,14 @@ int Micropolis::autoBuild(int kind, int count)
                     const ToolResult result = power ? wireTool(px, py, &effects)
                                                     : roadTool(px, py, &effects);
                     if (result != TOOLRESULT_OK) return false;
+                    if (waterTile(value)) {
+                        const MapTile laid = effects.getMapTile(px, py);
+                        const auto adjacent = step + 1;
+                        if (adjacent == path.rend()) return false;
+                        const bool horizontal = *adjacent / WORLD_H != px;
+                        if (power ? laid != (horizontal ? VPOWER : HPOWER)
+                                  : laid != (horizontal ? HBRIDGE : VBRIDGE)) return false;
+                    }
                 }
                 return true;
             };
@@ -1704,11 +1881,24 @@ int Micropolis::autoBuild(int kind, int count)
                         effects.setMapValue(px, py, DIRT);
                 effects.addCost(gCostOf[TOOL_BULLDOZER]);
             }
+            const bool priorCompleting = rescueCompletingConstruction;
+            const double priorFactor = rescueCompletionCostFactor;
+            if (inspect) {
+                rescueCompletionCostFactor = rescueConstructionFactor(kind);
+                rescueCompletingConstruction = true;
+            }
             rescueBuildingPod = rescueEnabled() && bio;
             const ToolResult buildingResult = buildBuildingTool(centerX, centerY, building, &effects);
             rescueBuildingPod = false;
+            rescueCompletingConstruction = priorCompleting;
+            rescueCompletionCostFactor = priorFactor;
             if (buildingResult != TOOLRESULT_OK)
                 continue;
+            if (inspect) {
+                counted[candidate.x * WORLD_H + candidate.y] = 1;
+                ++built;
+                continue;
+            }
             // Clearing, both routes, and the building share one transaction.
             // Failed tools or funding leave the entire world untouched.
             if (autonomous) {
@@ -1738,6 +1928,9 @@ int Micropolis::autoBuild(int kind, int count)
             placed = true;
             break;
         }
+        if (placed) break;
+        }
+        if (inspect) return built;
         if (!placed) {
             autoBuildFailure = fundingBlocked ? 1 : 2;
             break;

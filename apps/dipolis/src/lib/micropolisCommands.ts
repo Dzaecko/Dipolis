@@ -6,6 +6,7 @@ import { cssPixelsPerTile, syncViewportScreenScale } from './input/viewportSync'
 import { PROFILES, RESCUE_PARAMS, isSimulationProfile } from './params/profiles';
 import { advanceMonths } from './city-run/advance';
 import { validateToolCall } from './city-run/tools';
+import { readNetworkReport } from './city-run/network-report';
 
 export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
@@ -314,6 +315,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       { id: 'build.ai-zones', kind: 1, label: 'Build AI residential zones' },
       { id: 'build.farms', kind: 2, label: 'Build farms' },
       { id: 'build.bio-plant', kind: 5, label: 'Build bio plants' },
+      { id: 'build.commercial', kind: 7, label: 'Build commercial zones' },
+      { id: 'build.industrial', kind: 8, label: 'Build industrial zones' },
     ].map(({ id, kind, label }): Command<MicropolisCommandContext> => ({
       id,
       label,
@@ -323,6 +326,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
       enabled: hasMicropolis,
       run: ({ simulator, args }) => {
         const count = args?.count;
+        if ((kind === 7 || kind === 8) && simulator?.micropolis?.getParam('unrestEnabled') !== 1)
+          return { handled: false, message: 'commercial and industrial model tools require profile v2 or later' };
         if (kind === 5 && simulator?.micropolis?.getParam('podsEnabled') !== 1)
           return { handled: false, message: 'bio plants require an enabled pod profile' };
         if (kind === 5 && simulator?.micropolis && podsUnavailable(simulator.micropolis))
@@ -559,6 +564,15 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             automationTaxFund: m.automationTaxFund,
             automatedJobs: m.automatedJobs,
             unrest: m.unrest,
+            ...(m.getParam('unrestEnabled') === 1 ? {
+              ...readNetworkReport(m),
+              humanUnrest: m.unrest, humanUnrestScale: m.humanUnrestScale,
+              unrestUnemploymentContribution: m.unrestUnemploymentContribution,
+              humanUnrestReferencePop: m.getParam('humanUnrestReferencePop'),
+              humanJobsAvailable: m.humanJobsAvailable,
+              employedHumanCount: m.employedHumanCount, unemployedHumanCount: m.unemployedHumanCount,
+              residentialDemand: m.resValve, commercialDemand: m.comValve, industrialDemand: m.indValve
+            } : {}),
             unrestStage: m.unrestStage,
             stage: m.unrestStage,
             sabotageFires: m.sabotageFires,
@@ -585,6 +599,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
             } : {}),
             ...(m.getParam('aiFactionEnabled') === 1 ? {
               aiSatisfaction: m.aiSatisfaction, aiStrikeStage: m.aiStrikeStage, aiStrikeMonths: m.aiStrikeMonths,
+              aiDissatisfaction: Math.max(0, 100 - m.aiSatisfaction),
               newAiZones: m.newAiZones, podsPolicy: m.getParam('podsPolicy'),
               adminPodBreeding: m.getParam('podBreeding'), aiPodBreeding: m.aiPodBreeding,
               podsForbiddenSinceMonth: m.podsForbiddenSinceMonth,

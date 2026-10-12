@@ -80,6 +80,20 @@ describe('engine provenance and founding-rule propagation', () => {
   const beforeCountedAdmissions = 'sha256:b51cf74a1ba69edae9c7bde4ddd6aa729b7d23a6c9396117aa5e3b752456fd2e';
   expect(engineCompatibility({ engineId: beforeCountedAdmissions, rescuePressure: 0 }))
    .toMatchObject({ status: 'current', playable: true });
+  for (const profile of ['v2-unruhe', 'v3-pods', 'v4-fraktion'] as const)
+   expect(engineCompatibility({ engineId: beforeCountedAdmissions, profile, rescuePressure: 0 }))
+    .toMatchObject({ status: 'legacy', playable: false });
+  expect(engineCompatibility({ engineId: beforeCountedAdmissions, profile: 'classic', startMap: 'natural' }))
+   .toMatchObject({ status: 'legacy', playable: false });
+  const beforeHumanCorrection = 'sha256:74de46aa291ffc7154ab0dd06eda4fb761b10da26eb6c5bd4633d057e37a82ce';
+  for (const profile of ['classic', 'koexistenz'])
+   expect(engineCompatibility({ engineId: beforeHumanCorrection, profile, startMap: 'haight' }))
+    .toMatchObject({ status: 'current', playable: true });
+  for (const profile of ['v2-unruhe', 'v3-pods', 'v4-fraktion'])
+   expect(engineCompatibility({ engineId: beforeHumanCorrection, profile, startMap: 'haight' }))
+    .toMatchObject({ status: 'legacy', playable: false });
+  expect(engineCompatibility({ engineId: beforeHumanCorrection, profile: 'classic', startMap: 'natural' }))
+   .toMatchObject({ status: 'legacy', playable: false });
   for (const rescuePressure of [1, 2, 3] as const)
    expect(engineCompatibility({ engineId: beforeCountedAdmissions, rescuePressure }))
     .toMatchObject({ status: 'legacy', playable: false });

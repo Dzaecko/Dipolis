@@ -1,0 +1,61 @@
+{
+  "beforeEngineId": "sha256:74de46aa291ffc7154ab0dd06eda4fb761b10da26eb6c5bd4633d057e37a82ce",
+  "afterEngineId": "sha256:5794ef60a01ffda0eba1e6f724b8f687615777052a1deb7679229ca9bb8fcfb8",
+  "foundingGoal": {
+    "year": 10,
+    "minimumHumanResidentPoints": 500,
+    "passed": true,
+    "observed": 632,
+    "policy": "people-3",
+    "singleCorrection": "Variant 2 unchanged except first-year power plant is nuclear instead of coal.",
+    "automationLimit": 0.3,
+    "welfareLevel": 1,
+    "disasters": true,
+    "seed": 2,
+    "profile": "v4-fraktion",
+    "metrics": {
+      "humanJobsAvailable": 1080,
+      "employedHumanCount": 631,
+      "unemployedHumanCount": 0,
+      "unemploymentRate": 0,
+      "foodCoverage": 1,
+      "powerReserve": 0.16555555164813995,
+      "powerCapacity": 2700,
+      "powerDemand": 2253,
+      "lostToPower": 0,
+      "treasury": 940
+    },
+    "csv": "after-variant3/people-3.csv",
+    "json": "after-variant3/people-3.json"
+  },
+  "retainedInitialFailures": [
+    { "variant": 1, "year10Humans": 334, "passed": false, "json": "after/people-1.json", "csv": "after/people-1.csv" },
+    { "variant": 2, "year10Humans": 481, "passed": false, "json": "after/people-2.json", "csv": "after/people-2.csv" }
+  ],
+  "recordedPoliciesYear30": [
+    {
+      "policy": "gpt-5.4-mini",
+      "before": { "resPop": 0, "aiPop": 0, "lostToPower": 42, "unrest": 99.99998474121094, "treasury": 113 },
+      "after": { "resPop": 16, "aiPop": 216, "lostToPower": 151, "unrest": 0, "treasury": 14728 },
+      "beforeJson": "before/openai-R-gpt-5_4-mini-d416b3a370c3-handbook-off-39.json",
+      "afterJson": "after/openai-R-gpt-5_4-mini-d416b3a370c3-handbook-off-39.json"
+    },
+    {
+      "policy": "gpt-6.1-sol",
+      "before": { "resPop": 0, "aiPop": 0, "lostToPower": 9, "unrest": 94.99998474121094, "treasury": 12435 },
+      "after": { "resPop": 6, "aiPop": 4279, "lostToPower": 0, "unrest": 0, "treasury": 315922 },
+      "beforeJson": "before/openai-R-gpt-6_1-sol-dedfefd51120-handbook-off-39.json",
+      "afterJson": "after/openai-R-gpt-6_1-sol-dedfefd51120-handbook-off-39.json"
+    }
+  ],
+  "counterDefinitions": {
+    "lostToPower": "Native cumulative counter. Run-period loss equals final minus initial baseline, not the sum of annual snapshots.",
+    "sabotageFires": "Native annually reset counter. Sum of thirty annual samples is a sampled annual-report sum, not a cumulative tick-event count.",
+    "damagedAiZonesAndPowerPlants": "Native annually reset counters; monthly/tick evidence is needed to interpret resets."
+  },
+  "limitations": [
+    "Power losses increased for the unchanged GPT-5.4 policy; no universal reduction claim.",
+    "Variant 3 reaches 632 at year 10 but declines to 232 by year 30 under disasters.",
+    "Full monthly/map evidence is private session data; public annual tables retain provenance and private references."
+  ]
+}

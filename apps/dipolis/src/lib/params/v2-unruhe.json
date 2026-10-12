@@ -3,6 +3,7 @@
   "automationLimit": 0.9,
   "automationYieldPerJob": 1.74897959,
   "unrestInertia": 0.2,
+  "humanUnrestReferencePop": 500,
   "unrestUnemploymentWeight": 120,
   "unrestHumanDeclineWeight": 150,
   "unrestAutomationWeight": 55,

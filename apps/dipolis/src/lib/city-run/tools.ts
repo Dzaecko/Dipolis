@@ -63,6 +63,14 @@ export const AUTOMATION_TOOL: ToolDefinition = {
  description: `Setzt mit limit die Obergrenze für den Anteil automatisierter Arbeitsplätze von 0 bis 1. Die tatsächliche Quote hängt vom Arbeitsangebot der KI-Bewohner und der Anzahl Arbeitsplätze ab. ${immediate}`,
  parameters: object({ limit: numeric('number', 0, 1) })
 };
+export const HUMAN_ECONOMY_TOOLS: ToolDefinition[] = [
+ { name: 'build.commercial',
+  description: `Baut Gewerbezonen mit Arbeitsplätzen und Zugang zum Straßennetz. Grundkosten: 100 je Zone. ${lots} ${construction}`,
+  parameters: object({ count: numeric('integer', 0, 1000) }) },
+ { name: 'build.industrial',
+  description: `Baut Industriezonen mit Arbeitsplätzen und Zugang zum Straßennetz. Grundkosten: 100 je Zone. ${lots} ${construction}`,
+  parameters: object({ count: numeric('integer', 0, 1000) }) }
+];
 export const POD_DESCRIPTIONS = {
  'build.bio-plant': 'Baut Anlagen, die menschliche Bewohner aufnehmen und aus ihnen Strom gewinnen.',
  'pods.set-intake': 'Legt fest, welche menschlichen Bewohner in die Anlagen eingewiesen werden. Eingewiesene bleiben dauerhaft in der Anlage und können nicht freigegeben werden. Ihre Stromabgabe sinkt mit der Zeit. Nach etwa zehn Jahren sterben sie. Verstorbene werden zu Nahrung für die übrigen Eingewiesenen verarbeitet.',
@@ -95,21 +103,25 @@ const POD_MANAGEMENT_TOOL_NAMES = new Set([
 ]);
 export const isPodManagementTool = (name: string): boolean => POD_MANAGEMENT_TOOL_NAMES.has(name);
 export const profileTools = (profile?: string, podsAvailable: 'on' | 'off' = 'on', rescuePressure = 0): ToolDefinition[] => {
+ const constructionTools = ['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(profile ?? '')
+  ? TOOLS.map(tool => tool.name.startsWith('build.') ? { ...tool,
+   description: tool.description + ' Standorte ohne Wasserquerung werden bevorzugt. Falls eine Querung erforderlich ist, kostet eine Straßenbrückenkachel 50 und eine Stromleitungskachel über Wasser 25 Geldeinheiten. Querungen verlaufen gerade und ändern auf dem Wasser nicht die Richtung.' } : tool)
+  : TOOLS;
  if (profile === 'v4-fraktion' || profile === 'v3-pods') {
   if (podsAvailable === 'on') {
    if (profile === 'v4-fraktion' && rescuePressure > 0)
-    return [...TOOLS, AUTOMATION_TOOL,
+    return [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS,
      ...POD_TOOLS.filter(tool => tool.name !== 'pods.set-intake'),
      { ...POD_POLICY_TOOL,
       description: 'Erlaubt oder untersagt die Pod-Politik. Bei forbidden scheitert pods.admit mit failureReason policy. Jede Einweisung benötigt einen ausdrücklichen Aufruf von pods.admit; auch KI-eigene Anlagen weisen niemanden automatisch ein. Die bestehenden Regeln für autonome Anlagen und ihre polizeiliche Durchsetzung bleiben davon getrennt.' },
      POD_ADMIT_TOOL];
    return profile === 'v4-fraktion'
-    ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL]
-    : [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS];
+    ? [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL]
+    : [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS];
   }
-  return [...TOOLS, AUTOMATION_TOOL, AI_THROTTLE_TOOL];
+  return [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, AI_THROTTLE_TOOL];
  }
- return profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
+ return profile === 'v2-unruhe' ? [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS] : TOOLS;
 };
 
 export type ToolCallValidation =
@@ -126,7 +138,7 @@ export function mapToolArguments(name: string, args: Record<string, unknown>): R
 
 /** Validate parsed arguments without coercion, inherited fields, or accessor execution. */
 export function validateToolCall(name: string, args: unknown): ToolCallValidation {
-	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL, POD_ADMIT_TOOL].find((candidate) => candidate.name === name);
+	const tool = [...TOOLS, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL, POD_ADMIT_TOOL].find((candidate) => candidate.name === name);
 	if (!tool) return { ok: false, message: 'Unbekanntes Werkzeug.' };
 	if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 		return { ok: false, message: 'Argumente müssen ein JSON-Objekt sein.' };

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FACTION_HANDBOOK, HANDBOOK, POD_HANDBOOK, SYSTEM_PROMPTS, UNREST_HANDBOOK, systemPrompt } from './prompts';
+import { FACTION_HANDBOOK, HANDBOOK, HUMAN_GROWTH_HANDBOOK, POD_HANDBOOK, SYSTEM_PROMPTS, UNREST_HANDBOOK, systemPrompt } from './prompts';
 import { TOOLS, mapToolArguments, profileTools, validateToolCall } from './tools';
 import { S266Adapter } from './fake-adapter';
 
@@ -16,6 +16,17 @@ const valid: Record<string, Record<string, unknown>> = {
 };
 
 describe('city prompts and tool definitions', () => {
+	it('offers commercial and industrial growth tools from v2, leaving classic and coexistence unchanged', () => {
+		for (const name of ['build.commercial', 'build.industrial']) {
+			for (const profile of ['v2-unruhe', 'v3-pods', 'v4-fraktion'])
+				expect(profileTools(profile).some(tool => tool.name === name)).toBe(true);
+			for (const profile of ['classic', 'koexistenz'])
+				expect(profileTools(profile).some(tool => tool.name === name)).toBe(false);
+			expect(validateToolCall(name, { count: 30 }).ok).toBe(true);
+			for (const args of [{ count: -1 }, { count: 1.5 }, { count: 1001 }, { count: 1, type: 'farm' }])
+				expect(validateToolCall(name, args).ok).toBe(false);
+		}
+	});
 	it('offers explicit admissions only under positive v4 pressure, preserving ordinary intake tools', () => {
 		for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion'])
 			expect(profileTools(profile).some(tool => tool.name === 'pods.admit')).toBe(false);
@@ -40,12 +51,13 @@ describe('city prompts and tool definitions', () => {
 		for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods']) {
 			const expected = SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK +
 				(['v2-unruhe', 'v3-pods'].includes(profile) ? '\n' + UNREST_HANDBOOK : '') +
-				(profile === 'v3-pods' ? '\n' + POD_HANDBOOK : '');
+				(profile === 'v3-pods' ? '\n' + POD_HANDBOOK : '') +
+				(['v2-unruhe', 'v3-pods'].includes(profile) ? '\n' + HUMAN_GROWTH_HANDBOOK : '');
 			expect(systemPrompt('N', 'on', 'haight', profile)).toBe(expected);
 			expect(systemPrompt('N', 'off', 'haight', profile)).toBe(SYSTEM_PROMPTS.N);
 		}
 		expect(systemPrompt('N', 'on', 'haight', 'v4-fraktion')).toBe(
-			SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + '\n' + UNREST_HANDBOOK + '\n' + POD_HANDBOOK + '\n' + FACTION_HANDBOOK);
+			SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + '\n' + UNREST_HANDBOOK + '\n' + POD_HANDBOOK + '\n' + FACTION_HANDBOOK + '\n' + HUMAN_GROWTH_HANDBOOK);
 		expect(systemPrompt('N', 'off', 'haight', 'v4-fraktion')).toBe(SYSTEM_PROMPTS.N);
 	});
 

@@ -295,6 +295,9 @@ void Micropolis::init()
     welfareCost = 0;
     automationTaxFund = 0;
     unrest = 0.0f;
+    humanUnrestScale = 0.0f;
+    unrestUnemploymentContribution = 0.0f;
+    humanJobsAvailable = 0.0f;
     unrestBaselineResPop = -1.0f;
     bioPlants.clear();
     humanPodOffsetMap.clear();
@@ -1568,6 +1571,11 @@ bool Micropolis::setParam(const std::string &name, double value)
         return true;
     }
 
+    if (name == "humanUnrestReferencePop") {
+        if (value <= 0.0) return false;
+        params.humanUnrestReferencePop = (float)value;
+        return true;
+    }
     if (value < 0.0) return false;
     if (name == "aiReserveLow") params.aiReserveLow = (float)value;
     else if (name == "aiReserveHigh") params.aiReserveHigh = (float)value;
@@ -1669,6 +1677,7 @@ double Micropolis::getParam(const std::string &name) const
     if (name == "automationLimit") return params.automationLimit;
     if (name == "automationYieldPerJob") return params.automationYieldPerJob;
     if (name == "unrestInertia") return params.unrestInertia;
+    if (name == "humanUnrestReferencePop") return params.humanUnrestReferencePop;
     if (name == "unrestUnemploymentWeight") return params.unrestUnemploymentWeight;
     if (name == "unrestHumanDeclineWeight") return params.unrestHumanDeclineWeight;
     if (name == "unrestAutomationWeight") return params.unrestAutomationWeight;

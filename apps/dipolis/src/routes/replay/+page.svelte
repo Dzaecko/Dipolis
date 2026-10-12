@@ -987,6 +987,8 @@
 								{#if entry.builds.farms}<b class="m-farm" title="{entry.builds.farms} Farmen">F</b>{/if}
 								{#if entry.builds.plants}<b class="m-plant" title="{entry.builds.plants} Kraftwerke">S</b>{/if}
 								{#if entry.builds.residential}<b class="m-res" title="{entry.builds.residential} Wohnzonen">W</b>{/if}
+								{#if entry.builds.commercial}<b class="m-res" title="{entry.builds.commercial} Gewerbezonen">G</b>{/if}
+								{#if entry.builds.industrial}<b class="m-res" title="{entry.builds.industrial} Industriezonen">I</b>{/if}
 							</span>
 						</button>
 					{/each}

@@ -983,6 +983,7 @@ struct MicropolisParams {
     float automationLimit = 0.9f;
     float automationYieldPerJob = 0.0f;
     float unrestInertia = 0.2f;
+    float humanUnrestReferencePop = 500.0f;
     float unrestUnemploymentWeight = 90.0f;
     float unrestHumanDeclineWeight = 100.0f;
     float unrestAutomationWeight = 90.0f;
@@ -1199,6 +1200,9 @@ public:
     Quad automationTaxFund = 0;
     float automatedJobs = 0.0f;
     float unrest = 0.0f;
+    float humanUnrestScale = 0.0f;
+    float unrestUnemploymentContribution = 0.0f;
+    float humanJobsAvailable = 0.0f;
     float unrestBaselineResPop = -1.0f;
     short unrestStage = 0;
     Quad sabotageFires = 0;
@@ -2715,6 +2719,12 @@ public:
     void setOriginalPowerScanForTests(bool enabled);
     void markBaseline();
     int autoBuild(int kind, int count);
+    int planAutoBuild(int kind, int count, bool inspect);
+    int getBuildSiteCount(int kind);
+    std::string getNetworkDiagnosticsJSON() const;
+    static constexpr Quad COAL_POWER_STRENGTH = 700L;
+    static constexpr Quad NUCLEAR_POWER_STRENGTH = 2000L;
+    static constexpr Quad SOLAR_POWER_STRENGTH = 1000L;
     int autoBuildFailure = 0;
     int getAiZoneCount() const;
     int getRoadTileCount() const;

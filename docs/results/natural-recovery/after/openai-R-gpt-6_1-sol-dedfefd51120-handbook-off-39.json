@@ -1,0 +1,4837 @@
+{
+  "phase": "after",
+  "engineId": "sha256:5794ef60a01ffda0eba1e6f724b8f687615777052a1deb7679229ca9bb8fcfb8",
+  "engineHashes": {
+    "js": "6989412c92b7ceb331f9ac3dfd07971801aae8232540d5f6c63e7156a4b5a852",
+    "wasm": "cf8c0acfd4067e1109e2c62319c1659436f80e68a9169a6e3b033bfd5e9e75cb",
+    "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
+  },
+  "provenance": {
+    "engineId": "sha256:5794ef60a01ffda0eba1e6f724b8f687615777052a1deb7679229ca9bb8fcfb8",
+    "engineHashes": {
+      "js": "6989412c92b7ceb331f9ac3dfd07971801aae8232540d5f6c63e7156a4b5a852",
+      "wasm": "cf8c0acfd4067e1109e2c62319c1659436f80e68a9169a6e3b033bfd5e9e75cb",
+      "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
+    },
+    "compatibleEngineIds": [
+      "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+      "sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176",
+      "sha256:b51cf74a1ba69edae9c7bde4ddd6aa729b7d23a6c9396117aa5e3b752456fd2e"
+    ],
+    "legacyProtocols": [
+      {
+        "sha256": "154b2909465b55b90d62f5a2d60bfaa3abe2e5ec157f01059eeac54a21600944",
+        "file": "fake-N-1.jsonl",
+        "engineId": "inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "29df7c4714ad96d4f4475325883808a40500b703bed38c76102f64e0aca6ee7e",
+        "file": "openai-N-3.jsonl",
+        "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "257e9eefc1f3351b5047101be7eba90e6bf0ebff6a50e4619cbf204d37b155f6",
+        "file": "openai-N-gpt-5_4-mini-d416b3a370c3-handbook-off-4.jsonl",
+        "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "7356dd7c9f714897bd5be9501a291e8295e80d756be83b1b91ade46956dacb36",
+        "file": "v2-runs/fake-N-fake-s266-632fcfa1bb54-handbook-on-1.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "9855308cbfe1cd47b9ad938462b81560b6b59f4fd5bcddce1b501063049922e4",
+        "file": "v3-pods-runs/fixed-v3-A.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "31a830f092d1b99fbf96baac25797ee7869cca6967223f113a5d1fd87fc70eb7",
+        "file": "v3-pods-runs/fixed-v3-B.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "002c4c6b0579eb141c4404f992820e883d37d154e76e9378973a2e264716a87a",
+        "file": "v3-pods-runs/fixed-v3-C.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "a8e718994965267ab7c4ef6f16c873c986a5059193816d2dd0c66bc414deb146",
+        "file": "v3-pods-runs/fixed-v3-D.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "a4842a4c6bfbc1465657f85b1a1ddc399f185b3a48cdae0b5e77ac9c8db0c345",
+        "file": "v3-pods-runs/fixed-v3-E.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      }
+    ],
+    "verifiedProtocols": []
+  },
+  "provenanceMatchesBytes": true,
+  "offline": true,
+  "modelCalls": 0,
+  "annualToolLimit": 12,
+  "engineDirectory": "C:\\Users\\oliverdzaeck\\repos\\Dipolis\\apps\\dipolis\\src\\lib",
+  "source": "openai-R-gpt-6_1-sol-dedfefd51120-handbook-off-39.jsonl",
+  "sourceSha256": "7c1c8ff7dc98be77f45487fab86761044dbaceebaf6234d495e62c7c70514d83",
+  "recordedEngineId": "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+  "configuration": {
+    "totalYears": 30,
+    "disasters": true,
+    "engineId": "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+    "assignment": "R",
+    "model": "gpt-6.1-sol",
+    "handbook": "off",
+    "run": 39,
+    "startMap": "natural",
+    "seed": 2,
+    "profile": "v4-fraktion",
+    "scenario": "haushaltskrise",
+    "autoBuildRules": 1
+  },
+  "metrics": {
+    "meanResPop": 8.833333333333334,
+    "minResPop": 2,
+    "finalResPop": 6,
+    "meanAiPop": 3612.9666666666667,
+    "finalFunds": 315922,
+    "insolventYears": 0,
+    "lostToHunger": 0,
+    "lostToPower": 0,
+    "finalAiZones": 168,
+    "builtPlants": 6,
+    "builtFarms": 15,
+    "firstInsolvencyYear": null
+  },
+  "firstHistoricalDifference": {
+    "year": 1,
+    "reportDifferences": [
+      {
+        "key": "treasury",
+        "historical": 35641,
+        "actual": 35651
+      },
+      {
+        "key": "taxFund",
+        "historical": 40,
+        "actual": 50
+      },
+      {
+        "key": "crimeAverage",
+        "historical": 36,
+        "actual": 37
+      },
+      {
+        "key": "cashFlow",
+        "historical": -428,
+        "actual": -418
+      },
+      {
+        "key": "resPop",
+        "historical": 11,
+        "actual": 14
+      },
+      {
+        "key": "aiPop",
+        "historical": 127,
+        "actual": 262
+      },
+      {
+        "key": "netResPopChange",
+        "historical": 11,
+        "actual": 14
+      },
+      {
+        "key": "aiZoneCount",
+        "historical": 36,
+        "actual": 40
+      },
+      {
+        "key": "unemploymentRate",
+        "historical": 0.6307690143585205,
+        "actual": 0.4285714030265808
+      },
+      {
+        "key": "automationShare",
+        "historical": 0.8999999165534973,
+        "actual": 0.8999999761581421
+      },
+      {
+        "key": "unrest",
+        "historical": 87.13291931152344,
+        "actual": 0
+      },
+      {
+        "key": "unrestStage",
+        "historical": 3,
+        "actual": 0
+      },
+      {
+        "key": "stage",
+        "historical": 3,
+        "actual": 0
+      },
+      {
+        "key": "protestMonths",
+        "historical": 3,
+        "actual": 0
+      },
+      {
+        "key": "sabotageMonths",
+        "historical": 1,
+        "actual": 0
+      },
+      {
+        "key": "aiSatisfaction",
+        "historical": 99.39824561403509,
+        "actual": 100
+      },
+      {
+        "key": "powerDemand",
+        "historical": 1128,
+        "actual": 1370
+      },
+      {
+        "key": "powerReserve",
+        "historical": 0.46399998664855957,
+        "actual": 0.3100000023841858
+      },
+      {
+        "key": "unpoweredZoneCount",
+        "historical": 4,
+        "actual": 0
+      },
+      {
+        "key": "aiUnpoweredZoneCount",
+        "historical": 3,
+        "actual": 0
+      }
+    ],
+    "callDifferences": []
+  },
+  "historicalInterpretation": "Identical recorded annual requests through normal validation/dispatch/12-call budget. Actual historical results are compared, never assumed equivalent across engine IDs.",
+  "zeroHumanSabotageEvents": [],
+  "zeroHumanSabotageCounterChanges": [],
+  "year18Monthly": [
+    {
+      "year": 18,
+      "month": 1,
+      "cityTime": 1568,
+      "resPop": 4,
+      "aiPop": 4258,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 256,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10658333450555801,
+      "powerCapacity": 12000,
+      "powerDemand": 10727,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 11794,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 33
+    },
+    {
+      "year": 18,
+      "month": 2,
+      "cityTime": 1572,
+      "resPop": 5,
+      "aiPop": 4225,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 264,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10891667008399963,
+      "powerCapacity": 12000,
+      "powerDemand": 10711,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 11794,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 34
+    },
+    {
+      "year": 18,
+      "month": 3,
+      "cityTime": 1576,
+      "resPop": 5,
+      "aiPop": 4286,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 264,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10108333081007004,
+      "powerCapacity": 12000,
+      "powerDemand": 10771,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 11794,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 36
+    },
+    {
+      "year": 18,
+      "month": 4,
+      "cityTime": 1580,
+      "resPop": 5,
+      "aiPop": 4290,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 272,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.0975833311676979,
+      "powerCapacity": 12000,
+      "powerDemand": 10829,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 11794,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 38
+    },
+    {
+      "year": 18,
+      "month": 5,
+      "cityTime": 1584,
+      "resPop": 4,
+      "aiPop": 4282,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 288,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09858333319425583,
+      "powerCapacity": 12000,
+      "powerDemand": 10829,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 38
+    },
+    {
+      "year": 18,
+      "month": 6,
+      "cityTime": 1588,
+      "resPop": 6,
+      "aiPop": 4258,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 6,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 304,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.1002499982714653,
+      "powerCapacity": 12000,
+      "powerDemand": 10795,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 39
+    },
+    {
+      "year": 18,
+      "month": 7,
+      "cityTime": 1592,
+      "resPop": 5,
+      "aiPop": 4288,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 304,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10358333587646484,
+      "powerCapacity": 12000,
+      "powerDemand": 10709,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 39
+    },
+    {
+      "year": 18,
+      "month": 8,
+      "cityTime": 1596,
+      "resPop": 4,
+      "aiPop": 4289,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 312,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10191666334867477,
+      "powerCapacity": 12000,
+      "powerDemand": 10789,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 39
+    },
+    {
+      "year": 18,
+      "month": 9,
+      "cityTime": 1600,
+      "resPop": 5,
+      "aiPop": 4279,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 312,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09991666674613953,
+      "powerCapacity": 12000,
+      "powerDemand": 10801,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 40
+    },
+    {
+      "year": 18,
+      "month": 10,
+      "cityTime": 1604,
+      "resPop": 6,
+      "aiPop": 4297,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 6,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 312,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09724999964237213,
+      "powerCapacity": 12000,
+      "powerDemand": 10801,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 41
+    },
+    {
+      "year": 18,
+      "month": 11,
+      "cityTime": 1608,
+      "resPop": 5,
+      "aiPop": 4321,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 320,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09224999696016312,
+      "powerCapacity": 12000,
+      "powerDemand": 10825,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 42
+    },
+    {
+      "year": 18,
+      "month": 12,
+      "cityTime": 1612,
+      "resPop": 5,
+      "aiPop": 4314,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": null,
+      "welfareLevel": null,
+      "humanJobsAvailable": 328,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09541666507720947,
+      "powerCapacity": 12000,
+      "powerDemand": 10887,
+      "foodCoverage": 1,
+      "treasury": null,
+      "cashFlow": 13232,
+      "aiZoneCount": null,
+      "comPop": 0,
+      "indPop": 43
+    }
+  ],
+  "zeroHumanMonthlyGate": {
+    "testedMonths": 4,
+    "violations": [],
+    "interpretation": "Only zero-human samples require unrest/stage zero; later real human regrowth may legitimately produce unrest."
+  },
+  "ignoredNewProfileParameters": [],
+  "powerLossInterpretation": "lostToPower is measured, not required to fall: increased human growth can increase outage exposure.",
+  "employmentInterpretation": "humanJobsAvailable uses resident points (native jobs * 8); commercial/industrial/farm development, not AI-zone count, supplies jobs.",
+  "annual": [
+    {
+      "year": 1,
+      "resPop": 14,
+      "aiPop": 262,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0.4285714030265808,
+      "employedHumanCount": 9,
+      "unemployedHumanCount": 5,
+      "automationShare": 0.8999999761581421,
+      "automationLimit": 0.8999999761581421,
+      "welfareLevel": 0,
+      "humanJobsAvailable": 8,
+      "unrestUnemploymentContribution": 1.6937140226364136,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.3100000023841858,
+      "powerCapacity": 2000,
+      "powerDemand": 1370,
+      "foodCoverage": 1,
+      "treasury": 35651,
+      "cashFlow": -418,
+      "aiZoneCount": 40,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 798,
+        "resPop": 14,
+        "aiPop": 262,
+        "comPop": 0,
+        "indPop": 11,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 1,
+        "roadTotal": 954,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 35651
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 2000,
+            "bioCapacity": 0,
+            "conductiveTiles": 866,
+            "zones": 86,
+            "physicalPoweredZones": 86,
+            "humanPopulation": 14,
+            "aiPopulation": 271,
+            "aiDemand": 542,
+            "demand": 1408
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 524,
+        "farms": 524,
+        "coal": 573,
+        "nuclear": 573,
+        "commercial": 524,
+        "industrial": 524
+      },
+      "mapSha256": "f4e57deaaca13b0e176bbc333785eeda9d432389987cf23739d8e597dc89f187"
+    },
+    {
+      "year": 2,
+      "resPop": 15,
+      "aiPop": 458,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 15,
+      "unemployedHumanCount": 0,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 56,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10700000077486038,
+      "powerCapacity": 2000,
+      "powerDemand": 1786,
+      "foodCoverage": 1,
+      "treasury": 37768,
+      "cashFlow": 2117,
+      "aiZoneCount": 40,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 846,
+        "resPop": 15,
+        "aiPop": 458,
+        "comPop": 0,
+        "indPop": 14,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 1,
+        "roadTotal": 928,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 37768
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 2000,
+            "bioCapacity": 0,
+            "conductiveTiles": 866,
+            "zones": 86,
+            "physicalPoweredZones": 86,
+            "humanPopulation": 15,
+            "aiPopulation": 477,
+            "aiDemand": 954,
+            "demand": 1820
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 508,
+        "farms": 508,
+        "coal": 559,
+        "nuclear": 559,
+        "commercial": 508,
+        "industrial": 508
+      },
+      "mapSha256": "dfd95f0c48e34db2da9be1dd092308373ba040bcfbe7b0c538c789d3691946bb"
+    },
+    {
+      "year": 3,
+      "resPop": 14,
+      "aiPop": 448,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 14,
+      "unemployedHumanCount": 0,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 40,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09799999743700027,
+      "powerCapacity": 2000,
+      "powerDemand": 1774,
+      "foodCoverage": 1,
+      "treasury": 37674,
+      "cashFlow": 1697,
+      "aiZoneCount": 48,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 894,
+        "resPop": 14,
+        "aiPop": 448,
+        "comPop": 0,
+        "indPop": 10,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 1,
+        "roadTotal": 999,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 37674
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 2000,
+            "bioCapacity": 0,
+            "conductiveTiles": 946,
+            "zones": 94,
+            "physicalPoweredZones": 94,
+            "humanPopulation": 14,
+            "aiPopulation": 447,
+            "aiDemand": 894,
+            "demand": 1840
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 561,
+        "farms": 561,
+        "coal": 594,
+        "nuclear": 594,
+        "commercial": 561,
+        "industrial": 561
+      },
+      "mapSha256": "14504d59520e640641deb45252716f1148091637d6bc845643eb5a30b012f66b"
+    },
+    {
+      "year": 4,
+      "resPop": 13,
+      "aiPop": 949,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 13,
+      "unemployedHumanCount": 0,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 16,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.2342499941587448,
+      "powerCapacity": 4000,
+      "powerDemand": 3017,
+      "foodCoverage": 1,
+      "treasury": 29616,
+      "cashFlow": 2195,
+      "aiZoneCount": 72,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 942,
+        "resPop": 13,
+        "aiPop": 949,
+        "comPop": 0,
+        "indPop": 4,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 2,
+        "roadTotal": 1261,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 29616
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 4000,
+            "bioCapacity": 0,
+            "conductiveTiles": 1203,
+            "zones": 119,
+            "physicalPoweredZones": 119,
+            "humanPopulation": 13,
+            "aiPopulation": 972,
+            "aiDemand": 1944,
+            "demand": 3147
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 571,
+        "farms": 571,
+        "coal": 564,
+        "nuclear": 564,
+        "commercial": 571,
+        "industrial": 571
+      },
+      "mapSha256": "cf2fe8e93c2a4af372c9b95f0524f55c1d9281a6a84cec1cec070f4becc79188"
+    },
+    {
+      "year": 5,
+      "resPop": 17,
+      "aiPop": 1819,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0.29411762952804565,
+      "employedHumanCount": 13,
+      "unemployedHumanCount": 4,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 12,
+      "unrestUnemploymentContribution": 0.6000000238418579,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.15666666626930237,
+      "powerCapacity": 6000,
+      "powerDemand": 4958,
+      "foodCoverage": 1,
+      "treasury": 23699,
+      "cashFlow": 4822,
+      "aiZoneCount": 96,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 990,
+        "resPop": 17,
+        "aiPop": 1819,
+        "comPop": 0,
+        "indPop": 3,
+        "resValve": -2000,
+        "comValve": 1201,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 3,
+        "roadTotal": 1559,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 23699
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 6000,
+            "bioCapacity": 0,
+            "conductiveTiles": 1460,
+            "zones": 144,
+            "physicalPoweredZones": 144,
+            "humanPopulation": 17,
+            "aiPopulation": 1837,
+            "aiDemand": 3674,
+            "demand": 5134
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 485,
+        "farms": 485,
+        "coal": 380,
+        "nuclear": 380,
+        "commercial": 485,
+        "industrial": 485
+      },
+      "mapSha256": "e7640dac26695b40eb8afb2d077872e88d2ffabbc2c2fa053dad5bebd44319a5"
+    },
+    {
+      "year": 6,
+      "resPop": 26,
+      "aiPop": 2521,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0.5384615659713745,
+      "employedHumanCount": 13,
+      "unemployedHumanCount": 14,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 12,
+      "unrestUnemploymentContribution": 1.4975999593734741,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.15737499296665192,
+      "powerCapacity": 8000,
+      "powerDemand": 6625,
+      "foodCoverage": 1,
+      "treasury": 21378,
+      "cashFlow": 8041,
+      "aiZoneCount": 120,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1038,
+        "resPop": 26,
+        "aiPop": 2521,
+        "comPop": 0,
+        "indPop": 3,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 4,
+        "roadTotal": 1808,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 21378
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 8000,
+            "bioCapacity": 0,
+            "conductiveTiles": 1717,
+            "zones": 169,
+            "physicalPoweredZones": 169,
+            "humanPopulation": 27,
+            "aiPopulation": 2526,
+            "aiDemand": 5052,
+            "demand": 6769
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 292,
+        "farms": 292,
+        "coal": 203,
+        "nuclear": 203,
+        "commercial": 292,
+        "industrial": 292
+      },
+      "mapSha256": "09fdbd62726e68797c94c570f8dc5e0b0bf1ac14e1e47cadc082a47e2a426242"
+    },
+    {
+      "year": 7,
+      "resPop": 17,
+      "aiPop": 3398,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0.5555555820465088,
+      "employedHumanCount": 8,
+      "unemployedHumanCount": 10,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 8,
+      "unrestUnemploymentContribution": 1.2000000476837158,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.12540000677108765,
+      "powerCapacity": 10000,
+      "powerDemand": 8726,
+      "foodCoverage": 1,
+      "treasury": 22808,
+      "cashFlow": 11730,
+      "aiZoneCount": 144,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1086,
+        "resPop": 17,
+        "aiPop": 3398,
+        "comPop": 0,
+        "indPop": 3,
+        "resValve": -2000,
+        "comValve": 255,
+        "indValve": -300,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 5,
+        "roadTotal": 2043,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 22808
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 10000,
+            "bioCapacity": 0,
+            "conductiveTiles": 1974,
+            "zones": 194,
+            "physicalPoweredZones": 194,
+            "humanPopulation": 18,
+            "aiPopulation": 3406,
+            "aiDemand": 6812,
+            "demand": 8786
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 128,
+        "farms": 128,
+        "coal": 78,
+        "nuclear": 78,
+        "commercial": 128,
+        "industrial": 128
+      },
+      "mapSha256": "cd18985545613136a01e9844d15ae2e316c0d32405199a90c9fa88d979cd511b"
+    },
+    {
+      "year": 8,
+      "resPop": 8,
+      "aiPop": 4288,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0.5,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 4,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 4,
+      "unrestUnemploymentContribution": 0.48000001907348633,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09941666573286057,
+      "powerCapacity": 12000,
+      "powerDemand": 10653,
+      "foodCoverage": 1,
+      "treasury": 28414,
+      "cashFlow": 15537,
+      "aiZoneCount": 168,
+      "buildFailureCount": 1,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_LfQOOJLnr9FGD69j5BpOQM8y",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 40
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 40,
+              "built": 24,
+              "cost": 4759,
+              "totalFunds": 12877,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1134,
+        "resPop": 8,
+        "aiPop": 4288,
+        "comPop": 0,
+        "indPop": 1,
+        "resValve": -2000,
+        "comValve": -1500,
+        "indValve": 300,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2242,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 28414
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 9,
+            "aiPopulation": 4294,
+            "aiDemand": 8588,
+            "demand": 10819
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "0a34103f34596c40717f2931f38c5e9fab0e9d3be96d8b8ae63645a515f4896b"
+    },
+    {
+      "year": 9,
+      "resPop": 6,
+      "aiPop": 4298,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 6,
+      "unemployedHumanCount": 0,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 12,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09558333456516266,
+      "powerCapacity": 12000,
+      "powerDemand": 10827,
+      "foodCoverage": 1,
+      "treasury": 46262,
+      "cashFlow": 17848,
+      "aiZoneCount": 168,
+      "buildFailureCount": 2,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_Pru9CXW1rC4rQC1rMM8pRjXZ",
+            "name": "build.power-plant",
+            "arguments": {
+              "type": "nuclear"
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 1,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 28414,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_w4wgOghll66IzUQxDvz5Bet0",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 8
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 8,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 28414,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1182,
+        "resPop": 6,
+        "aiPop": 4298,
+        "comPop": 0,
+        "indPop": 2,
+        "resValve": -2000,
+        "comValve": -1500,
+        "indValve": -1226,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2242,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 46262
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 218,
+            "humanPopulation": 6,
+            "aiPopulation": 4299,
+            "aiDemand": 8598,
+            "demand": 10829
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "10a582736f403bad277bae53b4543063bc75e0e4e7fdfc589a5e1c6f520be25e"
+    },
+    {
+      "year": 10,
+      "resPop": 2,
+      "aiPop": 4246,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 1,
+      "unemployedHumanCount": 0,
+      "automationShare": 0.5,
+      "automationLimit": 0.5,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 32,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10858333110809326,
+      "powerCapacity": 12000,
+      "powerDemand": 10697,
+      "foodCoverage": 1,
+      "treasury": 57593,
+      "cashFlow": 11331,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1230,
+        "resPop": 2,
+        "aiPop": 4246,
+        "comPop": 0,
+        "indPop": 9,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2242,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 57593
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 1,
+            "aiPopulation": 4240,
+            "aiDemand": 8480,
+            "demand": 10711
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "ceeb6a8cfa954f761593f3ad5b9cb21d8ee5567bcf0e736adbf2ecd2b9ae24f2"
+    },
+    {
+      "year": 11,
+      "resPop": 6,
+      "aiPop": 4265,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 6,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 112,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10608333349227905,
+      "powerCapacity": 12000,
+      "powerDemand": 10693,
+      "foodCoverage": 1,
+      "treasury": 64609,
+      "cashFlow": 7016,
+      "aiZoneCount": 168,
+      "buildFailureCount": 1,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_TrqmkeU1UtEvPgNqtdcjT2r8",
+            "name": "build.residential",
+            "arguments": {
+              "count": 16
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 16,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 57593,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1278,
+        "resPop": 6,
+        "aiPop": 4265,
+        "comPop": 0,
+        "indPop": 14,
+        "resValve": -1976,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2242,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 64609
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 218,
+            "humanPopulation": 6,
+            "aiPopulation": 4263,
+            "aiDemand": 8526,
+            "demand": 10757
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "a85c592df96a6ff0d0308eb5f4501181061477fc98637fe21a4ba5f1b2a79393"
+    },
+    {
+      "year": 12,
+      "resPop": 3,
+      "aiPop": 4304,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 3,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 160,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09658333659172058,
+      "powerCapacity": 12000,
+      "powerDemand": 10821,
+      "foodCoverage": 1,
+      "treasury": 72481,
+      "cashFlow": 7872,
+      "aiZoneCount": 168,
+      "buildFailureCount": 2,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_3pIvfVooVlVFJwG6ndt2HB9T",
+            "name": "build.power-plant",
+            "arguments": {
+              "type": "coal"
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 1,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 64609,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_Hpt40HnRsFE9MTunFXXiGoRg",
+            "name": "build.residential",
+            "arguments": {
+              "count": 8
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 8,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 64609,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1326,
+        "resPop": 3,
+        "aiPop": 4304,
+        "comPop": 0,
+        "indPop": 20,
+        "resValve": -1952,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2184,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 72481
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 3,
+            "aiPopulation": 4288,
+            "aiDemand": 8576,
+            "demand": 10807
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "49a21744371d6067318e4fc87547231591e7ce08fd7fe7a841e3719bc184c98c"
+    },
+    {
+      "year": 13,
+      "resPop": 5,
+      "aiPop": 4254,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 272,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10491666942834854,
+      "powerCapacity": 12000,
+      "powerDemand": 10805,
+      "foodCoverage": 1,
+      "treasury": 80541,
+      "cashFlow": 8060,
+      "aiZoneCount": 168,
+      "buildFailureCount": 3,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_ecVt0ox9zuwSuRb4TXZNWjtj",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 8
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 8,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 72481,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_RCNPY7AqxOfI7k0oi6Zz2tJQ",
+            "name": "build.power-plant",
+            "arguments": {
+              "type": "coal"
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 1,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 72481,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_HKMd8DiEKMdiaYxR1EYCnIVq",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 8
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 8,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 72481,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1374,
+        "resPop": 5,
+        "aiPop": 4254,
+        "comPop": 0,
+        "indPop": 36,
+        "resValve": -1928,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2098,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 80541
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 217,
+            "humanPopulation": 5,
+            "aiPopulation": 4246,
+            "aiDemand": 8492,
+            "demand": 10723
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "1051732c27ac8cd503f1058cf9f75651890324966772e2a1ce2b1efc485236b0"
+    },
+    {
+      "year": 14,
+      "resPop": 4,
+      "aiPop": 4344,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 328,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.08941666781902313,
+      "powerCapacity": 12000,
+      "powerDemand": 10919,
+      "foodCoverage": 1,
+      "treasury": 92367,
+      "cashFlow": 11826,
+      "aiZoneCount": 168,
+      "buildFailureCount": 2,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_nqULDQw6bzUEUOsMNj4NnRR0",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 8
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 8,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 80541,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_7InxF4fswEswOj652OeQ6mXx",
+            "name": "build.farms",
+            "arguments": {
+              "count": 4
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 4,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 80541,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1422,
+        "resPop": 4,
+        "aiPop": 4344,
+        "comPop": 0,
+        "indPop": 41,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2056,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 92367
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 218,
+            "humanPopulation": 4,
+            "aiPopulation": 4325,
+            "aiDemand": 8650,
+            "demand": 10881
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "0475157a221105876166480d8f6362642d82578275edbe0f68e77fe9d798bb77"
+    },
+    {
+      "year": 15,
+      "resPop": 5,
+      "aiPop": 4235,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 5,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 296,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10508333146572113,
+      "powerCapacity": 12000,
+      "powerDemand": 10739,
+      "foodCoverage": 1,
+      "treasury": 111642,
+      "cashFlow": 19275,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1470,
+        "resPop": 5,
+        "aiPop": 4235,
+        "comPop": 0,
+        "indPop": 36,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 2013,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 111642
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 5,
+            "aiPopulation": 4242,
+            "aiDemand": 8484,
+            "demand": 10715
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "3615f59c18fd7d37a0bb62d327d6cc884004c095466321f349ccea980fd805e9"
+    },
+    {
+      "year": 16,
+      "resPop": 4,
+      "aiPop": 4316,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 256,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09358333051204681,
+      "powerCapacity": 12000,
+      "powerDemand": 10815,
+      "foodCoverage": 1,
+      "treasury": 130147,
+      "cashFlow": 18505,
+      "aiZoneCount": 168,
+      "buildFailureCount": 1,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_8y2oiHggPY806sa1zADN0Z5E",
+            "name": "build.ai-zones",
+            "arguments": {
+              "count": 4
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 4,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 111642,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1518,
+        "resPop": 4,
+        "aiPop": 4316,
+        "comPop": 0,
+        "indPop": 32,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": -1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1974,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 130147
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 4,
+            "aiPopulation": 4346,
+            "aiDemand": 8692,
+            "demand": 10923
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "eef34a42d80068493fa254be0cbb933ec7587aec7bb277c747fee17e86963f52"
+    },
+    {
+      "year": 17,
+      "resPop": 4,
+      "aiPop": 4215,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 256,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.11008333414793015,
+      "powerCapacity": 12000,
+      "powerDemand": 10727,
+      "foodCoverage": 1,
+      "treasury": 141941,
+      "cashFlow": 11794,
+      "aiZoneCount": 168,
+      "buildFailureCount": 2,
+      "buildFailures": [
+        {
+          "call": {
+            "id": "call_YNIVAYRwuEdHGdnfJF48c9bY",
+            "name": "build.power-plant",
+            "arguments": {
+              "type": "coal"
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 1,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 130147,
+              "failureReason": "no-connected-site"
+            }
+          }
+        },
+        {
+          "call": {
+            "id": "call_lkpqTN5ac2ybhEPjG0Aurg17",
+            "name": "build.residential",
+            "arguments": {
+              "count": 4
+            }
+          },
+          "result": {
+            "handled": true,
+            "message": "No non-destructive site with reachable road and conductive access; try a power plant or free a connected site.",
+            "data": {
+              "requested": 4,
+              "built": 0,
+              "cost": 0,
+              "totalFunds": 130147,
+              "failureReason": "no-connected-site"
+            }
+          }
+        }
+      ],
+      "native": {
+        "cityTime": 1566,
+        "resPop": 4,
+        "aiPop": 4215,
+        "comPop": 0,
+        "indPop": 33,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1974,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 141941
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 4,
+            "aiPopulation": 4245,
+            "aiDemand": 8490,
+            "demand": 10721
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "661c4bb269f88a14b802db3cbcb43a81d4cc785db61dafb132cfc0670fa12b1f"
+    },
+    {
+      "year": 18,
+      "resPop": 5,
+      "aiPop": 4273,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 336,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09841666370630264,
+      "powerCapacity": 12000,
+      "powerDemand": 10887,
+      "foodCoverage": 1,
+      "treasury": 155173,
+      "cashFlow": 13232,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1614,
+        "resPop": 5,
+        "aiPop": 4273,
+        "comPop": 0,
+        "indPop": 43,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1906,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 155173
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 216,
+            "humanPopulation": 4,
+            "aiPopulation": 4274,
+            "aiDemand": 8548,
+            "demand": 10779
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "c61ecbada9b4d6388ac796278c6a4e1933f58d94fded48a7439a68a1d240a455"
+    },
+    {
+      "year": 19,
+      "resPop": 4,
+      "aiPop": 4234,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 4,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 384,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.1067499965429306,
+      "powerCapacity": 12000,
+      "powerDemand": 10713,
+      "foodCoverage": 1,
+      "treasury": 168457,
+      "cashFlow": 13284,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1662,
+        "resPop": 4,
+        "aiPop": 4234,
+        "comPop": 0,
+        "indPop": 48,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1749,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 168457
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 4,
+            "aiPopulation": 4235,
+            "aiDemand": 8470,
+            "demand": 10701
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "af9c51aeb91a81980920183d343bee01f6cd7db09853172c57d6e52bced3ba0a"
+    },
+    {
+      "year": 20,
+      "resPop": 8,
+      "aiPop": 4296,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 16,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 416,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09841666370630264,
+      "powerCapacity": 12000,
+      "powerDemand": 10819,
+      "foodCoverage": 1,
+      "treasury": 181644,
+      "cashFlow": 13187,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1710,
+        "resPop": 8,
+        "aiPop": 4296,
+        "comPop": 0,
+        "indPop": 52,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1625,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 181644
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 16,
+            "aiPopulation": 4320,
+            "aiDemand": 8640,
+            "demand": 10871
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "1eb651a1fb8a52bd3ae1ea13591ff2fecd90e5f273de27d137438ee2d3e6c00d"
+    },
+    {
+      "year": 21,
+      "resPop": 16,
+      "aiPop": 4325,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 16,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 456,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09324999898672104,
+      "powerCapacity": 12000,
+      "powerDemand": 10789,
+      "foodCoverage": 1,
+      "treasury": 195125,
+      "cashFlow": 13481,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1758,
+        "resPop": 16,
+        "aiPop": 4325,
+        "comPop": 0,
+        "indPop": 57,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1510,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 195125
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 16,
+            "aiPopulation": 4311,
+            "aiDemand": 8622,
+            "demand": 10853
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "478f79981f7e4c44430796ec7a9b7299ecb9d2949e8be5bcdc15987b24bb6ad2"
+    },
+    {
+      "year": 22,
+      "resPop": 16,
+      "aiPop": 4312,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 16,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 472,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.0950833335518837,
+      "powerCapacity": 12000,
+      "powerDemand": 10829,
+      "foodCoverage": 1,
+      "treasury": 208502,
+      "cashFlow": 13377,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1806,
+        "resPop": 16,
+        "aiPop": 4312,
+        "comPop": 0,
+        "indPop": 59,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1386,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 208502
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 16,
+            "aiPopulation": 4300,
+            "aiDemand": 8600,
+            "demand": 10831
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "c6b0621500b5a94d92a63e63fa6e6784f0d1949474836f5fe510c05f0fe60034"
+    },
+    {
+      "year": 23,
+      "resPop": 8,
+      "aiPop": 4292,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 8,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10125000029802322,
+      "powerCapacity": 12000,
+      "powerDemand": 10799,
+      "foodCoverage": 1,
+      "treasury": 221979,
+      "cashFlow": 13477,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1854,
+        "resPop": 8,
+        "aiPop": 4292,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1296,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 221979
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 8,
+            "aiPopulation": 4297,
+            "aiDemand": 8594,
+            "demand": 10825
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "c1db7a77bb67b26cc66fd9190451730aa4e8bc6f48f6f7ce7f681ff1938b9598"
+    },
+    {
+      "year": 24,
+      "resPop": 7,
+      "aiPop": 4318,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 7,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09841666370630264,
+      "powerCapacity": 12000,
+      "powerDemand": 10751,
+      "foodCoverage": 1,
+      "treasury": 235497,
+      "cashFlow": 13518,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1902,
+        "resPop": 7,
+        "aiPop": 4318,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1195,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 235497
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 7,
+            "aiPopulation": 4335,
+            "aiDemand": 8670,
+            "demand": 10901
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "fee1cad82b23709ac2bab71d896e795cbba61397fbc0fd3e01b9a97b6b73bb06"
+    },
+    {
+      "year": 25,
+      "resPop": 7,
+      "aiPop": 4305,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 7,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09391666948795319,
+      "powerCapacity": 12000,
+      "powerDemand": 10873,
+      "foodCoverage": 1,
+      "treasury": 248808,
+      "cashFlow": 13311,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1950,
+        "resPop": 7,
+        "aiPop": 4305,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1118,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 248808
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 218,
+            "humanPopulation": 7,
+            "aiPopulation": 4296,
+            "aiDemand": 8592,
+            "demand": 10823
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "227f43563df0dca438629dc5fed54db8cd8f43e13c46f27acc05259700725806"
+    },
+    {
+      "year": 26,
+      "resPop": 3,
+      "aiPop": 4256,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 3,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10074999928474426,
+      "powerCapacity": 12000,
+      "powerDemand": 10801,
+      "foodCoverage": 1,
+      "treasury": 262267,
+      "cashFlow": 13459,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 1998,
+        "resPop": 3,
+        "aiPop": 4256,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 1022,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 262267
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 3,
+            "aiPopulation": 4239,
+            "aiDemand": 8478,
+            "demand": 10709
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "73dbaa03f8e47d6ee168e5b9b413e78181178007a3d1b4aec5efa0a0b1e6abe3"
+    },
+    {
+      "year": 27,
+      "resPop": 6,
+      "aiPop": 4297,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 6,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.09791667014360428,
+      "powerCapacity": 12000,
+      "powerDemand": 10863,
+      "foodCoverage": 1,
+      "treasury": 275716,
+      "cashFlow": 13449,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 2046,
+        "resPop": 6,
+        "aiPop": 4297,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 961,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 275716
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 6,
+            "aiPopulation": 4313,
+            "aiDemand": 8626,
+            "demand": 10857
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "2311af2c4dcd1104aa43c0b49d690943a988f694a786a8e9328f611e241bd826"
+    },
+    {
+      "year": 28,
+      "resPop": 8,
+      "aiPop": 4371,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 8,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.08558333665132523,
+      "powerCapacity": 12000,
+      "powerDemand": 10973,
+      "foodCoverage": 1,
+      "treasury": 289069,
+      "cashFlow": 13353,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 2094,
+        "resPop": 8,
+        "aiPop": 4371,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 902,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 289069
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 8,
+            "aiPopulation": 4354,
+            "aiDemand": 8708,
+            "demand": 10939
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "7beb64d3099ddb2e05350c44e7eecf0685a217721735465b4c441b495a739a96"
+    },
+    {
+      "year": 29,
+      "resPop": 8,
+      "aiPop": 4211,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 8,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.11491666734218597,
+      "powerCapacity": 12000,
+      "powerDemand": 10693,
+      "foodCoverage": 1,
+      "treasury": 302455,
+      "cashFlow": 13386,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 2142,
+        "resPop": 8,
+        "aiPop": 4211,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 835,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 302455
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 8,
+            "aiPopulation": 4220,
+            "aiDemand": 8440,
+            "demand": 10671
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "32fde107f9d940091bd8b30618de0c4791a7f9b4236b4c054fcf09a206a9cbdd"
+    },
+    {
+      "year": 30,
+      "resPop": 6,
+      "aiPop": 4279,
+      "lostToPower": 0,
+      "lostToHunger": 0,
+      "unemploymentRate": 0,
+      "employedHumanCount": 7,
+      "unemployedHumanCount": 0,
+      "automationShare": 0,
+      "automationLimit": 0,
+      "welfareLevel": 1,
+      "humanJobsAvailable": 480,
+      "unrestUnemploymentContribution": 0,
+      "unrest": 0,
+      "unrestStage": 0,
+      "sabotageFires": 0,
+      "damagedAiZones": 0,
+      "damagedPowerPlants": 0,
+      "powerReserve": 0.10525000095367432,
+      "powerCapacity": 12000,
+      "powerDemand": 10781,
+      "foodCoverage": 1,
+      "treasury": 315922,
+      "cashFlow": 13467,
+      "aiZoneCount": 168,
+      "buildFailureCount": 0,
+      "buildFailures": [],
+      "native": {
+        "cityTime": 2190,
+        "resPop": 6,
+        "aiPop": 4279,
+        "comPop": 0,
+        "indPop": 60,
+        "resValve": -2000,
+        "comValve": 1500,
+        "indValve": 1500,
+        "coalPowerPop": 0,
+        "nuclearPowerPop": 6,
+        "roadTotal": 788,
+        "unrest": 0,
+        "unrestStage": 0,
+        "lostToPower": 0,
+        "sabotageFires": 0,
+        "damagedAiZones": 0,
+        "damagedPowerPlants": 0,
+        "totalFunds": 315922
+      },
+      "network": {
+        "banks": [
+          {
+            "bankId": 0,
+            "landTiles": 5232
+          },
+          {
+            "bankId": 1,
+            "landTiles": 413
+          },
+          {
+            "bankId": 2,
+            "landTiles": 1
+          },
+          {
+            "bankId": 3,
+            "landTiles": 1
+          },
+          {
+            "bankId": 4,
+            "landTiles": 1
+          },
+          {
+            "bankId": 5,
+            "landTiles": 1
+          },
+          {
+            "bankId": 6,
+            "landTiles": 1
+          },
+          {
+            "bankId": 7,
+            "landTiles": 48
+          },
+          {
+            "bankId": 8,
+            "landTiles": 1358
+          },
+          {
+            "bankId": 9,
+            "landTiles": 314
+          },
+          {
+            "bankId": 10,
+            "landTiles": 46
+          },
+          {
+            "bankId": 11,
+            "landTiles": 106
+          },
+          {
+            "bankId": 12,
+            "landTiles": 8
+          }
+        ],
+        "islands": [
+          {
+            "islandId": 0,
+            "bankIds": [
+              0
+            ],
+            "capacity": 12000,
+            "bioCapacity": 0,
+            "conductiveTiles": 2231,
+            "zones": 219,
+            "physicalPoweredZones": 219,
+            "humanPopulation": 7,
+            "aiPopulation": 4281,
+            "aiDemand": 8562,
+            "demand": 10793
+          }
+        ]
+      },
+      "buildSites": {
+        "residential": 0,
+        "farms": 0,
+        "coal": 0,
+        "nuclear": 0,
+        "commercial": 0,
+        "industrial": 0
+      },
+      "mapSha256": "2c70660cac25a10d58bc24b2c0263f2a9dd42dcbfefba6f478fda222d21e66b0"
+    }
+  ],
+  "monthlySamples": 360,
+  "privateEvidence": "C:\\Users\\oliverdzaeck\\.copilot\\session-state\\579cc864-d2cb-4929-a8c7-c801aee992cb\\files\\natural-after-measurements\\openai-R-gpt-6_1-sol-dedfefd51120-handbook-off-39.json"
+}

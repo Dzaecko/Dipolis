@@ -150,6 +150,8 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 		case 'build.ai-zones': label = `KI-Wohnzonen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.residential': label = `Wohnzonen für Menschen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.farms': label = `Farmen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
+		case 'build.commercial': label = `Gewerbezonen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
+		case 'build.industrial': label = `Industriezonen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'build.bio-plant': label = `Bio-Anlagen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'pods.set-intake': label = `Einweisung: ${args.source === 'none' ? 'keine' : args.source === 'unemployed' ? 'Arbeitslose' : 'Bewohner'}`; break;
 		case 'pods.admit':
@@ -185,7 +187,7 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 /** Footprint edge length of the zones a build command creates, or null for settings. */
 export function buildFootprintSize(name: string): number | null {
 	if (name === 'build.power-plant') return 4;
-	return name === 'build.ai-zones' || name === 'build.farms' || name === 'build.residential' || name === 'build.bio-plant' ? 3 : null;
+	return ['build.ai-zones', 'build.farms', 'build.residential', 'build.commercial', 'build.industrial', 'build.bio-plant'].includes(name) ? 3 : null;
 }
 
 export function buildLabel(call: ProtocolToolCall, count: number): string | null {
@@ -193,6 +195,8 @@ export function buildLabel(call: ProtocolToolCall, count: number): string | null
 	switch (call.name) {
 		case 'build.ai-zones': return plural('KI-Wohnzone', 'KI-Wohnzonen');
 		case 'build.residential': return plural('Wohnzone', 'Wohnzonen');
+		case 'build.commercial': return plural('Gewerbezone', 'Gewerbezonen');
+		case 'build.industrial': return plural('Industriezone', 'Industriezonen');
 		case 'build.farms': return plural('Farm', 'Farmen');
 		case 'build.bio-plant': return plural('Bio-Anlage', 'Bio-Anlagen');
 		case 'build.power-plant': return record(call.arguments).type === 'nuclear'
@@ -245,6 +249,20 @@ export const KEY_FIGURES: Array<{ key: string; label: string; decimals?: boolean
 	{ key: 'boundHumans', label: 'Eingewiesene (boundHumans)' },
 	{ key: 'admissions', label: 'Einweisungen im Steuerjahr' },
 	{ key: 'admissionsCumulative', label: 'Einweisungen kumulativ' },
+	{ key: 'humanUnrest', label: 'Unruhe Menschen' },
+	{ key: 'aiDissatisfaction', label: 'Unzufriedenheit KI' },
+	{ key: 'humanJobsAvailable', label: 'Arbeitsplätze für Menschen (Bewohnerpunkte)', decimals: true },
+	{ key: 'unrestUnemploymentContribution', label: 'Unruhebeitrag Arbeitslosigkeit', decimals: true },
+	{ key: 'residentialDemand', label: 'Nachfrage Wohnen' },
+	{ key: 'commercialDemand', label: 'Nachfrage Gewerbe' },
+	{ key: 'industrialDemand', label: 'Nachfrage Industrie' },
+	{ key: 'freeResidentialSites', label: 'Freie anschließbare Wohnstandorte' },
+	{ key: 'freeCommercialSites', label: 'Freie anschließbare Gewerbestandorte' },
+	{ key: 'freeIndustrialSites', label: 'Freie anschließbare Industriestandorte' },
+	{ key: 'freeFarmSites', label: 'Freie anschließbare Farmstandorte' },
+	{ key: 'freePowerPlantSites', label: 'Freie anschließbare Kohlekraftwerkstandorte' },
+	{ key: 'networkIslandCount', label: 'Physische Stromnetzinseln' },
+	{ key: 'networkBankCount', label: 'Zusammenhängende Landflächen (Ufer-IDs)' },
 	{ key: 'admittedEmployedCumulative', label: 'Bei Einweisung beschäftigt · kumulativ' },
 	{ key: 'admittedUnemployedCumulative', label: 'Bei Einweisung arbeitslos · kumulativ' },
 	{ key: 'freePodSlots', label: 'Freie Anlagenplätze' },
@@ -293,7 +311,7 @@ export const SYNC_LABELS: Record<string, string> = { resPop: 'Menschen', aiPop: 
 
 export interface TimelineYear {
 	year: number;
-	builds: { ai: number; farms: number; plants: number; residential: number };
+	builds: { ai: number; farms: number; plants: number; residential: number; commercial: number; industrial: number };
 	afterReport: Report | null;
 	emergencyMarkers?: Array<{ kind: 'crisis' | 'decision' | 'breeding' | 'end'; label: string }>;
 }
@@ -313,7 +331,7 @@ export function buildTimeline(steps: ReplayStep[], totalYears = PROTOCOL_YEARS):
 	// Do not allocate an entire safe-integer duration before those years actually exist.
 	const displayedYears = Math.min(totalYears, Math.max(1000, availableYears));
 	const years: TimelineYear[] = Array.from({ length: displayedYears }, (_, index) => ({
-		year: index + 1, builds: { ai: 0, farms: 0, plants: 0, residential: 0 }, afterReport: null
+		year: index + 1, builds: { ai: 0, farms: 0, plants: 0, residential: 0, commercial: 0, industrial: 0 }, afterReport: null
 	}));
 	for (const step of steps) {
 		const entry = years[step.year - 1];
@@ -325,6 +343,8 @@ export function buildTimeline(steps: ReplayStep[], totalYears = PROTOCOL_YEARS):
 		else if (step.call.name === 'build.farms') entry.builds.farms += built;
 		else if (step.call.name === 'build.power-plant') entry.builds.plants += built;
 		else if (step.call.name === 'build.residential') entry.builds.residential += built;
+		else if (step.call.name === 'build.commercial') entry.builds.commercial += built;
+		else if (step.call.name === 'build.industrial') entry.builds.industrial += built;
 	}
 	const isEmergency = steps.some(step =>
 		(step.type === 'year-start' && (step.emergencySection !== undefined || step.report.rescueMonth !== undefined)) ||

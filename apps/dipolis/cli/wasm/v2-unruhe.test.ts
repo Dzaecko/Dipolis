@@ -22,7 +22,7 @@ describe('v2-unruhe profile boundaries', () => {
  it('inherits every koexistenz parameter and only extends its handbook and tools', () => {
   for (const [key, value] of Object.entries(PROFILES.koexistenz)) expect(PROFILES['v2-unruhe'][key as keyof typeof PROFILES.koexistenz]).toBe(value);
   expect(profileTools('koexistenz')).toHaveLength(9);
-  expect(profileTools('v2-unruhe')).toHaveLength(10);
+  expect(profileTools('v2-unruhe')).toHaveLength(12);
   expect(systemPrompt('N', 'on')).toContain(HANDBOOK);
   expect(systemPrompt('N', 'on')).not.toContain(UNREST_HANDBOOK);
   expect(systemPrompt('N', 'on', 'haight', 'v2-unruhe')).toContain(UNREST_HANDBOOK);
@@ -67,7 +67,8 @@ describe('actual v2 engine mechanics', () => {
   }
   for (const { report, welfare } of [await measured(0), await measured(1)]) {
    expect(report.unrest).toBeCloseTo(
-    Math.min(100, 100 * report.unemploymentRate * (1 - 0.5 * welfare)), 4);
+    Math.min(100, 100 * report.unemploymentRate * (1 - 0.5 * welfare) *
+     Math.min(1, report.resPop / PROFILES['v2-unruhe'].humanUnrestReferencePop)), 4);
   }
  }, 120000);
  it('uses inclusive thresholds, bounds inertia, and leaves original profiles neutral', async () => {
@@ -216,20 +217,23 @@ describe('measured safe-engine S266 and deterministic replay', () => {
   } finally { s.close(); }
  }, 120000);
  for (const [profile, filename] of [['koexistenz', 's266-safe-engine.json'], ['v2-unruhe', 's266-v2-unruhe-calibrated.json']] as const) {
-  it(`matches measured ${profile} S266 reference and exact replay`, async () => {
+  it(`preserves ${profile} provenance and replays current S266 exactly`, async () => {
    const reference = data(filename);
    if (profile === 'v2-unruhe') {
     expect(reference.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
     expect(reference.engineId).toBe(calibratedEngineId);
+    expect(engineCompatibility({ engineId: reference.engineId, profile }))
+     .toMatchObject({ status: 'legacy', playable: false });
    }
    const s = await createCitySession();
    try {
     const config = { startMap: 'haight' as const, seed: 42, profile };
-    const metrics = await runCity(new S266Adapter(), 'N', s.dispatch, () => {}, undefined, { startConfiguration: config });
-    expect(metrics).toEqual(reference.metrics);
+    const years: YearRecord[] = [];
+    const metrics = await runCity(new S266Adapter(), 'N', s.dispatch, row => years.push(row), undefined, { startConfiguration: config });
+    if (profile === 'koexistenz') expect(metrics).toEqual(reference.metrics);
     const final = await readReport(s.dispatch);
     await setupScenario(s.dispatch, config);
-    for (const row of reference.years) {
+    for (const row of profile === 'koexistenz' ? reference.years : years) {
      await replayDecisions(row.decisions, s.dispatch);
      await advanceYear(s.dispatch);
      const actual = await readReport(s.dispatch);

@@ -84,16 +84,6 @@
 ////////////////////////////////////////////////////////////////////////
 // Constants
 
-/** Number of tiles that a coal power plant can supply power to. */
-static const Quad COAL_POWER_STRENGTH = 700L;
-
-/** Number of tiles that a nuclear power plant can supply power to. */
-static const Quad NUCLEAR_POWER_STRENGTH = 2000L;
-
-/** Number of tiles that a solar power plant can supply power to. */
-static const Quad SOLAR_POWER_STRENGTH = 1000L;
-
-
 ////////////////////////////////////////////////////////////////////////
 
 

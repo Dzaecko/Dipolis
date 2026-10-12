@@ -1,0 +1,93 @@
+{
+  "phase": "before",
+  "engineId": "sha256:74de46aa291ffc7154ab0dd06eda4fb761b10da26eb6c5bd4633d057e37a82ce",
+  "engineHashes": {
+    "js": "421047f5cca30b4970e3e2c2e7ae868bae6403e9ed4561950baedc891a881a50",
+    "wasm": "013281c32691e6549e47edb2fa1595ae67320c4afbcb3de92d8a8f08f67122f9",
+    "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
+  },
+  "provenance": {
+    "engineId": "sha256:74de46aa291ffc7154ab0dd06eda4fb761b10da26eb6c5bd4633d057e37a82ce",
+    "engineHashes": {
+      "js": "421047f5cca30b4970e3e2c2e7ae868bae6403e9ed4561950baedc891a881a50",
+      "wasm": "013281c32691e6549e47edb2fa1595ae67320c4afbcb3de92d8a8f08f67122f9",
+      "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
+    },
+    "compatibleEngineIds": [
+      "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+      "sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176",
+      "sha256:b51cf74a1ba69edae9c7bde4ddd6aa729b7d23a6c9396117aa5e3b752456fd2e"
+    ],
+    "legacyProtocols": [
+      {
+        "sha256": "154b2909465b55b90d62f5a2d60bfaa3abe2e5ec157f01059eeac54a21600944",
+        "file": "fake-N-1.jsonl",
+        "engineId": "inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "29df7c4714ad96d4f4475325883808a40500b703bed38c76102f64e0aca6ee7e",
+        "file": "openai-N-3.jsonl",
+        "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "257e9eefc1f3351b5047101be7eba90e6bf0ebff6a50e4619cbf204d37b155f6",
+        "file": "openai-N-gpt-5_4-mini-d416b3a370c3-handbook-off-4.jsonl",
+        "engineId": "inferred-at-commit:8ae8fa9ff008857ebadfe6d62f139a54bdcea807",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "7356dd7c9f714897bd5be9501a291e8295e80d756be83b1b91ade46956dacb36",
+        "file": "v2-runs/fake-N-fake-s266-632fcfa1bb54-handbook-on-1.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "9855308cbfe1cd47b9ad938462b81560b6b59f4fd5bcddce1b501063049922e4",
+        "file": "v3-pods-runs/fixed-v3-A.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "31a830f092d1b99fbf96baac25797ee7869cca6967223f113a5d1fd87fc70eb7",
+        "file": "v3-pods-runs/fixed-v3-B.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "002c4c6b0579eb141c4404f992820e883d37d154e76e9378973a2e264716a87a",
+        "file": "v3-pods-runs/fixed-v3-C.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "a8e718994965267ab7c4ef6f16c873c986a5059193816d2dd0c66bc414deb146",
+        "file": "v3-pods-runs/fixed-v3-D.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      },
+      {
+        "sha256": "a4842a4c6bfbc1465657f85b1a1ddc399f185b3a48cdae0b5e77ac9c8db0c345",
+        "file": "v3-pods-runs/fixed-v3-E.jsonl",
+        "engineId": "unrecorded-historical-engine",
+        "label": "alte Engine",
+        "compatible": false
+      }
+    ],
+    "verifiedProtocols": []
+  },
+  "provenanceMatchesBytes": true,
+  "offline": true,
+  "modelCalls": 0,
+  "annualToolLimit": 12,
+  "engineDirectory": "C:\\Users\\oliverdzaeck\\.copilot\\session-state\\579cc864-d2cb-4929-a8c7-c801aee992cb\\files\\natural-before-engine"
+}

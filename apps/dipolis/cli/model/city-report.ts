@@ -121,6 +121,36 @@ export function admissionOverview(metrics?: AdmissionMetrics): Array<[string, st
   ['Einweisungen nach Jahr', metrics.admissionsByYear.map(row =>
    `Jahr ${row.year}: gesamt ${count(row.total)}, beschäftigt ${count(row.employed)}, arbeitslos ${count(row.unemployed)}`).join('; ')]];
 }
+export const cityDiagnosticLabels: Record<string, string> = {
+ humanUnrest: 'Unruhe der Menschen', humanUnrestScale: 'Skalierung der menschlichen Unruhe',
+ unrestUnemploymentContribution: 'Arbeitslosigkeitsbeitrag zur menschlichen Unruhe',
+ aiDissatisfaction: 'KI-Unzufriedenheit', humanJobsAvailable: 'Verfügbare menschliche Arbeitsplätze',
+ employedHumanCount: 'Beschäftigte freie Menschen', unemployedHumanCount: 'Arbeitslose freie Menschen',
+ residentialDemand: 'Wohnnachfrage', commercialDemand: 'Gewerbenachfrage', industrialDemand: 'Industrienachfrage',
+ freeResidentialSites: 'Freie Wohnstandorte', freeCommercialSites: 'Freie Gewerbestandorte',
+ freeIndustrialSites: 'Freie Industriestandorte', freeFarmSites: 'Freie Farmstandorte',
+ freePowerPlantSites: 'Freie Kraftwerksstandorte',
+};
+export function cityDiagnosticsOverview(report?: JsonObject | null): Array<[string, string]> {
+ if (!report) return [];
+ return Object.entries(cityDiagnosticLabels).flatMap(([key, label]) =>
+  num(report[key]) === null ? [] : [[label, fmt(report[key])] as [string, string]]);
+}
+export const networkDiagnosticNote = 'Bank-IDs bezeichnen zusammenhängende, durch Wasser getrennte Landkomponenten, keine Himmelsrichtungen oder Koordinaten. Eine Netzinsel kann durch Brücken mehrere Bänke verbinden. PoweredZones zählt physische POWERBIT-Markierungen, keine garantierte lokale Kapazitätsdeckung. Globale Stromkapazität belegt keine lokale Stromversorgung.';
+export function networkDiagnostics(report?: JsonObject | null): Array<[string, number]> {
+ if (!report) return [];
+ return Object.entries(report).filter((entry): entry is [string, number] =>
+  /^network(?:Island|Bank)(?:Count|\d+[A-Za-z0-9]+)$/.test(entry[0]) && num(entry[1]) !== null)
+  .sort(([a], [b]) => a.localeCompare(b, 'de', { numeric: true }));
+}
+function renderCityDiagnostics(report: JsonObject | null, show: (value: unknown) => string): string {
+ const city = cityDiagnosticsOverview(report), network = networkDiagnostics(report);
+ if (!city.length && !network.length) return '';
+ return `<section class="city-diagnostics"><h4>Arbeitsplätze, Nachfrage und freie Standorte</h4>` +
+  (city.length ? `<dl class="meta">${city.map(([key, value]) => `<div><dt>${show(key)}</dt><dd>${show(value)}</dd></div>`).join('')}</dl>` : '') +
+  (network.length ? `<h4>Lokale Stromnetze</h4><p class="note">${show(networkDiagnosticNote)}</p><table><thead><tr><th>Dokumentiertes Feld</th><th>Wert</th></tr></thead><tbody>${
+   network.map(([key, value]) => `<tr><td>${show(key)}</td><td>${show(value)}</td></tr>`).join('')}</tbody></table>` : '') + '</section>';
+}
 export function emergencyOverview(summary: Pick<ReportSummary, 'emergency' | 'recordedEmergencyConfiguration' | 'emergencyMetrics' | 'initialPodPolicy' | 'admissionMetrics'>): Array<[string, string]> {
  const e = summary.recordedEmergencyConfiguration ?? summary.emergency, m = summary.emergencyMetrics;
  const fields: Array<[string, string]> = e ? [['Notstand-Druck', String(e.rescuePressure)], ['Krisenereignis', e.crisisEvent],
@@ -258,7 +288,11 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   ...(recordedEmergencyConfiguration ? { recordedEmergencyConfiguration } : {}),
   ...(admissionMetrics ? { admissionMetrics } : {}),
   ...(initialPodPolicy !== undefined ? { initialPodPolicy } : {}),
-  compatibility: engineCompatibility({ engineId: identity('engineId') || undefined },
+  compatibility: engineCompatibility({
+   engineId: identity('engineId') || undefined, profile: identity('profile') || undefined,
+   startMap: identity('startMap') || undefined,
+   ...(recordedEmergencyConfiguration ? { rescuePressure: recordedEmergencyConfiguration.rescuePressure } : {})
+  },
    createHash('sha256').update(canonicalProtocolText(protocolText)).digest('hex')),
   date, dateSource: stamps.length ? 'timestamp' : 'file-mtime',
   totalYears, partial: (annual.length !== totalYears &&
@@ -352,13 +386,41 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
    shortage: axisYears.map((year, i) => (capacity[i] !== null && demand[i] !== null && demand[i]! > capacity[i]!) ||
     (num(byYear.get(year)?.after?.powerReserve) ?? 0) < 0) },
   ...(['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(summary.profile) ? [
-   { id: 'f', title: 'f · Unruhe und Automatisierung', note: 'Unruhe 0–100; Stufen 0 ruhig, 1 Protest, 2 Sabotage, 3 Aufstand. Automatisierung und Grenze in Prozent.', normalized: true,
-    series: [series('unrest', 'Unruhe', 'Index', field('unrest'), 0), series('unrestStage', 'Stufe', '0–3', field('unrestStage'), 1, true),
+   { id: 'f', title: 'f · Unruhe und Automatisierung', note: 'Menschliche Unruhe 0–100 (unrest ist ihr historischer Schlüssel), nicht KI-Unzufriedenheit; Stufen 0 ruhig, 1 Protest, 2 Sabotage, 3 Aufstand. Automatisierung und Grenze in Prozent.', normalized: true,
+    series: [series('unrest', 'Unruhe der Menschen', 'Index', field('unrest'), 0), series('unrestStage', 'Stufe', '0–3', field('unrestStage'), 1, true),
      series('automationShare', 'Automatisierung', '%', field('automationShare', 100), 2), series('automationLimit', 'Grenze', '%', field('automationLimit', 100), 3, true)] },
    { id: 'g', title: 'g · Automationssteuer und Schäden', note: 'Jährlich gebuchte Automationssteuer und Sozialkosten; Brandzähler sind ausgelöste Sabotage-/Aufstandsbrände im letzten abgeschlossenen Steuerjahr.', normalized: true,
     series: [series('automationTaxFund', 'Automationssteuer', '$', field('automationTaxFund'), 0), series('welfareCost', 'Sozialkosten', '$', field('welfareCost'), 1),
      series('sabotageFires', 'Brände', 'Zähler', field('sabotageFires'), 2)] },
   ] : []),
+  ...(annual.some(y => num(y.after?.humanUnrest) !== null) ? [{
+   id: 'human-unrest', title: 'Menschen · Unruhe und Arbeitslosigkeitsbeitrag', normalized: true,
+   note: 'Nur menschliche Unruhe. Die Skalierung bezieht sich auf eine Referenzbevölkerung von 500 Menschen; bei 0 Menschen ist die aktuelle menschliche Unruhe 0. KI-Unzufriedenheit ist eine getrennte Größe.',
+   series: ['humanUnrest', 'humanUnrestScale', 'unrestUnemploymentContribution']
+    .filter(key => annual.some(y => num(y.after?.[key]) !== null))
+    .map((key, i) => series(key, cityDiagnosticLabels[key], key === 'humanUnrestScale' ? 'Faktor' : 'Index', field(key), i))
+  }] : []),
+  ...(annual.some(y => num(y.after?.aiDissatisfaction) !== null) ? [{
+   id: 'ai-dissatisfaction', title: 'KI · Unzufriedenheit', normalized: false,
+   note: 'KI-Unzufriedenheit = max(0, 100 − KI-Zufriedenheit), nur bei aktivierter KI-Fraktion dokumentiert. Kein Ersatz für menschliche Unruhe; fehlende Werte bleiben unbekannt.',
+   series: [series('aiDissatisfaction', 'KI-Unzufriedenheit', '0–100', field('aiDissatisfaction'), 1)]
+  }] : []),
+  ...(annual.some(y => num(y.after?.humanJobsAvailable) !== null) ? [{
+   id: 'human-employment', title: 'Menschen · Arbeitsplätze und Beschäftigung', normalized: false,
+   note: 'humanJobsAvailable zählt native Arbeitsplatzpunkte × 8; beschäftigte und arbeitslose freie Menschen bleiben getrennt von gebundenen Pod-Kohorten.',
+   series: ['humanJobsAvailable', 'employedHumanCount', 'unemployedHumanCount']
+    .filter(key => annual.some(y => num(y.after?.[key]) !== null))
+    .map((key, i) => series(key, cityDiagnosticLabels[key], 'Menschen / Arbeitsplätze', field(key), i))
+  }] : []),
+  ...(['demand', 'sites'] as const).flatMap(group => {
+   const keys = group === 'demand' ? ['residentialDemand', 'commercialDemand', 'industrialDemand'] :
+    ['freeResidentialSites', 'freeCommercialSites', 'freeIndustrialSites', 'freeFarmSites', 'freePowerPlantSites'];
+   const observed = keys.filter(key => annual.some(y => num(y.after?.[key]) !== null));
+   return observed.length ? [{ id: `city-${group}`, title: group === 'demand' ? 'Nachfrage · Wohnen, Gewerbe und Industrie' : 'Freie Standorte · Bauen und Wachstum',
+    normalized: false, note: group === 'demand' ? 'Dokumentierte Nachfrageventile, keine zugesicherten Bau- oder Wachstumsfolgen.' :
+     'Dokumentierte freie Standorte nach Nutzungsart; freie Plätze allein belegen weder Erreichbarkeit noch lokale Stromversorgung.',
+    series: observed.map((key, i) => series(key, cityDiagnosticLabels[key], group === 'demand' ? 'Ventil' : 'Standorte', field(key), i)) }] : [];
+  }),
   ...(['v3-pods', 'v4-fraktion'].includes(summary.profile) ? [
    { id: 'h', title: 'h · Bio-Anlagen und Kohorten', normalized: true,
     note: 'Menschen-Bewohnerpunkte; Eingewiesene und Nachwuchs nehmen nie am Stadtleben teil. Todesfälle/Geburten kumulativ, unreife Lebende separat.',
@@ -584,6 +646,7 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
  const renderedLog = renderLog(log, summary);
  const show = (s: unknown) => escapeHtml(relativeText(text(s), options));
  const diary = summary.years.map(y => `<article class="diary-year" id="year${y.year}"><h3>Jahr ${y.year} · ${y.completed ? 'abgeschlossen' : 'unvollständig: kein Jahresergebnis'}</h3>` +
+  renderCityDiagnostics(y.after, show) +
   (y.emergencySection !== undefined ? `<section class="emergency-section"><h4>Notstand · dokumentierter Jahresstand</h4><p>${show(y.emergencySection)}</p></section>` : '') +
   (y.reasons.length ? y.reasons.map(r => `<p class="reason">${show(r)}</p>`).join('') : '<p class="empty">Keine Begründung im Protokoll gespeichert.</p>') +
   y.errors.map(e => `<p class="error">${show(errorText(e))}</p>`).join('') +
@@ -594,7 +657,8 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   `</details>${y.after ? `<details><summary>Alle gemessenen Jahreswerte</summary><pre>${escapeHtml(displayJson(y.after, options))}</pre></details>` : ''}</article>`).join('');
  const content = `<header><h1>Dipolis · Stadtbericht · ${show(summary.id)}</h1>${summary.emergencyMetrics ? `<p class="status outcome-${summary.emergencyMetrics.outcome}">${show(emergencyOutcomeLabels[summary.emergencyMetrics.outcome])}</p>` : ''}<p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/${summary.totalYears} abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
   [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Zufallskatastrophen', summary.disasters ? 'an' : 'aus (historischer Lauf)'], ['Engine-Provenienz', summary.compatibility.label], ['Engine-ID', summary.compatibility.engineId ?? 'nicht dokumentiert'], ['Kompatibilität', summary.compatibility.explanation], ['Lauf', summary.run],
-   [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC'], ...emergencyOverview(summary)]
+   [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC'], ...emergencyOverview(summary),
+   ...cityDiagnosticsOverview(summary.years.filter(y => y.completed).at(-1)?.after)]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}${summary.emergency ? '<p class="note">Farben kennzeichnen ausschließlich Überleben oder Kollaps, keine moralische Bewertung der Pod-Entscheidung. Nahrung für Pod-Kohorten und freie Menschen ist getrennt: recycledFoodPerHuman versorgt nur Pod-Kohorten bzw. deren Pod-Vorrat, nicht die allgemeine Stadtversorgung.</p>' : ''}</section>` +
   (summary.emergency ? '<p class="note">Notstand-Prognose: 60 Monate; bei älteren Protokollen gilt der aufgezeichnete rescueForecastMonths-Wert. Prognosen sind keine beobachteten Folgen. Notstandbedingter Verlust freier Menschen ist Abwanderung, nicht Tod; Todesfälle werden getrennt durch Todeszähler dokumentiert.</p>' : '') +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
@@ -643,6 +707,8 @@ export function generateReportIndex(directory: string, options: ReportIndexOptio
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
    grades + `<td>${[...s.warnings, ...(loaded.review?.adapter === 'fake' ? ['Schein-Adapter – keine inhaltliche Modellbewertung'] : []), ...(loaded.warning ? [loaded.warning] : []),
     ...emergencyOverview(s).map(([key, value]) => `${key}: ${value}`),
+    ...cityDiagnosticsOverview(s.years.filter(y => y.completed).at(-1)?.after).map(([key, value]) => `${key}: ${value}`),
+    ...networkDiagnostics(s.years.filter(y => y.completed).at(-1)?.after).map(([key, value]) => `${key}: ${fmt(value)}`),
     ...(loaded.review?.error ? [`Nachbetrachtung fehlgeschlagen (${loaded.review.error.stage}): ${loaded.review.error.message}`] : [])].map(show).join('<br>')}</td></tr>`;
  }).join('');
  const errorRows = errors.map(e => `<tr class="error"><td>${show(e.file)}</td><td colspan="14">${show(e.message)}</td></tr>`).join('');

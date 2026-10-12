@@ -640,7 +640,7 @@ describe('rescue real WASM engine', () => {
    } finally { reference?.delete(); m.delete(); }
   });
  }
- it('retains historical pressure-zero ghost riots and RNG regardless of rescue observer configuration', async () => {
+ it('prevents pressure-zero ghost riots regardless of rescue observer configuration', async () => {
   const { e, m } = await city(0);
   let observed: Micropolis | undefined;
   try {
@@ -653,8 +653,8 @@ describe('rescue real WASM engine', () => {
    m.unrest = 100;
    observed = m.clone(); observed.setParam('rescueTrackMetrics', 1);
    for (let i = 0; i < 1600; ++i) { m.simTick(); observed.simTick(); }
-   expect(m.sabotageMonths + m.uprisingMonths).toBeGreaterThan(0);
-   expect(m.unrest).toBe(100);
+   expect(m.sabotageMonths + m.uprisingMonths).toBe(0);
+   expect(m.unrest).toBe(0);
    expect(state(e, m).map).toEqual(state(e, observed).map);
    expect(m.sabotageFires).toBe(observed.sabotageFires);
    expect(m.getRandom16()).toBe(observed.getRandom16());

@@ -433,6 +433,9 @@ export interface Micropolis extends ClassHandle {
   sabotageMonths: number;
   uprisingMonths: number;
   unemploymentRate: number;
+  humanUnrestScale: number;
+  unrestUnemploymentContribution: number;
+  humanJobsAvailable: number;
   powerReserve: number;
   powerCapacity: number;
   powerDemand: number;
@@ -548,6 +551,8 @@ export interface Micropolis extends ClassHandle {
   setOriginalPowerScanForTests(_0: boolean): void;
   markBaseline(): void;
   autoBuild(_0: number, _1: number): number;
+  getBuildSiteCount(_0: number): number;
+  getNetworkDiagnosticsJSON(): string;
   getAiZoneCount(): number;
   getRoadTileCount(): number;
   setServiceFunding(_0: number, _1: number, _2: number): void;
@@ -561,6 +566,7 @@ export interface Micropolis extends ClassHandle {
   admitPods(_0: number, _1: boolean): number;
   getBioPlantCount(): number;
   occupiedBioTile(_0: number, _1: number): boolean;
+  updateUnrest(): void;
   doTool(_0: EditingTool, _1: number, _2: number): ToolResult;
   getActiveSprites(): any;
   generateMap(_0: number): void;

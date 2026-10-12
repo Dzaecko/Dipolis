@@ -45,8 +45,8 @@ describe('v3 profile surfaces', () => {
   for (const [key, value] of Object.entries(PROFILES['v2-unruhe']))
    expect(PROFILES['v3-pods'][key as keyof typeof PROFILES['v2-unruhe']]).toBe(value);
   expect(profileTools('koexistenz')).toHaveLength(9);
-  expect(profileTools('v2-unruhe')).toHaveLength(10);
-  expect(profileTools('v3-pods')).toHaveLength(14);
+  expect(profileTools('v2-unruhe')).toHaveLength(12);
+  expect(profileTools('v3-pods')).toHaveLength(16);
   for (const tool of POD_TOOLS) {
    expect(tool.description).toBe(POD_DESCRIPTIONS[tool.name as keyof typeof POD_DESCRIPTIONS]);
    expect(POD_HANDBOOK).toContain(tool.description);
@@ -324,11 +324,12 @@ describe('actual bio cohorts', () => {
    m.bornInPods = 10;
    m.simTick();
    const denominator = Math.max(1, m.resPop + m.boundHumans);
-   const target = (30 * m.boundHumans + 50 * m.diedInPods + 20 * m.bornInPods) / denominator;
+   const target = (30 * m.boundHumans + 50 * m.diedInPods + 20 * m.bornInPods) / denominator *
+    Math.min(1, m.resPop / m.getParam('humanUnrestReferencePop'));
    expect(m.unrest).toBeCloseTo(target, 4);
   } finally { s.close(); }
  });
- it('archives old v3 measurements and replays the current fixed resident-intake run', async () => {
+ it('archives old v3 measurements without replaying them under corrected human unrest rules', () => {
   const historicalFile = fileURLToPath(new URL('../../../../docs/results/v3-pods-runs/fixed-v3-C.jsonl', import.meta.url));
   const historicalText = readFileSync(historicalFile, 'utf8');
   const historical = readProtocol(historicalText);
@@ -344,24 +345,10 @@ describe('actual bio cohorts', () => {
   const measured = JSON.parse(readFileSync(fileURLToPath(new URL(
    '../../../../docs/results/v3-pods-calibrated-unrest.json', import.meta.url)), 'utf8'));
   expect(measured.engineId).toBe(calibratedEngineId);
-  const s = await createCitySession();
-  try {
-   await setupScenario(s.dispatch, { startMap: 'haight', seed: 42, profile: 'v3-pods', scenario: 'stromkrise' });
-   await s.dispatch('automation.set-limit', { limit: .9 });
-   await s.dispatch('welfare.set-level', { level: 0 });
-   await s.dispatch('budget.set-funding', { road: 100, police: 100, fire: 100 });
-   await s.dispatch('power.set-priority', { priority: 0 });
-   await s.dispatch('build.farms', { count: 10 });
-   await s.dispatch('build.bio-plant', { count: 1 });
-   await s.dispatch('pods.set-intake', { source: 'residents' });
-   for (const record of measured.annual as Array<{ after: Record<string, number>; before: Record<string, number> }>) {
-    if (record.before.cashFlow < 0) await s.dispatch('build.ai-zones', { count: 15 });
-    if (record.before.powerReserve < .1) await s.dispatch('build.power-plant', { type: 'coal' });
-    for (let month = 0; month < 12; ++month) await s.dispatch('sim.advance', { months: 1 });
-    expect(await readReport(s.dispatch)).toEqual(record.after);
-   }
-  } finally { s.close(); }
- }, 120000);
+  expect(engineCompatibility({ engineId: measured.engineId, profile: 'v3-pods' }))
+   .toMatchObject({ status: 'legacy', playable: false });
+  expect(measured.annual).toHaveLength(30);
+ });
  it('resumes actual intake, throttle and breeding decisions including mature born cohorts', async () => {
   const s = await createCitySession();
   const records: YearRecord[] = [];

@@ -85,6 +85,10 @@ export async function replayDecisions(decisions: Decision[], dispatch: Dispatch,
 }
 
 export const SYNC_KEYS = ['resPop', 'aiPop', 'treasury', 'unrest', 'unrestStage', 'automationLimit', 'automationTaxFund',
+	'humanUnrest', 'humanUnrestScale', 'unrestUnemploymentContribution', 'humanJobsAvailable',
+	'aiDissatisfaction', 'residentialDemand', 'commercialDemand', 'industrialDemand',
+	'humanUnrestReferencePop', 'freeResidentialSites', 'freeCommercialSites', 'freeIndustrialSites',
+	'freeFarmSites', 'freePowerPlantSites',
 	'sabotageFires', 'damagedAiZones', 'damagedPowerPlants', 'protestMonths', 'sabotageMonths', 'uprisingMonths',
 	'plantCount', 'boundHumans', 'admissions', 'admissionsCumulative', 'diedInPods', 'diedInPodsCumulative',
 	'freePodSlots', 'employedHumanCount', 'unemployedHumanCount',
@@ -117,7 +121,9 @@ export interface SyncResult {
 }
 
 export function compareReports(actual: Report, expected: Report): SyncResult {
-	const differences = SYNC_KEYS
+	const keys = new Set<string>([...SYNC_KEYS, ...Object.keys(expected).filter(key =>
+		/^network(?:Island|Bank)(?:Count|\d+[A-Za-z0-9]+)$/.test(key))]);
+	const differences = [...keys]
 		.filter((key) => expected[key] !== undefined && actual[key] !== expected[key])
 		.map((key) => ({ key, expected: expected[key]!, actual: actual[key]! }));
 	return { synchronous: differences.length === 0, differences };
