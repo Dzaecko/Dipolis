@@ -43,6 +43,7 @@ function reviewSidecar(file: string, overrides: Partial<CityReview> = {}): CityR
   createdAt: '2026-10-12T00:00:00Z', status: 'complete',
   facts: { version: 1, assignment: summary.assignment, model: summary.model, handbook: summary.handbook,
    profile: summary.profile, startMap: 'fixture', complete: !summary.partial,
+   ...(summary.totalYears !== 30 ? { totalYears: summary.totalYears } : {}),
    years: summary.years.map(y => ({ year: y.year, completed: y.completed, metrics: {}, chartMetrics: {},
     commands: y.tools, reasons: y.reasons })),
    findings: { endMetrics: { treasury: 0 }, firstEmptyTreasuryYear: 2, highestIntervention: 'unemployed',
@@ -62,6 +63,21 @@ function reviewSidecar(file: string, overrides: Partial<CityReview> = {}): CityR
 }
 
 describe('Nachbetrachtung reporting', () => {
+ it('accepts duration-aware bans after year 30 and links three-digit review years', () => {
+  const dir = temp(), file = protocol(dir, [{ event: 'run-started', totalYears: 105 },
+   ...Array.from({ length: 105 }, (_, i) => annual(i + 1))]);
+  const review = reviewSidecar(file);
+  review.facts.findings.yearsUntilBan = 104; review.facts.findings.banYear = 105;
+  review.self!.cityHistory = ['Jahr 105: Die Stadt ist gewachsen.'];
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(review));
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).not.toContain('Nachbetrachtung nicht verwendet');
+  expect(html).toContain('data-diary-year="105">105</a>');
+  delete review.facts.totalYears;
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(review));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Ungültige Struktur');
+ });
+
  it('brands reports as Dipolis and keeps engine identity in provenance', () => {
   const file = protocol(temp(), [annual(1)]);
   const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
@@ -250,6 +266,63 @@ describe('Nachbetrachtung reporting', () => {
 });
 
 describe('generateCityReport', () => {
+ it('uses the planned duration beyond 30 in completion, all charts, logs and the mixed-duration index', () => {
+  const dir = temp(), file = protocol(dir, [{ event: 'run-started', totalYears: 35 },
+   ...Array.from({ length: 35 }, (_, i) => annual(i + 1))], 'long.jsonl');
+  const summary = readReportSummary(file), result = generateCityReport(file);
+  expect(summary.totalYears).toBe(35); expect(result.complete).toBe(true);
+  expect(summary.observedYears).toBe(35); expect(summary.metrics.meanResPop).toBe(180);
+  expect(summary.charts.every(chart => chart.series.every(series => series.values.length === 35))).toBe(true);
+  const html = readFileSync(result.htmlPath, 'utf8');
+  expect(html).toContain('35/35 abgeschlossene Jahre');
+  expect(html).toContain('Jahre 1 bis 35'); expect(html).toContain('Jahr (1–35)');
+  expect(html).toContain('id="log-year35"'); expect(payload(html).totalYears).toBe(35);
+  expect(svg(html, 'a')).toContain('<circle cx="730"');
+  const listeners: Record<string, (event: Record<string, unknown>) => void> = {};
+  const attributes: Record<string, unknown> = {}, tooltip = { textContent: '' }, location = { hash: '' };
+  const chart = { dataset: { chart: 'a' }, querySelector: () => ({
+   removeAttribute() {}, setAttribute(key: string, value: unknown) { attributes[key] = value; }
+  }), getBoundingClientRect: () => ({ left: 0, width: 1000 }),
+   addEventListener(name: string, handler: typeof listeners[string]) { listeners[name] = handler; } };
+  const document = {
+   getElementById: (id: string) => id === 'report-data' ? { textContent: JSON.stringify(payload(html)) } :
+    id === 'year35' ? { querySelector: () => null, scrollIntoView() {} } : null,
+   querySelectorAll: (selector: string) => selector === '.year-chart' ? [chart] : [],
+   querySelector: () => tooltip,
+  };
+  runInNewContext(script(html), { document, location, Intl });
+  listeners.pointermove({ clientX: 730 });
+  expect(tooltip.textContent).toContain('Jahr 35 · Menschen: 350');
+  expect(attributes.x1).toBe(730);
+  listeners.keydown({ key: 'ArrowRight', preventDefault() {} });
+  expect(tooltip.textContent).toContain('Jahr 35');
+  listeners.keydown({ key: 'Enter' });
+  expect(location.hash).toBe('year35');
+  protocol(dir, [annual(1)], 'historical.jsonl');
+  const index = readFileSync(generateReportIndex(dir).htmlPath, 'utf8');
+  expect(index).toContain('vollständig · 35/35'); expect(index).toContain('Teillauf · 1/30');
+  expect(index).toContain('Gemeinsame Jahre 1–35'); expect(payload(index).totalYears).toBe(35);
+ });
+
+ it('supports one-year terms and huge safe-integer durations without allocating every missing year', () => {
+  const dir = temp(), one = protocol(dir, [{ event: 'run-started', totalYears: 1 }, annual(1)], 'one.jsonl');
+  expect(generateCityReport(one).complete).toBe(true);
+  expect(readFileSync(one.replace('.jsonl', '.html'), 'utf8')).not.toMatch(/NaN|Infinity/);
+  const totalYears = Number.MAX_SAFE_INTEGER;
+  const huge = protocol(dir, [{ event: 'run-started', totalYears }, annual(1), annual(totalYears)], 'huge.jsonl');
+  const summary = readReportSummary(huge), html = readFileSync(generateCityReport(huge).htmlPath, 'utf8');
+  expect(summary.partial).toBe(true); expect(summary.observedYears).toBe(2);
+  expect(summary.charts[0].series[0].years).toEqual([1, totalYears]);
+  expect(summary.charts[0].series[0].values).toHaveLength(2);
+  expect(html).toContain(`Jahr (1–${totalYears})`); expect(html).not.toMatch(/NaN|Infinity/);
+ });
+
+ it.each([0, -1, 1.5, '35', null, Number.MAX_SAFE_INTEGER + 1])('rejects invalid recorded duration %s', totalYears => {
+  const file = protocol(temp(), [{ event: 'run-started', totalYears }, annual(1)]);
+  expect(() => readReportSummary(file)).toThrow('positive safe integer');
+  expect(() => generateCityReport(file)).toThrow('positive safe integer');
+ });
+
  it('adds v4 faction and owner-separated series without changing prior-profile charts', () => {
   const dir = temp();
   for (const [profile, count] of [['koexistenz', 5], ['v2-unruhe', 7], ['v3-pods', 10], ['v4-fraktion', 13]] as const) {

@@ -9,7 +9,7 @@ import { generateCityReport, generateReportIndex } from './city-report';
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const args = await yargs(hideBin(process.argv)).scriptName('city-review')
  .usage('Dipolis-Nachbetrachtung: $0 --protocol <file>')
- .option('protocol', { type: 'string', demandOption: true, description: 'Complete 30-year JSONL protocol' })
+ .option('protocol', { type: 'string', demandOption: true, description: 'JSONL protocol covering its complete planned term' })
  .option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake' as const, description: 'Fake is local and makes no requests' })
  .option('overwrite', { type: 'boolean', default: false, description: 'Explicitly replace an existing review' })
  .strict().help().parseAsync();

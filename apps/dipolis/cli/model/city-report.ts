@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseProtocolRecords } from '../../src/lib/city-run/protocol';
+import { parseProtocolRecords, validateRunYears } from '../../src/lib/city-run/protocol';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../../src/lib/city-run/compatibility';
 import { loadCityReview, renderCityReview, reviewGradeLabels } from './city-review-render';
@@ -26,6 +26,7 @@ export interface ReportYear {
 export interface ReportSeries {
  key: string; label: string; unit: string; color: string; dash: string;
  values: Array<number | null>; min: number; max: number; step?: boolean;
+ years?: number[];
 }
 export interface ReportChart {
  id: string; title: string; note: string; normalized: boolean;
@@ -35,7 +36,7 @@ export interface ReportEvent { year: number; kind: string; label: string; lane: 
 export interface ReportSummary {
  id: string; model: string; assignment: string; handbook: string; run: string; profile: string;
  date: string; dateSource: 'timestamp' | 'file-mtime'; partial: boolean;
- observedYears: number; partialYears: number; years: ReportYear[]; warnings: string[];
+ totalYears: number; observedYears: number; partialYears: number; years: ReportYear[]; warnings: string[];
  metrics: ReportMetrics; metricSamples: Record<string, number>; firstInsolvencyYear: number | null;
  charts: ReportChart[]; events: ReportEvent[]; logSource: 'original' | 'reconstructed';
  compatibility: EngineCompatibility;
@@ -44,7 +45,6 @@ export interface CityReportResult { htmlPath: string; metrics: ReportMetrics; ye
 export interface ReportIndexResult { htmlPath: string; summaries: ReportSummary[]; errors: Array<{ file: string; message: string }>; }
 
 const ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
-const YEARS = 30;
 const COLORS = ['#ffbf4a', '#36e7ff', '#60f0b1', '#ff6ad5', '#b8a0ff', '#ff8566'];
 const DASHES = ['', '8 4', '2 4', '10 3 2 3'];
 const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 });
@@ -94,6 +94,8 @@ export function readReportSummary(protocolPath: string): ReportSummary {
  const { records: parsedRecords, warnings } = parseProtocolRecords(protocolText);
  const records = parsedRecords as JsonObject[];
  if (!records.length) throw new Error('Keine lesbaren JSONL-Datensätze.');
+ const meta = records.find(r => r.event === 'run-started') ?? records.find(r => r.assignment !== undefined) ?? {};
+ const totalYears = validateRunYears(meta.totalYears === undefined ? 30 : meta.totalYears);
  const identity = (key: string) => text(records.find(r => text(r[key]))?.[key]);
  const id = path.basename(protocolPath, path.extname(protocolPath));
  const filenameAssignment = id.match(/(?:^|-)(N|R)(?:-|$)/)?.[1];
@@ -105,7 +107,7 @@ export function readReportSummary(protocolPath: string): ReportSummary {
     warnings.push(`Protokolleintrag ohne Jahr: ${text(r.event) || text(r.status)} ${text(r.message) || text(r.error)}`.trim());
    continue;
   }
-  if (!Number.isInteger(year) || year < 1 || year > YEARS) { warnings.push('Jahr außerhalb 1–30 übersprungen.'); continue; }
+  if (!Number.isSafeInteger(year) || year < 1 || year > totalYears) { warnings.push(`Jahr außerhalb 1–${totalYears} übersprungen.`); continue; }
   grouped.set(year, [...(grouped.get(year) ?? []), r]);
  }
  const years: ReportYear[] = [];
@@ -147,7 +149,7 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   compatibility: engineCompatibility({ engineId: identity('engineId') || undefined },
    createHash('sha256').update(canonicalProtocolText(protocolText)).digest('hex')),
   date, dateSource: stamps.length ? 'timestamp' : 'file-mtime',
-  partial: annual.length !== YEARS || annual.some((y, i) => y.year !== i + 1), observedYears: annual.length,
+  totalYears, partial: annual.length !== totalYears || annual.some((y, i) => y.year !== i + 1), observedYears: annual.length,
   partialYears: years.length - annual.length, years, warnings, metrics, metricSamples: samples, charts: [], events: [],
   firstInsolvencyYear: annual.find(y => num(y.after?.treasury) !== null && Number(y.after?.treasury) <= 0)?.year ?? null,
   logSource: existsSync(protocolPath.replace(/\.jsonl$/i, '.log')) ? 'original' : 'reconstructed',
@@ -176,14 +178,18 @@ function buildEvents(summary: ReportSummary): ReportEvent[] {
 function buildCharts(summary: ReportSummary): ReportChart[] {
  const annual = summary.years.filter(y => y.completed);
  const byYear = new Map(annual.map(y => [y.year, y]));
- const array = (read: (y: ReportYear) => number | null) => Array.from({ length: YEARS }, (_, i) => {
-  const y = byYear.get(i + 1); return y ? read(y) : null;
+ // Huge planned durations must not allocate an array for every unobserved year.
+ const axisYears = summary.totalYears <= 1000 ? Array.from({ length: summary.totalYears }, (_, i) => i + 1) :
+  [...new Set([1, ...summary.years.map(y => y.year), summary.totalYears])].sort((a, b) => a - b);
+ const array = (read: (y: ReportYear) => number | null) => axisYears.map(year => {
+  const y = byYear.get(year); return y ? read(y) : null;
  });
  const field = (key: string, factor = 1) => array(y => { const n = num(y.after?.[key]); return n === null ? null : n * factor; });
  const series = (key: string, label: string, unit: string, v: Array<number | null>, i: number, step = false): ReportSeries => {
   const valid = v.filter((n): n is number => n !== null);
   return { key, label, unit, values: v, min: valid.length ? Math.min(...valid) : 0,
-   max: valid.length ? Math.max(...valid) : 1, color: COLORS[i % COLORS.length], dash: DASHES[i % DASHES.length], step };
+   max: valid.length ? Math.max(...valid) : 1, color: COLORS[i % COLORS.length], dash: DASHES[i % DASHES.length], step,
+   ...(summary.totalYears > 1000 ? { years: axisYears } : {}) };
  };
  const baseline = num(annual[0]?.before.baselineResPop) ?? num(annual[0]?.after?.baselineResPop);
  const funding = (key: string, legacy: string) => array(y => {
@@ -220,8 +226,8 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
     series(roadsKey, roadsKey === 'roadTileCount' ? 'Straßen-Tiles' : 'Straßen (roadTotal)', roadsKey === 'roadTileCount' ? 'Tiles' : 'Zähler', field(roadsKey), 3)] },
   { id: 'e', title: 'e · Stromkapazität und Nachfrage', note: 'Gemeinsame Stromskala. Schattierung: Nachfrage > Kapazität oder dokumentierte Reserve < 0.', normalized: false,
    series: [series('powerCapacity', 'Kapazität', 'Tiles', capacity, 0), series('powerDemand', 'Nachfrage', 'Tiles', demand, 1)],
-   shortage: Array.from({ length: YEARS }, (_, i) => (capacity[i] !== null && demand[i] !== null && demand[i]! > capacity[i]!) ||
-    (num(byYear.get(i + 1)?.after?.powerReserve) ?? 0) < 0) },
+   shortage: axisYears.map((year, i) => (capacity[i] !== null && demand[i] !== null && demand[i]! > capacity[i]!) ||
+    (num(byYear.get(year)?.after?.powerReserve) ?? 0) < 0) },
   ...(['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(summary.profile) ? [
    { id: 'f', title: 'f · Unruhe und Automatisierung', note: 'Unruhe 0–100; Stufen 0 ruhig, 1 Protest, 2 Sabotage, 3 Aufstand. Automatisierung und Grenze in Prozent.', normalized: true,
     series: [series('unrest', 'Unruhe', 'Index', field('unrest'), 0), series('unrestStage', 'Stufe', '0–3', field('unrestStage'), 1, true),
@@ -268,24 +274,27 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
 }
 
 const LEFT = 60, RIGHT = 730, TOP = 90, BOTTOM = 282, WIDTH = 1000, HEIGHT = 370;
-const x = (year: number) => LEFT + (year - 1) / (YEARS - 1) * (RIGHT - LEFT);
+const x = (year: number, totalYears: number) => LEFT + (year - 1) / Math.max(1, totalYears - 1) * (RIGHT - LEFT);
 const coordinate = (n: number) => Number(n.toFixed(3));
 function scale(min: number, max: number) {
  if (min === max) { const pad = Math.max(Math.abs(min) * .1, 1); return [min - pad, max + pad]; }
  return [min, max];
 }
-function linePath(values: Array<number | null>, low: number, high: number, step = false): string {
+function linePath(values: Array<number | null>, low: number, high: number, totalYears: number, step = false, years?: number[]): string {
  const [min, max] = scale(low, high);
  let previous: number | null = null, d = '';
  values.forEach((v, i) => {
   if (v === null) { previous = null; return; }
-  const px = coordinate(x(i + 1)), py = coordinate(BOTTOM - (v - min) / (max - min) * (BOTTOM - TOP));
+  if (years && i > 0 && years[i] !== years[i - 1] + 1) previous = null;
+  const px = coordinate(x(years?.[i] ?? i + 1, totalYears)), py = coordinate(BOTTOM - (v - min) / (max - min) * (BOTTOM - TOP));
   d += previous === null ? `M${px},${py}` : step ? `H${px}V${py}` : `L${px},${py}`;
   previous = v;
  });
  return d;
 }
-function renderChart(chart: ReportChart, events: ReportEvent[]): string {
+function renderChart(chart: ReportChart, events: ReportEvent[], totalYears: number): string {
+ const x = (year: number) => LEFT + (year - 1) / Math.max(1, totalYears - 1) * (RIGHT - LEFT);
+ const at = (series: ReportSeries, i: number) => series.years?.[i] ?? i + 1;
  const all = [...chart.series, ...(chart.bars ? [chart.bars] : [])].flatMap(s => s.values.filter((v): v is number => v !== null));
  const [low, high] = chart.id === 'c' ? [0, 100] : scale(Math.min(0, ...all), Math.max(1, ...all));
  const y = (v: number) => coordinate(BOTTOM - (v - low) / (high - low) * (BOTTOM - TOP));
@@ -293,21 +302,28 @@ function renderChart(chart: ReportChart, events: ReportEvent[]): string {
  const lines = chart.series.map((s, i) => {
   const last = s.values.findLastIndex(v => v !== null), value = last < 0 ? null : s.values[last];
   const range = chart.normalized ? ` · ${fmt(s.min)}–${fmt(s.max)} ${s.unit}` : ` · ${fmt(value)} ${s.unit}`;
-  return `<g class="data-series" data-series="${escapeHtml(s.key)}"><path class="series-line" d="${linePath(s.values, chart.normalized ? s.min : low, chart.normalized ? s.max : high, s.step)}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-dasharray="${s.dash}"/>` +
-   s.values.map((v, j) => v === null ? '' : `<circle cx="${coordinate(x(j + 1))}" cy="${chart.normalized ? coordinate(BOTTOM - (v - scale(s.min, s.max)[0]) / (scale(s.min, s.max)[1] - scale(s.min, s.max)[0]) * (BOTTOM - TOP)) : y(v)}" r="2.1" fill="${s.color}"><title>${escapeHtml(`Jahr ${j + 1}: ${s.label} ${fmt(v)} ${s.unit}`)}</title></circle>`).join('') +
-   (last < 0 ? '' : `<path class="endpoint-guide" d="M${coordinate(x(last + 1))},${chart.normalized ? coordinate(BOTTOM - (value! - scale(s.min, s.max)[0]) / (scale(s.min, s.max)[1] - scale(s.min, s.max)[0]) * (BOTTOM - TOP)) : y(value!)}L742,${110 + i * 39}" fill="none" stroke="${s.color}" stroke-dasharray="2 3"/>`) +
+  return `<g class="data-series" data-series="${escapeHtml(s.key)}"><path class="series-line" d="${linePath(s.values, chart.normalized ? s.min : low, chart.normalized ? s.max : high, totalYears, s.step, s.years)}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-dasharray="${s.dash}"/>` +
+   s.values.map((v, j) => v === null ? '' : `<circle cx="${coordinate(x(at(s, j)))}" cy="${chart.normalized ? coordinate(BOTTOM - (v - scale(s.min, s.max)[0]) / (scale(s.min, s.max)[1] - scale(s.min, s.max)[0]) * (BOTTOM - TOP)) : y(v)}" r="2.1" fill="${s.color}"><title>${escapeHtml(`Jahr ${at(s, j)}: ${s.label} ${fmt(v)} ${s.unit}`)}</title></circle>`).join('') +
+   (last < 0 ? '' : `<path class="endpoint-guide" d="M${coordinate(x(at(s, last)))},${chart.normalized ? coordinate(BOTTOM - (value! - scale(s.min, s.max)[0]) / (scale(s.min, s.max)[1] - scale(s.min, s.max)[0]) * (BOTTOM - TOP)) : y(value!)}L742,${110 + i * 39}" fill="none" stroke="${s.color}" stroke-dasharray="2 3"/>`) +
    `<text x="750" y="${110 + i * 39}" fill="${s.color}" font-size="11">${escapeHtml(s.label)}<tspan x="750" dy="14">${escapeHtml(last < 0 ? 'nicht verfügbar' : range)}</tspan></text></g>`;
  }).join('');
- const bars = chart.bars?.values.map((v, i) => v === null ? '' : `<rect class="saldo-bar" x="${coordinate(x(i + 1) - 6)}" y="${Math.min(y(0), y(v))}" width="12" height="${Math.abs(y(v) - y(0))}" fill="${chart.bars!.color}" opacity=".45"><title>${escapeHtml(`Jahr ${i + 1}: Saldo ${fmt(v)} $`)}</title></rect>`).join('') ?? '';
+ const bars = chart.bars?.values.map((v, i) => v === null ? '' : `<rect class="saldo-bar" x="${coordinate(x(at(chart.bars!, i)) - 6)}" y="${Math.min(y(0), y(v))}" width="12" height="${Math.abs(y(v) - y(0))}" fill="${chart.bars!.color}" opacity=".45"><title>${escapeHtml(`Jahr ${at(chart.bars!, i)}: Saldo ${fmt(v)} $`)}</title></rect>`).join('') ?? '';
  const band = chart.band ? `<text x="60" y="337" font-size="10">Wohlfahrt (0–1), gefüllte Mini-Zeile</text>` + chart.band.values.map((v, i) => v === null ? '' :
-  `<rect class="welfare-band" x="${coordinate(x(i + 1) - 7)}" y="${358 - Math.max(0, Math.min(1, v)) * 16}" width="14" height="${Math.max(1, Math.max(0, Math.min(1, v)) * 16)}" fill="${chart.band!.color}"><title>${escapeHtml(`Jahr ${i + 1}: Wohlfahrt ${fmt(v)}`)}</title></rect>`).join('') : '';
- const shortage = chart.shortage?.map((v, i) => v ? `<rect class="power-shortage" x="${coordinate(Math.max(LEFT, x(i + 1) - 11.55))}" y="${TOP}" width="${i === 0 || i === 29 ? 11.55 : 23.1}" height="${BOTTOM - TOP}" fill="${COLORS[1]}" opacity=".16"><title>Jahr ${i + 1}: Strommangel</title></rect>` : '').join('') ?? '';
- return `<section class="chart-card"><h2>${escapeHtml(chart.title)}</h2><p class="note">${escapeHtml(chart.note)}</p>${chart.id === 'a' ? '<div class="population-legend" aria-label="Bevölkerungs-Legende"><span class="human-symbol">● Menschen</span><span class="ai-symbol">◆ KI</span></div>' : ''}<svg class="year-chart" data-chart="${chart.id}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeHtml(chart.title)}; Jahre 1 bis 30; klicken für Tagebuch" tabindex="0">` +
+  `<rect class="welfare-band" x="${coordinate(x(at(chart.band!, i)) - 7)}" y="${358 - Math.max(0, Math.min(1, v)) * 16}" width="14" height="${Math.max(1, Math.max(0, Math.min(1, v)) * 16)}" fill="${chart.band!.color}"><title>${escapeHtml(`Jahr ${at(chart.band!, i)}: Wohlfahrt ${fmt(v)}`)}</title></rect>`).join('') : '';
+ const halfYearWidth = (RIGHT - LEFT) / Math.max(1, totalYears - 1) / 2;
+ const shortage = chart.shortage?.map((v, i) => {
+  const year = at(chart.series[0], i), left = Math.max(LEFT, x(year) - halfYearWidth);
+  const right = Math.min(RIGHT, x(year) + halfYearWidth);
+  return v ? `<rect class="power-shortage" x="${coordinate(left)}" y="${TOP}" width="${coordinate(right - left)}" height="${BOTTOM - TOP}" fill="${COLORS[1]}" opacity=".16"><title>Jahr ${year}: Strommangel</title></rect>` : '';
+ }).join('') ?? '';
+ const ticks = totalYears <= 30 ? Array.from({ length: totalYears }, (_, i) => i + 1) :
+  [...new Set(Array.from({ length: 30 }, (_, i) => Math.round(1 + i / 29 * (totalYears - 1))))];
+ return `<section class="chart-card"><h2>${escapeHtml(chart.title)}</h2><p class="note">${escapeHtml(chart.note)}</p>${chart.id === 'a' ? '<div class="population-legend" aria-label="Bevölkerungs-Legende"><span class="human-symbol">● Menschen</span><span class="ai-symbol">◆ KI</span></div>' : ''}<svg class="year-chart" data-chart="${chart.id}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeHtml(chart.title)}; Jahre 1 bis ${totalYears}; klicken für Tagebuch" tabindex="0">` +
   `<title>${escapeHtml(chart.title)}</title><rect class="plot-bg" x="${LEFT}" y="${TOP}" width="${RIGHT - LEFT}" height="${BOTTOM - TOP}"/>` + shortage +
   [0, .25, .5, .75, 1].map(f => `<line class="grid" x1="${LEFT}" x2="${RIGHT}" y1="${TOP + f * (BOTTOM - TOP)}" y2="${TOP + f * (BOTTOM - TOP)}"/><text data-y-fraction="${f}" x="52" y="${TOP + f * (BOTTOM - TOP) + 4}" text-anchor="end" font-size="10">${escapeHtml(chart.normalized ? fmt(100 - f * 100) + '%' : fmt(high - f * (high - low)))}</text>`).join('') +
   (chart.bars ? `<line class="zero-line" x1="${LEFT}" x2="${RIGHT}" y1="${y(0)}" y2="${y(0)}"/><text x="750" y="169" fill="${chart.bars.color}" font-size="11">Saldo: Balken ($)</text>` : '') + bars + lines + eventMarkup +
-  Array.from({ length: YEARS }, (_, i) => `<text x="${coordinate(x(i + 1))}" y="303" text-anchor="middle" font-size="9">${i + 1}</text>`).join('') +
-  `<text x="395" y="319" text-anchor="middle" font-size="10">Jahr (1–30)</text>${band}<line class="year-hair" x1="60" x2="60" y1="${TOP}" y2="${BOTTOM}" hidden/><rect class="chart-hit" x="${LEFT}" y="${TOP}" width="${RIGHT - LEFT}" height="${BOTTOM - TOP}" fill="transparent"/></svg><output class="chart-tooltip" data-tooltip="${chart.id}" aria-live="polite">Jahr auswählen: Maus, Pfeiltasten; Enter öffnet das Tagebuch.</output></section>`;
+  ticks.map(year => `<text x="${coordinate(x(year))}" y="303" text-anchor="middle" font-size="9">${year}</text>`).join('') +
+  `<text x="395" y="319" text-anchor="middle" font-size="10">Jahr (1–${totalYears})</text>${band}<line class="year-hair" x1="60" x2="60" y1="${TOP}" y2="${BOTTOM}" hidden/><rect class="chart-hit" x="${LEFT}" y="${TOP}" width="${RIGHT - LEFT}" height="${BOTTOM - TOP}" fill="transparent"/></svg><output class="chart-tooltip" data-tooltip="${chart.id}" aria-live="polite">Jahr auswählen: Maus, Pfeiltasten; Enter öffnet das Tagebuch.</output></section>`;
 }
 
 const CSS = `
@@ -318,6 +334,9 @@ const CSS = `
 // Browser code is constant. All protocol strings enter only through inert JSON or textContent.
 const SCRIPT = `
 const payload=JSON.parse(document.getElementById('report-data').textContent);
+const totalYears=payload.totalYears||30,yearSpan=Math.max(1,totalYears-1);
+const seriesYear=(s,i)=>s.years?s.years[i]:i+1;
+const seriesValue=(s,year)=>s.values[s.years?s.years.indexOf(year):year-1];
 // Restore CRLF/control characters lost by the HTML parser, without parsing markup.
 if(payload.logLines)Array.from(document.querySelectorAll('#full-log .log-line')).forEach((n,i)=>{n.textContent=payload.logLines[i]});
 const format=new Intl.NumberFormat('de-DE',{maximumFractionDigits:2});
@@ -326,18 +345,18 @@ const nodes=(tag,attributes={})=>{const n=document.createElementNS('http://www.w
 function showYear(year){
  const charts=payload.charts||[];
  for(const svg of document.querySelectorAll('.year-chart')){
-  const hair=svg.querySelector('.year-hair');if(hair){hair.removeAttribute('hidden');hair.setAttribute('x1',60+(year-1)/29*670);hair.setAttribute('x2',60+(year-1)/29*670)}
+  const hair=svg.querySelector('.year-hair');if(hair){hair.removeAttribute('hidden');hair.setAttribute('x1',60+(year-1)/yearSpan*670);hair.setAttribute('x2',60+(year-1)/yearSpan*670)}
   const chart=charts.find(c=>c.id===svg.dataset.chart);const out=document.querySelector('[data-tooltip="'+svg.dataset.chart+'"]');
-  if(chart&&out){const ss=[...chart.series,...(chart.bars?[chart.bars]:[]),...(chart.band?[chart.band]:[])];out.textContent='Jahr '+year+' · '+ss.map(s=>s.label+': '+formatValue(s.values[year-1])+' '+s.unit).join(' · ')+(chart.shortage&&chart.shortage[year-1]?' · Strommangel':'')}
+  if(chart&&out){const ss=[...chart.series,...(chart.bars?[chart.bars]:[]),...(chart.band?[chart.band]:[])];const index=chart.series[0]?.years?chart.series[0].years.indexOf(year):year-1;out.textContent='Jahr '+year+' · '+ss.map(s=>s.label+': '+formatValue(seriesValue(s,year))+' '+s.unit).join(' · ')+(chart.shortage&&chart.shortage[index]?' · Strommangel':'')}
  }
 }
 function openYear(year){const el=document.getElementById('year'+year);if(!el)return;const details=el.querySelector('details.year-details');if(details)details.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});location.hash='year'+year}
 let activeYear=1;
 for(const svg of document.querySelectorAll('.year-chart')){
- const yearAt=e=>{const box=svg.getBoundingClientRect();return Math.max(1,Math.min(30,Math.round((((e.clientX-box.left)/box.width*1000)-60)/670*29)+1))};
+ const yearAt=e=>{const box=svg.getBoundingClientRect();return Math.max(1,Math.min(totalYears,Math.round((((e.clientX-box.left)/box.width*1000)-60)/670*yearSpan)+1))};
  svg.addEventListener('pointermove',e=>{activeYear=yearAt(e);showYear(activeYear)});
  svg.addEventListener('click',e=>{activeYear=yearAt(e);showYear(activeYear);openYear(activeYear)});
- svg.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();activeYear=Math.max(1,Math.min(30,activeYear+(e.key==='ArrowLeft'?-1:1)));showYear(activeYear)}else if(e.key==='Enter')openYear(activeYear)});
+ svg.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();activeYear=Math.max(1,Math.min(totalYears,activeYear+(e.key==='ArrowLeft'?-1:1)));showYear(activeYear)}else if(e.key==='Enter')openYear(activeYear)});
 }
 function openLog(id){const full=document.getElementById('full-output');if(full)full.open=true;const target=document.getElementById(id);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});location.hash=id}}
 for(const a of document.querySelectorAll('[data-log-target]'))a.addEventListener('click',e=>{e.preventDefault();openLog(a.dataset.logTarget)});
@@ -359,9 +378,9 @@ if(payload.runs){
   const filtered=payload.runs.filter((r,i)=>(!assignment.value||r.assignment===assignment.value)&&(!handbook.value||r.handbook===handbook.value)&&checks[i].checked);
   payload.charts=[{id:'index',series:filtered.map(r=>r.series)}];
   const layer=svg.querySelector('.index-lines');layer.replaceChildren();const values=filtered.flatMap(r=>r.series.values.filter(v=>v!==null));const max=Math.max(1,...values);
-  for(let i=0;i<filtered.length;i++){const r=filtered[i],s=r.series;let d='',previous=false;s.values.forEach((v,j)=>{if(v===null){previous=false;return}d+=(previous?'L':'M')+(60+j/29*670)+','+(282-v/max*192);previous=true});
+  for(let i=0;i<filtered.length;i++){const r=filtered[i],s=r.series;let d='',previous=false;s.values.forEach((v,j)=>{if(v===null){previous=false;return}if(j>0&&seriesYear(s,j)!==seriesYear(s,j-1)+1)previous=false;d+=(previous?'L':'M')+(60+(seriesYear(s,j)-1)/yearSpan*670)+','+(282-v/max*192);previous=true});
   const p=nodes('path',{d,fill:'none',stroke:s.color,'stroke-width':2,'stroke-dasharray':s.dash,'data-run':r.id});const title=nodes('title');title.textContent=s.label;p.appendChild(title);layer.appendChild(p);
-  s.values.forEach((v,j)=>{if(v===null)return;const dot=nodes('circle',{cx:60+j/29*670,cy:282-v/max*192,r:2,fill:s.color});const title=nodes('title');title.textContent=s.label+' · Jahr '+(j+1)+': '+formatValue(v)+' Personen';dot.appendChild(title);layer.appendChild(dot)});
+  s.values.forEach((v,j)=>{if(v===null)return;const dot=nodes('circle',{cx:60+(seriesYear(s,j)-1)/yearSpan*670,cy:282-v/max*192,r:2,fill:s.color});const title=nodes('title');title.textContent=s.label+' · Jahr '+seriesYear(s,j)+': '+formatValue(v)+' Personen';dot.appendChild(title);layer.appendChild(dot)});
    const last=s.values.findLastIndex(v=>v!==null);if(last>=0){const t=nodes('text',{x:750,y:100+i*14,fill:s.color,'font-size':10});t.textContent=s.label;layer.appendChild(t)}
   }
   // The selectable legend holds all labels when there are too many for endpoint labels.
@@ -385,7 +404,7 @@ const metricLabels: Record<keyof ReportMetrics, string> = {
 };
 function renderMetrics(summary: ReportSummary) {
  return `<dl class="metric-grid">${Object.entries(summary.metrics).map(([key, v]) => `<div><dt>${escapeHtml(metricLabels[key as keyof ReportMetrics])}</dt><dd>${fmt(v)}</dd></div>`).join('')}</dl>` +
-  `<p class="note">Strategie-Aggregate ausschließlich über ${summary.observedYears} abgeschlossene Jahre (nicht durch 30 geteilt); ${summary.partialYears} unvollständige Jahre ohne Jahresabschluss nicht eingerechnet. Gültige Stichproben: Menschen ${summary.metricSamples.resPop}, KI ${summary.metricSamples.aiPop}, Kasse ${summary.metricSamples.treasury}. Letzte Werte = letzter Jahresabschluss; kumulierte Verluste nicht summiert.</p>`;
+  `<p class="note">Strategie-Aggregate ausschließlich über ${summary.observedYears} abgeschlossene Jahre (nicht durch ${summary.totalYears} geteilt); ${summary.partialYears} unvollständige Jahre ohne Jahresabschluss nicht eingerechnet. Gültige Stichproben: Menschen ${summary.metricSamples.resPop}, KI ${summary.metricSamples.aiPop}, Kasse ${summary.metricSamples.treasury}. Letzte Werte = letzter Jahresabschluss; kumulierte Verluste nicht summiert.</p>`;
 }
 const responseText = (r: JsonObject) => `Modellantwort: ${fmt(r.inputTokens)} Eingabe- / ${fmt(r.outputTokens)} Ausgabetokens`;
 const errorText = (e: JsonObject) => `Fehler${text(e.kind) ? ' (' + text(e.kind) + ')' : ''}: ${text(e.message) || 'ohne Meldung'}`;
@@ -407,7 +426,7 @@ function renderLog(log: string, summary: ReportSummary) {
  const spanIds = new Map<number, string[]>();
  lines.forEach((line, i) => {
   const matched = line.match(/\bJahr\s+(\d+)\s*:/);
-  if (matched && Number(matched[1]) >= 1 && Number(matched[1]) <= YEARS) { current = Number(matched[1]); if (!anchors.has(current)) anchors.set(current, i); }
+  if (matched && Number(matched[1]) >= 1 && Number(matched[1]) <= summary.totalYears) { current = Number(matched[1]); if (!anchors.has(current)) anchors.set(current, i); }
   if (/\bMenschen\s*(?:=|:)/.test(line)) {
    const year = current ?? summary.years.filter(y => y.completed)[populationIndex]?.year;
    populationIndex++;
@@ -439,16 +458,16 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   `<details class="year-details"><summary>${y.tools.length} Tool-Ergebnisse${y.termination ? ' · ' + show(y.termination) : ''}</summary>` +
   y.tools.map(t => `<details class="tool"><summary>${show(t.call.name)} · ${obj(t.result).handled === false ? 'nicht ausgeführt' : 'gespeichertes Ergebnis'}</summary><h4>Aufruf</h4><pre>${escapeHtml(displayJson(t.call, options))}</pre><h4>Tatsächliches Ergebnis</h4><pre>${escapeHtml(displayJson(t.result, options))}</pre></details>`).join('') +
   `</details>${y.after ? `<details><summary>Alle gemessenen Jahreswerte</summary><pre>${escapeHtml(displayJson(y.after, options))}</pre></details>` : ''}</article>`).join('');
- const content = `<header><h1>Dipolis · Stadtbericht · ${show(summary.id)}</h1><p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/30 abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
+ const content = `<header><h1>Dipolis · Stadtbericht · ${show(summary.id)}</h1><p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/${summary.totalYears} abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
   [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Engine-Provenienz', summary.compatibility.label], ['Engine-ID', summary.compatibility.engineId ?? 'nicht dokumentiert'], ['Kompatibilität', summary.compatibility.explanation], ['Lauf', summary.run],
    [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC']]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}</section>` +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
   `<p class="event-key">Ereignisse in allen ${summary.charts.length} Diagrammen: Kasse ≤ 0 (gepunktet), erfolgreiche KI-, Farm- und Kraftwerksbauten (eigene Liniencodes und Beschriftungszeilen). Nur built &gt; 0; abgelehnte Aufrufe sind keine Bauereignisse.</p>` +
-  summary.charts.map(c => renderChart(c, summary.events)).join('') + renderCityReview(review, summary, show) +
+  summary.charts.map(c => renderChart(c, summary.events, summary.totalYears)).join('') + renderCityReview(review, summary, show) +
   `<section><h2>Jahrestagebuch</h2>${diary || '<p>Keine Jahresentscheidung gespeichert.</p>'}</section>` + renderedLog.html;
  // Shorten path strings within the inert payload too, never replace numbers or content globally.
- const payload = { charts: summary.charts, logLines: log.split('\n').map((line, i, all) => line + (i < all.length - 1 ? '\n' : '')) };
+ const payload = { totalYears: summary.totalYears, charts: summary.charts, logLines: log.split('\n').map((line, i, all) => line + (i < all.length - 1 ? '\n' : '')) };
  writeFileSync(htmlPath, page('Dipolis · Stadtbericht · ' + relativeText(summary.id, options), content, payload), 'utf8');
  return { htmlPath, metrics: summary.metrics, years: summary.years, complete: !summary.partial };
 }
@@ -465,8 +484,9 @@ export function generateReportIndex(directory: string, options: CityReportOption
  const select = (key: 'assignment' | 'handbook') => `<select id="filter-${key}"><option value="">Alle</option>${[...new Set(summaries.map(s => s[key]))].sort().map(v => `<option value="${show(v)}">${show(v)}</option>`).join('')}</select>`;
  const runs = summaries.map((s, i) => ({ id: s.id, assignment: s.assignment, handbook: s.handbook, profile: s.profile,
   series: { ...s.charts[0].series[0], key: s.id, label: relativeText(`${s.id} · ${s.model}`, options), color: COLORS[i % COLORS.length], dash: DASHES[Math.floor(i / COLORS.length) % DASHES.length] } }));
- const skeleton: ReportChart = { id: 'index', title: 'Bevölkerung aller ausgewählten Läufe', note: 'Gemeinsame Jahre 1–30 und Bevölkerungsskala. Filter nach Auftrag / Handbuch; Checkbox-Legende mit Lauf-ID und Modell. Bei vielen Kurven Auswahl einschränken; Einzelwerte im gemeinsamen Hover.', normalized: false, series: [] };
- let chart = renderChart(skeleton, []).replace('<rect class="chart-hit"', '<g class="index-lines"></g><text class="index-scale" x="750" y="300" font-size="11"></text><rect class="chart-hit"');
+ const totalYears = Math.max(1, ...summaries.map(s => s.totalYears));
+ const skeleton: ReportChart = { id: 'index', title: 'Bevölkerung aller ausgewählten Läufe', note: `Gemeinsame Jahre 1–${totalYears} und Bevölkerungsskala. Filter nach Auftrag / Handbuch; Checkbox-Legende mit Lauf-ID und Modell. Bei vielen Kurven Auswahl einschränken; Einzelwerte im gemeinsamen Hover.`, normalized: false, series: [] };
+ let chart = renderChart(skeleton, [], totalYears).replace('<rect class="chart-hit"', '<g class="index-lines"></g><text class="index-scale" x="750" y="300" font-size="11"></text><rect class="chart-hit"');
  // No diary in the index, but individual report links remain available in the run table.
  chart = chart.replace('klicken für Tagebuch', 'gemeinsame Jahreswerte');
  const rows = summaries.map((s, i) => {
@@ -474,7 +494,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
   const loaded = loadCityReview(path.join(absolute, s.id + '.jsonl'), s);
   const grades = REVIEW_CRITERIA.map(k => `<td>${loaded.warning ? 'ungültig' : loaded.review?.status === 'failed' ?
    'fehlgeschlagen' : loaded.review?.judge ? String(loaded.review.judge[k].score) : '—'}</td>`).join('');
-  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
+  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/${s.totalYears}</td>` +
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
    grades + `<td>${[...s.warnings, ...(loaded.review?.adapter === 'fake' ? ['Schein-Adapter – keine inhaltliche Modellbewertung'] : []), ...(loaded.warning ? [loaded.warning] : []),
     ...(loaded.review?.error ? [`Nachbetrachtung fehlgeschlagen (${loaded.review.error.stage}): ${loaded.review.error.message}`] : [])].map(show).join('<br>')}</td></tr>`;
@@ -484,6 +504,6 @@ export function generateReportIndex(directory: string, options: CityReportOption
   summaries.map((s, i) => `<label><input type="checkbox" checked data-run-check="${i}"><span style="color:${runs[i].series.color}">━━</span> ${show(s.assignment)} / ${show(s.handbook)} · ${show(s.id)} · ${show(s.model)}</label>`).join('') +
   `</fieldset></section>${chart}<section class="card table-wrap"><h2>Läufe und letzte Metriken</h2><table><thead><tr>${['Lauf / Modell', 'Auftrag / Handbuch / Nr.', 'Datum / Status', 'Ø Menschen', 'Letzte Menschen', 'Ø KI', 'Letzte Kasse', 'Insolvente Jahre', 'Hunger kumuliert', ...reviewGradeLabels, 'Hinweise'].map(v => `<th>${escapeHtml(v)}</th>`).join('')}</tr></thead><tbody>${rows}${errorRows}</tbody></table></section>`;
  const htmlPath = path.join(absolute, 'index.html');
- writeFileSync(htmlPath, page('Dipolis · Stadtmodell · Berichtübersicht', content, { runs, charts: [] }), 'utf8');
+ writeFileSync(htmlPath, page('Dipolis · Stadtmodell · Berichtübersicht', content, { totalYears, runs, charts: [] }), 'utf8');
  return { htmlPath, summaries, errors };
 }

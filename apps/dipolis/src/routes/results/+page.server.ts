@@ -17,6 +17,8 @@ export function load() {
 			const html = file.replace(/\.jsonl$/i, '.html');
 			return {
 				name: file.replace(/\.jsonl$/i, ''),
+				totalYears: summary.totalYears,
+				observedYears: summary.observedYears,
 				href: existsSync(path.join(root, html)) ? `/reports/${directory}/${html}` : null,
 				grades: REVIEW_CRITERIA.map((key) => loaded.review?.judge?.[key]?.score ?? null),
 				warning: loaded.warning ?? loaded.review?.error?.message ?? null,

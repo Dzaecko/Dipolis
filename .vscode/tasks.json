@@ -84,6 +84,7 @@
         "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
         "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
         "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
+        "-Years", { "value": "${input:cityModelYears}", "quoting": "strong" },
         "-Assignment", "N",
         "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
@@ -114,6 +115,7 @@
         "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
         "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
         "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
+        "-Years", { "value": "${input:cityModelYears}", "quoting": "strong" },
         "-Assignment", "R",
         "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
@@ -144,6 +146,12 @@
     }
   ],
   "inputs": [
+    {
+      "id": "cityModelYears",
+      "type": "promptString",
+      "description": "Jahre fuer einen neuen Lauf (positive sichere ganze Zahl; Fortsetzen erbt die Protokolldauer)",
+      "default": "30"
+    },
     {
       "id": "cityReviewProtocol",
       "type": "promptString",

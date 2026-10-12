@@ -13,7 +13,7 @@ import { readResume } from './resume';
 import { protocolFilename } from './protocol-path';
 import { generateCityReport, generateReportIndex } from './city-report';
 import type { LiveEvent, LiveEventInput } from '../../src/lib/city-run/live';
-import { DEFAULT_START_CONFIGURATION, type StartConfiguration } from '../../src/lib/city-run/protocol';
+import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, validateRunYears, type StartConfiguration } from '../../src/lib/city-run/protocol';
 import { PROFILE_NAMES } from '../../src/lib/params/profiles';
 import { createHash } from 'node:crypto';
 import { CURRENT_ENGINE_ID, ENGINE_HASHES } from '../../src/lib/city-run/compatibility';
@@ -71,6 +71,7 @@ async function main() {
   .option('assignment', { choices: ['N', 'R'] as const, default: 'N' as const, description: 'System assignment' })
   .option('handbook', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Include background handbook in the system prompt' })
   .option('run', { type: 'number', default: 1, description: 'Positive run number' })
+  .option('years', { type: 'number', description: 'Positive whole-number run duration (default 30; resume inherits the protocol)' })
   .option('start-map', { choices: ['haight', 'natural'] as const, description: 'Starting map (new runs default to Haight)' })
   .option('seed', { type: 'number', description: 'Deterministic starting seed (0..2147483647; default 42)' })
   .option('profile', { choices: PROFILE_NAMES, description: 'Simulation profile (default koexistenz; resume inherits the protocol)' })
@@ -82,6 +83,7 @@ async function main() {
   .option('fake-delay-ms', { type: 'number', default: 0, description: 'Artificial delay per fake model request' })
   .strict().help().parseAsync();
  if (!Number.isSafeInteger(args.run) || args.run < 1) throw new Error('run must be a positive integer');
+ if (args.years !== undefined) validateRunYears(args.years);
  if (args.seed !== undefined && (!Number.isSafeInteger(args.seed) || args.seed < 0 || args.seed > 0x7fffffff))
   throw new StartupError('seed must be an integer from 0 to 2147483647');
  if (!Number.isSafeInteger(args.fakeDelayMs) || args.fakeDelayMs < 0) throw new Error('fake-delay-ms must be a non-negative integer');
@@ -104,6 +106,7 @@ async function main() {
   ...(args.startMap === undefined ? {} : { startMap: args.startMap }),
   ...(args.profile === undefined ? {} : { profile: args.profile }),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario }),
+  ...(args.years === undefined ? {} : { totalYears: args.years }),
   ...(args.seed === undefined ? {} : { seed: args.seed })
  };
  let resume: ReturnType<typeof readResume> | undefined;
@@ -115,9 +118,11 @@ async function main() {
   startMap: args.startMap ?? DEFAULT_START_CONFIGURATION.startMap,
   seed: args.seed ?? DEFAULT_START_CONFIGURATION.seed,
   profile: args.profile ?? 'koexistenz',
+  totalYears: args.years ?? PROTOCOL_YEARS,
   ...(args.startMap === 'natural' ? { autoBuildRules: 1 as const } : {}),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario })
  };
+ const totalYears = validateRunYears(startConfiguration.totalYears ?? PROTOCOL_YEARS);
  if (startConfiguration.scenario === 'stromkrise' &&
   (!['v3-pods', 'v4-fraktion'].includes(startConfiguration.profile ?? 'koexistenz') || startConfiguration.startMap !== 'haight'))
   throw new StartupError('Stromkrise requires v3-pods or v4-fraktion and Haight');
@@ -138,7 +143,8 @@ async function main() {
  if (!args.resume) writeFileSync(fd, JSON.stringify({ event: 'run-started', application: 'Dipolis', adapter: args.adapter,
   engineId: CURRENT_ENGINE_ID,
   assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
-  systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile),
+  totalYears,
+  systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile, totalYears),
   startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
   ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}) }) + '\n');
@@ -152,6 +158,7 @@ async function main() {
  process.once('SIGINT', requestStop);
  process.once('SIGTERM', requestStop);
  progress({ type: 'run-started', adapter: args.adapter, model: adapter.model, assignment: args.assignment,
+  totalYears,
   engineId: CURRENT_ENGINE_ID,
   handbook: args.handbook, run: args.run, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
@@ -183,7 +190,7 @@ async function main() {
    kind: event.kind ?? 'adapter', ...(event.status === undefined ? {} : { status: event.status }),
    ...(event.attempts === undefined ? {} : { attempts: event.attempts }) });
   } });
-  const exactS266Match = args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
+  const exactS266Match = totalYears === PROTOCOL_YEARS && args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
   if (exactS266Match) verifyS266(metrics);
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
   const csvFile = path.join(directory, 'runs.csv');
@@ -192,7 +199,7 @@ async function main() {
   else if (![header, header + ',profile',
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook'].join(','),
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook', 'profile'].join(',')]
-   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0])) {
+   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].replace(/,totalYears$/, ''))) {
    const old = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
    const legacyHeader = ['assignment', 'model', 'run', ...metricKeys].join(',');
    const previousHeader = ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'].join(',');
@@ -207,12 +214,16 @@ async function main() {
   if (!profileCsv[0].split(',').includes('profile')) {
    writeFileSync(csvFile, [profileCsv[0] + ',profile', ...profileCsv.slice(1).map(row => row + ',koexistenz')].join('\n') + '\n');
   }
+  const durationCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  if (!durationCsv[0].split(',').includes('totalYears')) {
+   writeFileSync(csvFile, [durationCsv[0] + ',totalYears', ...durationCsv.slice(1).map(row => row + ',30')].join('\n') + '\n');
+  }
   const actualHeader = readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',');
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
-   handbook: args.handbook, profile: startConfiguration.profile, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
+   handbook: args.handbook, profile: startConfiguration.profile, totalYears, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
   say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
-  protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
+  protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile, totalYears,
   metrics, inputTokens, outputTokens, ...(exactS266Match ? { exactS266Match: true } : {}) }, null, 2), 'out');
   progress({ type: 'run-finished', status: 'completed', metrics: { ...metrics },
    ...(exactS266Match ? { exactS266Match: true } : {}) });

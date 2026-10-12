@@ -81,6 +81,25 @@ describe('step generation', () => {
 });
 
 describe('timeline', () => {
+	it('uses the planned duration for short and extended runs', () => {
+		for (const totalYears of [1, 50]) {
+			const protocol = readProtocol(JSON.stringify({ event: 'run-started', totalYears }));
+			const timeline = buildTimeline(stepsFromProtocol(protocol), protocol.meta.totalYears);
+			expect(timeline.years).toHaveLength(totalYears);
+			expect(timeline.series.resPop).toHaveLength(totalYears);
+			expect(timeline.years.at(-1)?.year).toBe(totalYears);
+		}
+		expect(buildTimeline([]).years).toHaveLength(30);
+	});
+
+	it('bounds unrecorded future slots without losing completed years', () => {
+		expect(buildTimeline([], Number.MAX_SAFE_INTEGER).years).toHaveLength(1000);
+		const timeline = buildTimeline([{ type: 'year-end', year: 1001, afterReport: { resPop: 7 } }], 1002);
+		expect(timeline.years).toHaveLength(1001);
+		expect(timeline.availableYears).toBe(1001);
+		expect(timeline.series.resPop[1000]).toBe(7);
+	});
+
 	it('marks builds, first insolvent year and series', () => {
 		const timeline = buildTimeline(stepsFromProtocol(readProtocol(protocolText())), 4);
 		expect(timeline.availableYears).toBe(3);

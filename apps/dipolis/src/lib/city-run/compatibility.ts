@@ -1,5 +1,5 @@
 import provenance from './engine-provenance.json';
-import type { ProtocolMeta, StartConfiguration } from './protocol';
+import { validateRunYears, type ProtocolMeta, type StartConfiguration } from './protocol';
 
 export const CURRENT_ENGINE_ID = provenance.engineId;
 export const ENGINE_HASHES = provenance.engineHashes;
@@ -36,10 +36,15 @@ export function assertReplayCompatible(meta: Pick<ProtocolMeta, 'engineId'>, pro
 
 /** Shared live bootstrap: rules must travel with the map, not default to historical rules. */
 export function liveStartConfiguration(event: StartConfiguration, recorded?: StartConfiguration): StartConfiguration {
+ const eventYears = event.totalYears === undefined ? undefined : validateRunYears(event.totalYears);
+ const recordedYears = recorded?.totalYears === undefined ? undefined : validateRunYears(recorded.totalYears);
  if (recorded && (event.startMap !== recorded.startMap || event.seed !== recorded.seed ||
-  (event.profile ?? 'koexistenz') !== (recorded.profile ?? 'koexistenz')))
+  (event.profile ?? 'koexistenz') !== (recorded.profile ?? 'koexistenz') ||
+  (eventYears !== undefined && recordedYears !== undefined && eventYears !== recordedYears)))
   throw new Error('Live bootstrap does not match the recorded start configuration');
+ const totalYears = recordedYears ?? eventYears;
  return { startMap: event.startMap, seed: event.seed, profile: event.profile ?? 'koexistenz',
+  ...(totalYears === undefined ? {} : { totalYears }),
   ...(event.scenario ? { scenario: event.scenario } : {}),
   ...(event.startMap === 'natural' ? { autoBuildRules: event.autoBuildRules ?? recorded?.autoBuildRules ?? 0 } : {}) };
 }

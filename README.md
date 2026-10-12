@@ -64,6 +64,14 @@ The current browser interface is primarily in German.
 
 By default, the runner loads Haight, lets it settle, sets the treasury to **60,000**, and runs **30 years**. Each year, the model reads a report and can make up to **12 tool calls** before the city advances.
 
+The run length is configurable: enter any positive whole number in the live form's **Jahre** field, or pass `--years` on the CLI:
+
+```sh
+corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --years 50 --run 2
+```
+
+The selected duration is included in the mandate, protocol, results CSV, replay, charts and post-run review. Existing protocols without a duration retain their original 30-year horizon. Resuming an interrupted run inherits its recorded horizon; a conflicting explicit duration is rejected. Longer runs can require more time and, with real models, more tokens and cost. The S266 reference comparison remains specific to the default 30-year run.
+
 ### Local mock adapter: no model account required
 
 ```sh

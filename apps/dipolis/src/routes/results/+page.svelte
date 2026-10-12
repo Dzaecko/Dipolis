@@ -14,11 +14,12 @@
 	{:else}
 		<div class="table-wrap">
 			<table>
-				<thead><tr><th>Lauf</th>{#each data.gradeLabels as label}<th>{label}</th>{/each}<th>Hinweis</th></tr></thead>
+				<thead><tr><th>Lauf</th><th>Jahre (abgeschlossen / geplant)</th>{#each data.gradeLabels as label}<th>{label}</th>{/each}<th>Hinweis</th></tr></thead>
 				<tbody>
 					{#each data.runs as run}
 						<tr>
 							<td>{#if run.href}<a href={run.href}>{run.name}</a>{:else}{run.name} (Bericht noch nicht erzeugt){/if}</td>
+							<td>{run.observedYears} / {run.totalYears}</td>
 							{#each run.grades as grade}<td>{grade ?? '–'}</td>{/each}
 							<td>{run.warning ?? (run.fake ? 'Schein-Adapter: keine inhaltliche Bewertung' : '')}</td>
 						</tr>

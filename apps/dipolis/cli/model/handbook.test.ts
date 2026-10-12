@@ -38,7 +38,7 @@ describe('optional handbook and protocol identity', () => {
   const protocol = JSON.stringify({ event: 'run-started', assignment: 'N', model: 'm', run: 1,
    handbook: 'off', startMap: 'natural', seed: 321 }) + '\n' +
    JSON.stringify({ status: 'failed', assignment: 'N', model: 'm', run: 1, handbook: 'off' });
-  expect(readResume(protocol, 'N', 'm', 1).startConfiguration).toEqual({ startMap: 'natural', seed: 321, profile: 'koexistenz', autoBuildRules: 0 });
+  expect(readResume(protocol, 'N', 'm', 1).startConfiguration).toEqual({ startMap: 'natural', seed: 321, profile: 'koexistenz', autoBuildRules: 0, totalYears: 30 });
   expect(readResume(protocol.replace('"seed":321', '"seed":321,"autoBuildRules":1'), 'N', 'm', 1)
    .startConfiguration.autoBuildRules).toBe(1);
   expect(() => readResume(protocol, 'N', 'm', 1, 'off', { startMap: 'haight' })).toThrow('start map mismatch');

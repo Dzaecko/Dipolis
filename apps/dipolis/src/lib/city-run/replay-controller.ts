@@ -2,7 +2,7 @@
  * Engine-independent playback of city-model years. Steps come from a static protocol (replay)
  * or from a queue that a live run appends to; an executor applies them to an engine.
  */
-import { PROTOCOL_YEARS, type Decision, type Protocol, type ProtocolCallResult, type ProtocolToolCall, type Report } from './protocol';
+import { PROTOCOL_YEARS, validateRunYears, type Decision, type Protocol, type ProtocolCallResult, type ProtocolToolCall, type Report } from './protocol';
 import { compareReports, type SyncResult } from './replay';
 
 export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; }
@@ -295,12 +295,15 @@ export interface Timeline {
 }
 
 export function buildTimeline(steps: ReplayStep[], totalYears = PROTOCOL_YEARS): Timeline {
-	const years: TimelineYear[] = Array.from({ length: totalYears }, (_, index) => ({
+	validateRunYears(totalYears);
+	let availableYears = 0;
+	for (const step of steps) availableYears = Math.max(availableYears, step.year);
+	// Do not allocate an entire safe-integer duration before those years actually exist.
+	const displayedYears = Math.min(totalYears, Math.max(1000, availableYears));
+	const years: TimelineYear[] = Array.from({ length: displayedYears }, (_, index) => ({
 		year: index + 1, builds: { ai: 0, farms: 0, plants: 0, residential: 0 }, afterReport: null
 	}));
-	let availableYears = 0;
 	for (const step of steps) {
-		availableYears = Math.max(availableYears, step.year);
 		const entry = years[step.year - 1];
 		if (!entry) continue;
 		if (step.type === 'year-end') entry.afterReport = step.afterReport;

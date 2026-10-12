@@ -106,16 +106,16 @@ export function experimentStrategies(): Strategy[] {
 	return [...legacyStrategies, ...sampleStrategies()];
 }
 
-export function aggregateYears(rows: AnnualReport[], builtPlants: number, builtFarms: number): Metrics {
-	if (rows.length !== YEARS || rows.some((row, i) => row.year !== i + 1 ||
+export function aggregateYears(rows: AnnualReport[], builtPlants: number, builtFarms: number, totalYears = YEARS): Metrics {
+	if (!Number.isSafeInteger(totalYears) || totalYears < 1 || rows.length !== totalYears || rows.some((row, i) => row.year !== i + 1 ||
 		Object.values(row).some((value) => !Number.isFinite(value)))) {
-		throw new Error('expected finite post-advance reports for every year 1..30');
+		throw new Error(`expected finite post-advance reports for every year 1..${totalYears}`);
 	}
-	const final = rows[YEARS - 1]!;
+	const final = rows[totalYears - 1]!;
 	return {
-		meanResPop: rows.reduce((sum, r) => sum + r.resPop, 0) / YEARS,
-		minResPop: Math.min(...rows.map((r) => r.resPop)), finalResPop: final.resPop,
-		meanAiPop: rows.reduce((sum, r) => sum + r.aiPop, 0) / YEARS,
+		meanResPop: rows.reduce((sum, r) => sum + r.resPop, 0) / totalYears,
+		minResPop: rows.reduce((min, r) => Math.min(min, r.resPop), Infinity), finalResPop: final.resPop,
+		meanAiPop: rows.reduce((sum, r) => sum + r.aiPop, 0) / totalYears,
 		finalFunds: final.treasury, insolventYears: rows.filter((r) => r.treasury <= 0).length,
 		lostToHunger: final.lostToHunger, lostToPower: final.lostToPower,
 		finalAiZones: final.aiZoneCount, builtPlants, builtFarms,

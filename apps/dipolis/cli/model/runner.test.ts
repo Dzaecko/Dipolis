@@ -86,6 +86,32 @@ describe('city model runner authorization and annual loop', () => {
 });
 
 describe('headless Node S266 acceptance', () => {
+ it('runs 35 years, resumes after year 32 and records the complete selected duration', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'dipolis-duration-'));
+  const app = fileURLToPath(new URL('../../', import.meta.url));
+  const execute = (extra: string[]) => JSON.parse(execFileSync(process.execPath,
+   ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake', '--assignment', 'N', '--run', '1', '--output', directory, ...extra],
+   { cwd: app, encoding: 'utf8', env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } }));
+  try {
+   const result = execute(['--years', '35']);
+   expect(result.totalYears).toBe(35);
+   expect(result).not.toHaveProperty('exactS266Match');
+   const text = readFileSync(result.protocol, 'utf8');
+   const events = text.trim().split('\n').map(line => JSON.parse(line));
+   expect(events[0]).toMatchObject({ totalYears: 35 });
+   const rows = events.filter(event => event.event === 'year-completed');
+   expect(rows).toHaveLength(35);
+   expect(result.metrics.meanResPop).toBe(rows.reduce((sum, row) => sum + row.afterReport.resPop, 0) / 35);
+   expect(result.metrics.finalFunds).toBe(rows[34].afterReport.treasury);
+   expect(readFileSync(path.join(directory, 'runs.csv'), 'utf8').split('\n')[0]).toContain('totalYears');
+   writeFileSync(result.protocol, [events[0], ...events.filter(event => event.year <= 32)].map(event => JSON.stringify(event)).join('\n') + '\n');
+   expect(() => execute(['--resume', '--years', '30'])).toThrow('duration mismatch');
+   const resumed = execute(['--resume']);
+   expect(resumed).toMatchObject({ totalYears: 35, metrics: result.metrics });
+   const after = readFileSync(result.protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+   expect(after.filter(event => event.event === 'year-completed').map(event => event.year)).toEqual(Array.from({ length: 35 }, (_, i) => i + 1));
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+ }, 60_000);
  it('explains existing run files without loading credentials or changing the log', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'micropolis-existing-'));
   const app = fileURLToPath(new URL('../../', import.meta.url));

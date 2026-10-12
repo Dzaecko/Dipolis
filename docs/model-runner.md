@@ -1,5 +1,25 @@
 # Dipolis model runner
 
+## Run duration
+
+New runs default to 30 years. `city-model --years 50` (or any positive safe-integer
+number of years) selects a different horizon. The live form has a **Jahre** input.
+The configured horizon is recorded as `totalYears` in `run-started` and the results
+CSV, propagated to live events, and used by the mandate, reports, replay and reviews.
+Existing protocols without this field continue to mean 30 years.
+
+```sh
+corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --years 50 --run 2
+```
+
+Resume without `--years` inherits the saved horizon; an explicitly different
+duration is rejected before the protocol is changed. A completed run is not
+extended by resuming it: start a new run to choose a different term.
+Zero, negative, fractional and unsafe integer durations are rejected.
+The fixed strategy comparisons and S266 reference remain 30-year measurements;
+non-30-year mock runs do not claim exact S266 parity. Longer real-model runs and
+their reviews can take longer and incur additional cost.
+
 ## Simulation profiles
 
 `city-model --profile classic|koexistenz|v2-unruhe|v3-pods|v4-fraktion` selects a rules profile; new

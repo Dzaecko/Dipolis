@@ -7,6 +7,20 @@ import { listCityRuns } from '../../../vite-plugins/city-runs';
 import { fileURLToPath } from 'node:url';
 
 describe('engine provenance and founding-rule propagation', () => {
+ it('propagates explicit and recorded duration without changing historical omission', () => {
+  const historical = { startMap: 'haight' as const, seed: 42 };
+  expect(liveStartConfiguration(historical)).not.toHaveProperty('totalYears');
+  expect(liveStartConfiguration({ ...historical, totalYears: 1 })).toMatchObject({ totalYears: 1 });
+  expect(liveStartConfiguration(historical, { ...historical, totalYears: 50 })).toMatchObject({ totalYears: 50 });
+  expect(liveStartConfiguration({ ...historical, totalYears: 50 }, { ...historical, totalYears: 50 }))
+   .toMatchObject({ totalYears: 50 });
+  expect(() => liveStartConfiguration({ ...historical, totalYears: 30 }, { ...historical, totalYears: 50 }))
+   .toThrow('recorded start configuration');
+  for (const totalYears of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+   expect(() => liveStartConfiguration({ ...historical, totalYears })).toThrow();
+   expect(() => liveStartConfiguration(historical, { ...historical, totalYears })).toThrow();
+  }
+ });
  it('identifies the actual packaged artifacts, not just a release name', () => {
   expect(CURRENT_ENGINE_ID).toBe(`sha256:${createHash('sha256').update(JSON.stringify(ENGINE_HASHES)).digest('hex')}`);
   for (const [ext, hash] of Object.entries(ENGINE_HASHES))

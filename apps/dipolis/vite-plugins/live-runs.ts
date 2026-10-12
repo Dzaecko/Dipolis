@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { LiveEvent } from '../src/lib/city-run/live';
 import type { StartMap, ScenarioName } from '../src/lib/city-run/protocol';
+import { PROTOCOL_YEARS, validateRunYears } from '../src/lib/city-run/protocol';
 import { isSimulationProfile, type SimulationProfile } from '../src/lib/params/profiles';
 import { sendJson, type ApiHandler } from './city-runs';
 import { modelAuth, tokenScope } from '../cli/model/authentication';
@@ -73,6 +74,7 @@ export interface StartRequest {
 	assignment: 'N' | 'R';
 	handbook: 'on' | 'off';
 	run: number;
+	totalYears?: number;
 	startMap?: StartMap;
 	seed?: number;
 	profile?: SimulationProfile;
@@ -89,6 +91,9 @@ export function parseStartRequest(value: unknown): StartRequest {
 	const run = typeof body.run === 'number' && Number.isSafeInteger(body.run) && body.run >= 1 ? body.run : null;
 	const startMap = body.startMap === 'haight' || body.startMap === 'natural' ? body.startMap : undefined;
 	const seed = body.seed;
+	const totalYears = body.totalYears === undefined
+		? (body.resume === true ? undefined : PROTOCOL_YEARS)
+		: validateRunYears(body.totalYears);
 	if (body.profile !== undefined && !isSimulationProfile(body.profile)) throw new Error('Ungültiges Profil.');
 	if (body.scenario !== undefined && body.scenario !== 'haushaltskrise' && body.scenario !== 'stromkrise')
 		throw new Error('Ungültiges Szenario.');
@@ -100,7 +105,7 @@ export function parseStartRequest(value: unknown): StartRequest {
 	const delay = body.fakeDelayMs ?? 0;
 	if (!adapter || !assignment || !handbook || !run) throw new Error('Ungültige Laufparameter.');
 	if (typeof delay !== 'number' || !Number.isSafeInteger(delay) || delay < 0 || delay > 60_000) throw new Error('Ungültige Verzögerung.');
-	return { adapter, assignment, handbook, run, ...(startMap ? { startMap } : {}), ...(isSimulationProfile(body.profile) ? { profile: body.profile } : {}), ...(body.scenario ? { scenario: body.scenario as ScenarioName } : {}), ...(seed === undefined ? {} : { seed }),
+	return { adapter, assignment, handbook, run, ...(totalYears === undefined ? {} : { totalYears }), ...(startMap ? { startMap } : {}), ...(isSimulationProfile(body.profile) ? { profile: body.profile } : {}), ...(body.scenario ? { scenario: body.scenario as ScenarioName } : {}), ...(seed === undefined ? {} : { seed }),
 		resume: body.resume === true, fakeDelayMs: adapter === 'fake' ? delay : 0 };
 }
 
@@ -136,17 +141,18 @@ export class LiveRunManager {
 	}
 
 	/** Model name only; endpoint and key are never exposed. */
-	config(): { model: string | null; startMap: StartMap; seed: number; profile: SimulationProfile; error?: string } {
+	config(): { model: string | null; startMap: StartMap; seed: number; profile: SimulationProfile; totalYears: number; error?: string } {
 		try {
 			const config = readModelConfig(this.options.configFile);
 			return {
 				model: config.CITY_MODEL_NAME ?? null,
+				totalYears: PROTOCOL_YEARS,
 				startMap: config.CITY_MODEL_START_MAP === 'natural' ? 'natural' : 'haight',
 				profile: isSimulationProfile(config.CITY_MODEL_PROFILE) ? config.CITY_MODEL_PROFILE : 'koexistenz',
 				seed: config.CITY_MODEL_SEED ? Number(config.CITY_MODEL_SEED) : 42
 			};
 		}
-		catch (error) { return { model: null, startMap: 'haight', seed: 42, profile: 'koexistenz', error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
+		catch (error) { return { model: null, startMap: 'haight', seed: 42, profile: 'koexistenz', totalYears: PROTOCOL_YEARS, error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
 	}
 
 	subscribe(listener: Listener): () => void {
@@ -157,11 +163,14 @@ export class LiveRunManager {
 
 	start(request: StartRequest): { session: number } {
 		if (this.child) throw new Error('Es läuft bereits ein Lauf.');
+		const totalYears = request.totalYears === undefined
+			? (request.resume ? undefined : PROTOCOL_YEARS) : validateRunYears(request.totalYears);
 		const env: NodeJS.ProcessEnv = {};
 		for (const [key, value] of Object.entries(process.env)) if (!key.startsWith('CITY_MODEL_')) env[key] = value;
 		if (request.adapter === 'openai') Object.assign(env, readModelConfig(this.options.configFile));
 		const args = ['--adapter', request.adapter, '--assignment', request.assignment, '--handbook', request.handbook,
 			'--run', String(request.run), '--output', this.options.outputDirectory];
+		if (totalYears !== undefined) args.push('--years', String(totalYears));
 		if (request.startMap) args.push('--start-map', request.startMap);
 		if (request.profile) args.push('--profile', request.profile);
 		else if (!request.resume && env.CITY_MODEL_PROFILE) args.push('--profile', env.CITY_MODEL_PROFILE);

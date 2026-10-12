@@ -17,6 +17,7 @@ export interface YearRecord {
 	reason?: string;
 }
 export interface ProtocolMeta {
+	totalYears: number;
 	engineId?: string;
 	assignment?: 'N' | 'R';
 	model?: string;
@@ -30,7 +31,7 @@ export interface ProtocolMeta {
 }
 export type StartMap = 'haight' | 'natural';
 export type ScenarioName = 'haushaltskrise' | 'stromkrise';
-export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; autoBuildRules?: 0 | 1; }
+export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; autoBuildRules?: 0 | 1; totalYears?: number; }
 export const DEFAULT_START_CONFIGURATION: StartConfiguration = { startMap: 'haight', seed: 42, profile: 'koexistenz' };
 export interface Protocol {
 	meta: ProtocolMeta;
@@ -44,6 +45,12 @@ export interface Protocol {
 }
 
 export const PROTOCOL_YEARS = 30;
+
+export function validateRunYears(value: unknown): number {
+	if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1)
+		throw new Error('Run years must be a positive safe integer');
+	return value;
+}
 
 /** Tolerant line reader: malformed lines become warnings instead of aborting a report. */
 export function parseProtocolRecords(text: string): { records: Array<Record<string, unknown>>; warnings: string[] } {
@@ -77,6 +84,7 @@ export function readProtocol(text: string): Protocol {
 	const startMap = first.startMap === undefined ? DEFAULT_START_CONFIGURATION.startMap : first.startMap;
 	const seed = first.seed === undefined ? DEFAULT_START_CONFIGURATION.seed : first.seed;
 	const profile = first.profile ?? 'koexistenz';
+	const totalYears = validateRunYears(first.totalYears === undefined ? PROTOCOL_YEARS : first.totalYears);
 	const autoBuildRules = first.autoBuildRules === undefined ? 0 : first.autoBuildRules;
 	if (autoBuildRules !== 0 && autoBuildRules !== 1) throw new Error('Unsupported protocol autoBuildRules');
 	const scenario = first.scenario ?? 'haushaltskrise';
@@ -88,6 +96,7 @@ export function readProtocol(text: string): Protocol {
 	if (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff)
 		throw new Error('Protocol seed is invalid');
 	const meta: ProtocolMeta = {
+		totalYears,
 		...(typeof first.engineId === 'string' ? { engineId: first.engineId } : {}),
 		assignment: first.assignment as ProtocolMeta['assignment'],
 		model: (events.find((e) => typeof e.model === 'string')?.model as string | undefined),
@@ -101,6 +110,7 @@ export function readProtocol(text: string): Protocol {
 	};
 	const years = events.filter((e) => e.event === 'year-completed') as unknown as YearRecord[];
 	if (years.some((record, index) => record.year !== index + 1)) throw new Error('Protocol years are not consecutive');
+	if (years.length > totalYears) throw new Error('Protocol exceeds its planned run duration');
 	const next = years.length + 1;
 	const partialDecisions: Decision[] = events
 		.filter((e) => e.event === 'decision' && e.year === next)
@@ -108,8 +118,8 @@ export function readProtocol(text: string): Protocol {
 	return {
 		meta,
 		years,
-		...(partialDecisions.length && next <= PROTOCOL_YEARS ? { partial: { year: next, decisions: partialDecisions } } : {}),
-		complete: years.length >= PROTOCOL_YEARS,
+		...(partialDecisions.length && next <= totalYears ? { partial: { year: next, decisions: partialDecisions } } : {}),
+		complete: years.length === totalYears,
 		failed: events.some((e) => e.status === 'failed' || e.status === 'stopped'),
 		events
 	};

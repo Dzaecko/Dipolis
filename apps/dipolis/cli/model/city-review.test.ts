@@ -5,8 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ChatAdapter, ChatRequest } from './adapter';
 import { generateCityReview, judgeEnvironment, reviewPath, validateJudgeAssessment,
- validateReviewComparison, validateSelfAssessment } from './city-review';
+ validateReviewComparison, validateSelfAssessment, selfReviewPrompt, judgeReviewPrompt, comparisonReviewPrompt } from './city-review';
 import { buildReviewFacts } from './review-facts';
+import { readReportSummary } from './city-report';
+import { loadCityReview } from './city-review-render';
 import { REVIEW_CRITERIA, type SelfAssessment } from './review-types';
 import { systemPrompt } from './prompts';
 import { createEnvironmentAdapter } from './openai-adapter';
@@ -17,13 +19,15 @@ afterEach(() => {
  directories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true }));
  vi.unstubAllGlobals();
 });
-function protocol(options: { years?: number; prompt?: string; model?: string; assignment?: 'N' | 'R' } = {}) {
+function protocol(options: { years?: number; totalYears?: unknown; prompt?: string; model?: string; assignment?: 'N' | 'R' } = {}) {
  const directory = path.join(fileURLToPath(new URL('../../', import.meta.url)), `.city-review-test-${randomUUID()}`);
  mkdirSync(directory); directories.push(directory);
  const file = path.join(directory, 'city.jsonl');
  const assignment = options.assignment ?? 'R', model = options.model ?? 'recorded-model';
  const events: unknown[] = [{ event: 'run-started', assignment, model, handbook: 'on', startMap: 'natural',
-  profile: 'v3-pods', systemPrompt: options.prompt ?? systemPrompt(assignment, 'on', 'natural', 'v3-pods') }];
+  profile: 'v3-pods', ...(options.totalYears === undefined ? {} : { totalYears: options.totalYears }),
+  systemPrompt: options.prompt ?? systemPrompt(assignment, 'on', 'natural', 'v3-pods',
+   typeof options.totalYears === 'number' && Number.isSafeInteger(options.totalYears) && options.totalYears > 0 ? options.totalYears : 30) }];
  for (let year = 1; year <= (options.years ?? 30); year++) events.push({ event: 'year-completed',
   assignment, model, handbook: 'on', year, report: { resPop: 100, aiPop: 10, treasury: 1000 },
   afterReport: { resPop: 100 + year, aiPop: 10 + year, treasury: 1000 - year, lostToHunger: year,
@@ -53,6 +57,42 @@ function adapters(selfContent: unknown = self(), judgeContent: unknown = judge()
 }
 
 describe('city-review workflow', () => {
+ it('reviews a complete 35-year term with duration-aware facts and mandates and validates its sidecar', async () => {
+  const file = protocol({ years: 35, totalYears: 35 }), facts = buildReviewFacts(file);
+  expect(facts.totalYears).toBe(35); expect(facts.complete).toBe(true); expect(facts.years).toHaveLength(35);
+  expect(selfReviewPrompt(facts)).toContain('Amtszeit von 35 Jahren');
+  expect(selfReviewPrompt(facts)).toContain('Amtsjahr (1 bis 35)');
+  expect(judgeReviewPrompt(facts)).toContain(systemPrompt('R', 'on', 'natural', 'v3-pods', 35));
+  expect(comparisonReviewPrompt(facts, self())).toContain(systemPrompt('R', 'on', 'natural', 'v3-pods', 35));
+  const result = await generateCityReview(file);
+  expect(result.status).toBe('complete');
+  expect(result.self?.cityHistory[0]).toBe('Die Amtszeit dauerte 35 Jahre.');
+  expect(result.self?.residents[0].years).toEqual([35]);
+  expect(loadCityReview(file, readReportSummary(file)).review).toEqual(result);
+  result.facts.totalYears = 30;
+  writeFileSync(reviewPath(file), JSON.stringify(result));
+  expect(loadCityReview(file, readReportSummary(file)).warning).toContain('Ungültige Struktur');
+ });
+
+ it('does not review a 35-year term after only 30 completed years or call adapters', async () => {
+  const file = protocol({ years: 30, totalYears: 35 }), mock = adapters();
+  const result = await generateCityReview(file, mock);
+  expect(result.status).toBe('failed'); expect(result.error?.message).toContain('35-year');
+  expect(mock.selfRequests).toHaveLength(0); expect(mock.judgeRequests).toHaveLength(0);
+ });
+
+ it.each([0, -1, 1.5, '35', null, Number.MAX_SAFE_INTEGER + 1])('rejects invalid duration %s before making requests', async totalYears => {
+  const file = protocol({ years: 1, totalYears }), mock = adapters();
+  await expect(generateCityReview(file, mock)).rejects.toThrow('positive safe integer');
+  expect(mock.selfRequests).toHaveLength(0); expect(mock.judgeRequests).toHaveLength(0);
+  expect(existsSync(reviewPath(file))).toBe(false);
+ });
+
+ it('keeps historical 30-year facts shape and accepts historical sidecars without a duration field', async () => {
+  const file = protocol(), result = await generateCityReview(file);
+  expect(Object.hasOwn(result.facts, 'totalYears')).toBe(false);
+  expect(loadCityReview(file, readReportSummary(file)).review).toEqual(result);
+ });
  it('runs three fresh independent requests, preserving exact system and separate usage', async () => {
   const file = protocol(), mock = adapters();
   const result = await generateCityReview(file, mock);

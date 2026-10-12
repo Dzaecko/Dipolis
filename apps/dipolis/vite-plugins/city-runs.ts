@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
-import { readProtocol } from '../src/lib/city-run/protocol';
+import { PROTOCOL_YEARS, readProtocol } from '../src/lib/city-run/protocol';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../src/lib/city-run/compatibility';
 
@@ -13,6 +13,7 @@ export interface CityRunListing {
 	handbook: string;
 	run: number | null;
 	years: number;
+	totalYears: number;
 	complete: boolean;
 	modified: string;
 	error?: string;
@@ -29,10 +30,10 @@ export function listCityRuns(directory: string): CityRunListing[] {
 			const protocol = readProtocol(text);
 			const compatibility = engineCompatibility(protocol.meta, createHash('sha256').update(canonicalProtocolText(text)).digest('hex'));
 			return { file, model: protocol.meta.model ?? 'unbekannt', assignment: protocol.meta.assignment ?? '?',
-				handbook: protocol.meta.handbook, run: protocol.meta.run ?? null, years: protocol.years.length,
+				handbook: protocol.meta.handbook, run: protocol.meta.run ?? null, years: protocol.years.length, totalYears: protocol.meta.totalYears,
 				complete: protocol.complete, modified, compatibility };
 		} catch (error) {
-			return { file, model: 'unbekannt', assignment: '?', handbook: '?', run: null, years: 0, complete: false,
+			return { file, model: 'unbekannt', assignment: '?', handbook: '?', run: null, years: 0, totalYears: PROTOCOL_YEARS, complete: false,
 				modified, error: error instanceof Error ? error.message : 'unlesbar' };
 		}
 	}).sort((a, b) => b.modified.localeCompare(a.modified));

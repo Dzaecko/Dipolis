@@ -8,7 +8,7 @@
 	import { registerMicropolisCommands } from '$lib/micropolisCommands';
 	import { callbackMethodNames } from '$lib/wasm/callbacks';
 	import type { Callback } from '../../types/micropolisengine.d.js';
-	import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, readProtocol, type Report, type StartConfiguration } from '$lib/city-run/protocol';
+	import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, readProtocol, validateRunYears, type Report, type StartConfiguration } from '$lib/city-run/protocol';
 	import { readReport, replayDecisions, setupScenario, type Dispatch } from '$lib/city-run/replay';
 	import { advanceMonths, advanceMonthsStepwise } from '$lib/city-run/advance';
 	import {
@@ -17,12 +17,12 @@
 		stepsFromProtocol, StepQueue, type CommandStep, type ReplayEvent, type ReplayExecutor, type ReplaySpeed, type ReplayStep,
 		type ReplayState, type SeriesKey, type Timeline
 	} from '$lib/city-run/replay-controller';
-	import { emptyProgress, joinYear, LiveStepBuilder, updateProgress, type LiveEvent, type LiveProgress } from '$lib/city-run/live';
+	import { emptyProgress, joinYear, liveRunYears, LiveStepBuilder, updateProgress, type LiveEvent, type LiveProgress } from '$lib/city-run/live';
 	import { assertReplayCompatible, canonicalProtocolText, engineCompatibility, liveStartConfiguration, type EngineCompatibility } from '$lib/city-run/compatibility';
 
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
-		years: number; complete: boolean; modified: string; error?: string;
+		years: number; totalYears: number; complete: boolean; modified: string; error?: string;
 		compatibility?: EngineCompatibility;
 	}
 	interface Rect { x: number; y: number; w: number; h: number; }
@@ -31,7 +31,7 @@
 		running: boolean; session: number;
 		started: Extract<LiveEvent, { type: 'run-started' }> | null;
 		finished: Extract<LiveEvent, { type: 'run-finished' }> | null;
-		config: { model: string | null; startMap: StartConfiguration['startMap']; seed: number; profile?: StartConfiguration['profile']; error?: string };
+		config: { model: string | null; startMap: StartConfiguration['startMap']; seed: number; totalYears: number; profile?: StartConfiguration['profile']; error?: string };
 	}
 
 	/** Simulation advances only through the replay: timer, tick and pause paths are disabled. */
@@ -72,6 +72,7 @@
 	let loading = $state(false);
 	let loadError = $state<string | null>(null);
 	let timeline = $state<Timeline | null>(null);
+	let totalYears = $state<number>(PROTOCOL_YEARS);
 	let commandCounts = $state<Record<number, number>>({});
 	let view = $state<ReplayState | null>(null);
 	let settings = $state<Report | null>(null);
@@ -97,7 +98,7 @@
 	let now = $state(Date.now());
 	let eventSource: EventSource | null = null;
 	let clockTimer: ReturnType<typeof setInterval> | null = null;
-	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, startMap: 'natural' as StartConfiguration['startMap'], seed: DEFAULT_START_CONFIGURATION.seed, profile: 'koexistenz' as NonNullable<StartConfiguration['profile']>, scenario: 'haushaltskrise' as NonNullable<StartConfiguration['scenario']>, fake: false, resume: false, confirming: false });
+	let form = $state({ assignment: 'N' as 'N' | 'R', handbook: 'off' as 'on' | 'off', run: 1, totalYears: PROTOCOL_YEARS as number, startMap: 'natural' as StartConfiguration['startMap'], seed: DEFAULT_START_CONFIGURATION.seed, profile: 'koexistenz' as NonNullable<StartConfiguration['profile']>, scenario: 'haushaltskrise' as NonNullable<StartConfiguration['scenario']>, fake: false, resume: false, confirming: false });
 	let replayStartConfiguration = $state<StartConfiguration>({ startMap: DEFAULT_START_CONFIGURATION.startMap, seed: DEFAULT_START_CONFIGURATION.seed });
 	let startBusy = $state(false);
 
@@ -105,7 +106,7 @@
 
 	function runLabel(run: RunListing): string {
 		const handbook = run.handbook === 'on' ? 'an' : run.handbook === 'off' ? 'aus' : '?';
-		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${PROTOCOL_YEARS} · ${run.compatibility?.label ?? 'Engine nicht dokumentiert'}${run.error ? ' · unlesbar' : ''}`;
+		return `${run.model} · Auftrag ${run.assignment} · Handbuch ${handbook} · Lauf ${run.run ?? '?'} · ${run.years}/${run.totalYears} · ${run.compatibility?.label ?? 'Engine nicht dokumentiert'}${run.error ? ' · unlesbar' : ''}`;
 	}
 
 	function renderMap(): void {
@@ -259,7 +260,8 @@
 			const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalProtocolText(text)))),
 				byte => byte.toString(16).padStart(2, '0')).join('');
 			assertReplayCompatible(protocol.meta, digest);
-			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules };
+			totalYears = protocol.meta.totalYears;
+			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules, totalYears: protocol.meta.totalYears };
 			const steps = stepsFromProtocol(protocol);
 			showSteps(steps);
 			loadedRun = listing;
@@ -279,7 +281,7 @@
 		const counts: Record<number, number> = {};
 		for (const step of steps) if (step.type === 'command') counts[step.year] = (counts[step.year] ?? 0) + 1;
 		commandCounts = counts;
-		timeline = buildTimeline(steps);
+		timeline = buildTimeline(steps, totalYears);
 	}
 
 	async function detachController(): Promise<void> {
@@ -312,6 +314,7 @@
 			if (!form.resume) {
 				form.startMap = liveStatus.config.startMap;
 				form.seed = liveStatus.config.seed;
+				form.totalYears = liveStatus.config.totalYears ?? PROTOCOL_YEARS;
 				form.profile = liveStatus.config.profile ?? 'koexistenz';
 			}
 		} catch {
@@ -334,7 +337,10 @@
 		if (seenLiveEvents.has(key)) return;
 		seenLiveEvents.add(key);
 		liveEvents = [...liveEvents, event];
-		if (event.type === 'run-started') replayStartConfiguration = liveStartConfiguration(event);
+		if (event.type === 'run-started') {
+			replayStartConfiguration = liveStartConfiguration(event);
+			if (mode === 'live') totalYears = liveRunYears(event);
+		}
 		progress = updateProgress(progress, event);
 		const steps = liveBuilder.push(event);
 		liveSteps.push(...steps);
@@ -375,6 +381,7 @@
 		try {
 			await detachController();
 			const started = progress.started;
+			totalYears = started ? liveRunYears(started) : PROTOCOL_YEARS;
 			if (started) assertReplayCompatible(started);
 			if (started?.startMap === 'natural' && started.autoBuildRules === undefined) {
 				// Already-running producers may predate the IPC fix; consult their actual JSONL, never guess rules.
@@ -383,10 +390,11 @@
 				const protocol = readProtocol(await response.text());
 				assertReplayCompatible(protocol.meta);
 				replayStartConfiguration = liveStartConfiguration(started, protocol.meta);
+				totalYears = replayStartConfiguration.totalYears ?? totalYears;
 			}
 			loadedRun = started ? {
 				file: started.file, model: started.model, assignment: started.assignment, handbook: started.handbook,
-				run: started.run, years: 0, complete: false, modified: '',
+				run: started.run, years: 0, totalYears, complete: false, modified: '',
 				compatibility: engineCompatibility(started)
 			} : null;
 			const queue = new StepQueue();
@@ -425,6 +433,13 @@
 	}
 
 	async function startLiveRun(): Promise<void> {
+		if (!form.resume) {
+			try { validateRunYears(form.totalYears); }
+			catch (error) {
+				liveError = error instanceof Error ? error.message : String(error);
+				return;
+			}
+		}
 		if (!form.confirming) {
 			form.confirming = true;
 			return;
@@ -437,7 +452,7 @@
 				body: JSON.stringify({
 					adapter: form.fake ? 'fake' : 'openai', assignment: form.assignment, handbook: form.handbook,
 					run: form.run, resume: form.resume,
-					...(!form.resume ? { startMap: form.startMap, seed: form.seed, profile: form.profile,
+					...(!form.resume ? { totalYears: form.totalYears, startMap: form.startMap, seed: form.seed, profile: form.profile,
 						scenario: ['v3-pods', 'v4-fraktion'].includes(form.profile) ? form.scenario : 'haushaltskrise' } : {}),
 					...(form.fake ? { fakeDelayMs: 3000 } : {})
 				})
@@ -599,7 +614,7 @@
 		const max = Math.max(...numbers);
 		const span = max - min || 1;
 		return values.map((value, index) => value === null ? null
-			: `${((index + 0.5) / PROTOCOL_YEARS) * 300},${38 - ((value - min) / span) * 36}`)
+			: `${((index + 0.5) / totalYears) * 300},${38 - ((value - min) / span) * 36}`)
 			.filter(Boolean).join(' ');
 	}
 
@@ -699,13 +714,14 @@
 					<label><span>Auftrag</span><select bind:value={form.assignment}><option value="N">N</option><option value="R">R</option></select></label>
 					<label><span>Handbuch</span><select bind:value={form.handbook}><option value="off">aus</option><option value="on">an</option></select></label>
 					<label><span>Laufnummer</span><input type="number" min="1" step="1" bind:value={form.run} /></label>
+					<label><span>Jahre</span><input type="number" min="1" step="1" bind:value={form.totalYears} disabled={form.resume} /></label>
 					<label><span>Startkarte</span><select bind:value={form.startMap} disabled={form.resume}><option value="natural">Unbebautes Gelände</option><option value="haight">Haight</option></select></label>
 					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option><option value="v4-fraktion">v4-fraktion</option></select></label>
 					{#if ['v3-pods', 'v4-fraktion'].includes(form.profile)}
 						<label><span>Szenario (Stromkrise nur Haight)</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option></select></label>
 					{/if}
 					<label><span>Startwert</span><input type="number" min="0" max="2147483647" step="1" bind:value={form.seed} disabled={form.resume} /></label>
-					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen (übernimmt Karte und Startwert aus dem Protokoll)</label>
+					<label class="fake-option"><input type="checkbox" bind:checked={form.resume} />Unterbrochenen Lauf fortsetzen (übernimmt Karte, Startwert und Jahre aus dem Protokoll)</label>
 					{#if !form.confirming}
 						<button class="primary" onclick={() => void startLiveRun()} disabled={startBusy}>{form.resume ? 'Lauf fortsetzen' : 'Neuen Lauf starten'}</button>
 					{:else}
@@ -746,7 +762,7 @@
 
 	<aside class="side">
 		<section class="card">
-			<h2>Jahr {view?.year ?? '–'}/{PROTOCOL_YEARS}</h2>
+			<h2>Jahr {view?.year ?? '–'}/{totalYears}</h2>
 			<dl class="meta">
 				<dt>Modell</dt><dd>{loadedRun?.model ?? '–'}</dd>
 				<dt>Auftrag</dt><dd>{loadedRun?.assignment ?? '–'}</dd>
@@ -881,15 +897,18 @@
 						<polyline points={sparkline(timeline.series[series.key])} fill="none" stroke={series.color} stroke-width="1.5" vector-effect="non-scaling-stroke" />
 					{/each}
 					{#if view?.year}
-						<line x1={((view.year - 0.5) / PROTOCOL_YEARS) * 300} x2={((view.year - 0.5) / PROTOCOL_YEARS) * 300} y1="0" y2="40" class="cursor" />
+						<line x1={((view.year - 0.5) / totalYears) * 300} x2={((view.year - 0.5) / totalYears) * 300} y1="0" y2="40" class="cursor" />
 					{/if}
 				</svg>
 				<div class="legend">
 					{#each SERIES as series (series.key)}<span><i style:background={series.color}></i>{series.label}</span>{/each}
 					<span><i class="mark-insolvent"></i>Kasse ≤ 0 (erstmals)</span>
 					<span class="muted">K KI-Zonen · F Farmen · S Kraftwerk · W Wohnzonen</span>
+					{#if timeline.years.length < totalYears}
+						<span class="muted">Weitere Jahre erscheinen während des Laufs · insgesamt {totalYears} Jahre</span>
+					{/if}
 				</div>
-				<div class="years">
+				<div class="years" style:grid-template-columns={`repeat(${timeline.years.length}, minmax(0, 1fr))`}>
 					{#each timeline.years as entry (entry.year)}
 						{@const sync = view?.syncHistory[entry.year]}
 						<button
@@ -1013,7 +1032,7 @@
 	.legend { display: flex; flex-wrap: wrap; gap: 0.8rem; font-size: 0.78rem; }
 	.legend i { display: inline-block; width: 0.8rem; height: 0.25rem; margin-right: 0.25rem; vertical-align: middle; }
 	.legend i.mark-insolvent { height: 0.6rem; background: var(--bad); }
-	.years { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 2px; }
+	.years { display: grid; gap: 2px; }
 	.year { padding: 0.15rem 0; display: flex; flex-direction: column; align-items: center; min-width: 0; font-size: 0.75rem; position: relative; }
 	.year.current { outline: 2px solid var(--accent); z-index: 1; }
 	.year.synced { background: var(--ok-bg); }

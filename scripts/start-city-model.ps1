@@ -6,10 +6,15 @@ param(
     [ValidateSet('haight', 'natural')][string]$StartMap,
     [ValidateSet('classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion')][string]$Profile,
     [ValidatePattern('^(0|[1-9][0-9]*)$')][string]$Seed,
+    [string]$Years = '30',
     [switch]$Resume,
     [switch]$ValidateOnly
 )
 $ErrorActionPreference = 'Stop'
+$parsedYears = [decimal]0
+if ($Years -notmatch '^[1-9][0-9]*$' -or ![decimal]::TryParse($Years, [ref]$parsedYears) -or $parsedYears -gt 9007199254740991) {
+    throw 'Die Jahreszahl muss eine positive sichere ganze Zahl (1 bis 9007199254740991) sein.'
+}
 $root = Split-Path $PSScriptRoot -Parent
 $configPath = Join-Path $root '.env.city-model'
 if (!(Test-Path $configPath)) { throw 'Bitte .env.city-model.example nach .env.city-model kopieren und ausfuellen.' }
@@ -105,6 +110,7 @@ try {
     }
     Write-Host "Stadtlauf $Assignment / $Run / Handbuch $Handbook wird gestartet. Modellkosten koennen entstehen."
     $runArgs = @()
+    if (!$Resume -or $PSBoundParameters.ContainsKey('Years')) { $runArgs += @('--years', $Years) }
     if ($Profile) { $runArgs += @('--profile', $Profile) }
     if ($Resume) {
         $runArgs += '--resume'

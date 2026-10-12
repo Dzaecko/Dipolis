@@ -15,6 +15,7 @@ export function readResume(text: string, assignment: string, model: string, run:
  }
  const startConfiguration = protocol.meta.startMap && protocol.meta.seed !== undefined
   ? { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile,
+   totalYears: protocol.meta.totalYears,
    ...(protocol.meta.startMap === 'natural' ? { autoBuildRules: protocol.meta.autoBuildRules ?? 0 } : {}),
    ...(protocol.meta.scenario === 'stromkrise' ? { scenario: protocol.meta.scenario } : {}) } : DEFAULT_START_CONFIGURATION;
  if (requestedStart?.scenario !== undefined && requestedStart.scenario !== (startConfiguration.scenario ?? 'haushaltskrise'))
@@ -25,6 +26,8 @@ export function readResume(text: string, assignment: string, model: string, run:
   throw new Error(`Resume start map mismatch: protocol uses ${startConfiguration.startMap}`);
  if (requestedStart?.seed !== undefined && requestedStart.seed !== startConfiguration.seed)
   throw new Error(`Resume seed mismatch: protocol uses ${startConfiguration.seed}`);
+ if (requestedStart?.totalYears !== undefined && requestedStart.totalYears !== startConfiguration.totalYears)
+  throw new Error(`Resume duration mismatch: protocol uses ${startConfiguration.totalYears} years`);
  if (protocol.complete) throw new Error('Invalid or already completed resume log');
  return { completed: protocol.years, ...(protocol.partial ? { partial: protocol.partial } : {}), startConfiguration };
 }

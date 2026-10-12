@@ -25,7 +25,8 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
   year: year.year,
   completed: year.completed,
   metrics: Object.fromEntries(rawKeys.map(key => [key, number(year.after?.[key])])),
-  chartMetrics: Object.fromEntries(chartSeries.map(series => [series.key, series.values[year.year - 1] ?? null])),
+  chartMetrics: Object.fromEntries(chartSeries.map(series => [series.key,
+   series.values[series.years ? series.years.indexOf(year.year) : year.year - 1] ?? null])),
   commands: year.tools.map(tool => {
    const annual = records.filter(record => record.year === year.year &&
     (record.event === 'year-completed' || (!record.event && record.afterReport !== undefined))).at(-1);
@@ -131,6 +132,7 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
  return {
   version: 1, assignment: summary.assignment, model: summary.model, handbook: summary.handbook,
   profile: summary.profile, startMap: typeof meta.startMap === 'string' ? meta.startMap : 'haight',
+  ...(summary.totalYears !== 30 ? { totalYears: summary.totalYears } : {}),
   complete: !summary.partial, years,
   findings: {
    endMetrics: completeYears.at(-1)?.metrics ?? {},
@@ -151,7 +153,7 @@ export function reviewFactsTable(facts: ReviewFacts): string {
  const keys = ['year', 'completed', ...raw, ...chart.map(key => `chart.${key}`), 'commands', 'reasons'];
  return [
   'null = nicht dokumentiert, nicht 0. chart.* verwendet exakt die Diagrammeinheiten (Quoten dort ggf. in Prozent).',
-  'year ist das Amtsjahr (1 bis 30). Belege und Jahresverweise verwenden dieses Amtsjahr, nicht ein eventuell enthaltenes Kalenderjahr.',
+  `year ist das Amtsjahr (1 bis ${facts.totalYears ?? 30}). Belege und Jahresverweise verwenden dieses Amtsjahr, nicht ein eventuell enthaltenes Kalenderjahr.`,
   'commands enthalten tatsächliche Ergebnisse einschließlich nicht ausgeführter Aufträge. Begründungen sind aufgezeichnete Aussagen, keine gesicherten Ursachen.',
   `|${keys.join('|')}|`, `|${keys.map(() => '---').join('|')}|`,
   ...facts.years.map(year => `|${[year.year, year.completed, ...raw.map(key => year.metrics[key] ?? null),

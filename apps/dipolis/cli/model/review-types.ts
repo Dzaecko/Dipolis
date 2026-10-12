@@ -17,6 +17,8 @@ export interface ReviewFacts {
  handbook: string;
  profile: string;
  startMap: string;
+ /** Omitted in historical 30-year sidecars. */
+ totalYears?: number;
  complete: boolean;
  years: ReviewYear[];
  findings: {

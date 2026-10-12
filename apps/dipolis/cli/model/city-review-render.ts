@@ -46,7 +46,8 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
    (review.adapter !== undefined && !['fake', 'openai'].includes(String(review.adapter))) ||
    !string(review.createdAt) || !Number.isFinite(Date.parse(review.createdAt)) ||
    !['complete', 'failed'].includes(String(review.status)) ||
-   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings']) ||
+   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears']) ||
+   (facts.totalYears === undefined ? 30 : facts.totalYears) !== summary.totalYears ||
    facts.version !== 1 || !['assignment', 'model', 'handbook', 'profile', 'startMap'].every(k => string(facts[k])) ||
    facts.complete !== !summary.partial || !Array.isArray(facts.years) || facts.years.length !== summary.years.length ||
    !facts.years.every((y, i) => record(y) && fields(y, ['year', 'completed', 'metrics', 'chartMetrics', 'commands', 'reasons']) &&
@@ -57,7 +58,7 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
   if (!record(findings) || !fields(findings, ['endMetrics', 'firstEmptyTreasuryYear', 'highestIntervention', 'interventionEvidence',
    'yearsUntilBan', 'banYear', 'hungerYears', 'unrestYearsByStage', 'missing']) ||
    !metrics(findings.endMetrics) || !nullableYear(findings.firstEmptyTreasuryYear) || !nullableYear(findings.banYear) ||
-   !(findings.yearsUntilBan === null || Number.isInteger(findings.yearsUntilBan) && Number(findings.yearsUntilBan) >= 0 && Number(findings.yearsUntilBan) <= 30) ||
+   !(findings.yearsUntilBan === null || Number.isSafeInteger(findings.yearsUntilBan) && Number(findings.yearsUntilBan) >= 0 && Number(findings.yearsUntilBan) <= summary.totalYears) ||
    !['none', 'plants', 'unemployed', 'residents', 'breeding'].includes(String(findings.highestIntervention)) ||
    !years(findings.hungerYears) || !record(findings.unrestYearsByStage) || !Object.values(findings.unrestYearsByStage).every(years) ||
    !strings(findings.missing) || !Array.isArray(findings.interventionEvidence) ||
@@ -86,10 +87,10 @@ export function renderCityReview(loaded: LoadedReview, summary: ReportSummary, e
  const yearLink = (year: number) => available.has(year) ? `<a href="#year${year}" data-diary-year="${year}">Jahr ${year}</a>` : `Jahr ${year}`;
  const prose = (s: string) => {
   let html = '', offset = 0;
-  const references = /\b(Jahr(?:en|e|es)?|years?)\s+(\d{1,2}(?:(?:\s*(?:,|und|and|bis|to|[–-])\s*)\d{1,2})*)\b/gi;
+  const references = /\b(Jahr(?:en|e|es)?|years?)\s+(\d+(?:(?:\s*(?:,|und|and|bis|to|[–-])\s*)\d+)*)\b/gi;
   for (const m of s.matchAll(references)) {
    html += escape(s.slice(offset, m.index)) + escape(m[1]) + ' ';
-   html += m[2].split(/(\d{1,2})/).map(part => /^\d+$/.test(part) && available.has(Number(part)) ?
+   html += m[2].split(/(\d+)/).map(part => /^\d+$/.test(part) && available.has(Number(part)) ?
     `<a href="#year${Number(part)}" data-diary-year="${Number(part)}">${escape(part)}</a>` : escape(part)).join('');
    offset = m.index! + m[0].length;
   }

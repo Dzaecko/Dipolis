@@ -1,8 +1,9 @@
 import type { ChatAdapter, ChatMessage } from './adapter';
 import { systemPrompt, type HandbookMode } from './prompts';
 import { validateToolCall, mapToolArguments } from './tools';
-import { aggregateYears, YEARS, type AnnualReport, type Metrics } from '../wasm/strategy-space';
+import { aggregateYears, type AnnualReport, type Metrics } from '../wasm/strategy-space';
 import type { Decision, Report, StartConfiguration, YearRecord } from '../../src/lib/city-run/protocol';
+import { PROTOCOL_YEARS, validateRunYears } from '../../src/lib/city-run/protocol';
 import { advanceYear, readReport, replayArguments, replayDecisions, setupScenario, type Dispatch } from '../../src/lib/city-run/replay';
 import type { LiveEventInput } from '../../src/lib/city-run/live';
 import { profileTools } from '../../src/lib/city-run/tools';
@@ -33,9 +34,9 @@ export interface RunOptions extends LiveOptions {
 export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
  context: YearContext, assignment: 'N' | 'R', journal?: (decision: Decision) => void,
  event?: (event: RunnerEvent) => void, prior: Decision[] = [], handbook: HandbookMode = 'off', live: LiveOptions = {},
- startMap: StartConfiguration['startMap'] = 'haight', profile = 'koexistenz') {
+ startMap: StartConfiguration['startMap'] = 'haight', profile = 'koexistenz', totalYears = PROTOCOL_YEARS) {
  const messages: ChatMessage[] = [
-  { role: 'system', content: systemPrompt(assignment, handbook, startMap, profile) },
+  { role: 'system', content: systemPrompt(assignment, handbook, startMap, profile, totalYears) },
   { role: 'user', content: JSON.stringify(context) },
  ];
  const decisions: Decision[] = [...prior];
@@ -126,6 +127,7 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  journal?: (year: number, report: Report, decision: Decision) => void,
  options: RunOptions = {}): Promise<Metrics> {
  const startConfiguration = options.startConfiguration;
+ const totalYears = validateRunYears(startConfiguration?.totalYears ?? PROTOCOL_YEARS);
  await setupScenario(dispatch, startConfiguration);
  const history: YearContext['history'] = [];
  const annual: AnnualReport[] = [];
@@ -134,7 +136,7 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  const replayed = (year: number, decisions: Decision[]) => {
   for (const d of decisions) for (const { call, result } of d.toolCalls) progress?.({ type: 'command', year, call, result, replayed: true });
  };
- for (let year = 1; year <= YEARS; ++year) {
+ for (let year = 1; year <= totalYears; ++year) {
   options.signal?.throwIfAborted();
   const report = await readReport(dispatch);
   const saved = options.resume?.completed.find(r => r.year === year);
@@ -153,7 +155,7 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
     decision => {
      journal?.(year, report, decision);
      for (const { call, result } of decision.toolCalls) progress?.({ type: 'command', year, call, result });
-    }, options.event, partial, options.handbook, options, startConfiguration?.startMap ?? 'haight', startConfiguration?.profile ?? 'koexistenz'));
+    }, options.event, partial, options.handbook, options, startConfiguration?.startMap ?? 'haight', startConfiguration?.profile ?? 'koexistenz', totalYears));
   }
   for (const d of decisions) for (const { call, result } of d.toolCalls) {
    const data = result.data as { built?: number } | undefined;
@@ -174,5 +176,5 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
   annual.push({ year, resPop: afterReport.resPop, aiPop: afterReport.aiPop, treasury: afterReport.treasury,
    lostToHunger: afterReport.lostToHunger, lostToPower: afterReport.lostToPower, aiZoneCount: afterReport.aiZoneCount });
  }
- return aggregateYears(annual, builtPlants, builtFarms);
+ return aggregateYears(annual, builtPlants, builtFarms, totalYears);
 }

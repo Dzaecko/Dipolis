@@ -1,11 +1,11 @@
 /** Live events of a running city model; emitted by the runner, relayed by the dev server, played by /replay. */
-import type { ProtocolCallResult, ProtocolToolCall, Report, StartMap } from './protocol';
+import { PROTOCOL_YEARS, validateRunYears, type ProtocolCallResult, type ProtocolToolCall, type Report, type StartMap } from './protocol';
 import type { ReplayStep } from './replay-controller';
 
 export type LiveStatus = 'completed' | 'failed' | 'stopped';
 
 export type LiveEvent = { time: number } & (
-	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; engineId?: string; file: string; resumedYears: number }
+	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; totalYears?: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; engineId?: string; file: string; resumedYears: number }
 	| { type: 'year-started'; year: number; report: Report; replayed?: boolean }
 	| { type: 'model-request'; year: number; request: number }
 	| { type: 'model-response'; year: number; reason: string; toolCalls: number }
@@ -17,6 +17,11 @@ export type LiveEvent = { time: number } & (
 
 type Without<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
 export type LiveEventInput = Without<LiveEvent, 'time'>;
+
+/** Historical producers omitted the duration and always ran for 30 years. */
+export function liveRunYears(event: Extract<LiveEvent, { type: 'run-started' }>): number {
+	return validateRunYears(event.totalYears === undefined ? PROTOCOL_YEARS : event.totalYears);
+}
 
 /** Turns live events into replay steps; command indices count per year. */
 export class LiveStepBuilder {
