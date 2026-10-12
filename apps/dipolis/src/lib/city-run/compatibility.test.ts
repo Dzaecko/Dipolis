@@ -2,11 +2,31 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assertReplayCompatible, canonicalProtocolText, CURRENT_ENGINE_ID, ENGINE_HASHES, engineCompatibility, liveStartConfiguration } from './compatibility';
-import { readProtocol } from './protocol';
+import { readProtocol, type StartConfiguration } from './protocol';
 import { listCityRuns } from '../../../vite-plugins/city-runs';
 import { fileURLToPath } from 'node:url';
 
 describe('engine provenance and founding-rule propagation', () => {
+ it('propagates disasters across all profiles and preserves historical false', () => {
+  const historical = { startMap: 'haight' as const, seed: 42 };
+  expect(liveStartConfiguration(historical).disasters).toBe(false);
+  for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion'] as const) {
+   const start = { ...historical, profile, disasters: true };
+   expect(liveStartConfiguration(start).disasters).toBe(true);
+   expect(liveStartConfiguration({ ...historical, profile }, start).disasters).toBe(true);
+   expect(liveStartConfiguration({ ...historical, profile, disasters: false }).disasters).toBe(false);
+  }
+  for (const disasters of [false, true])
+   expect(liveStartConfiguration({ ...historical, disasters }, { ...historical, disasters }).disasters).toBe(disasters);
+  expect(() => liveStartConfiguration({ ...historical, disasters: true }, historical)).toThrow('recorded start configuration');
+  expect(() => liveStartConfiguration({ ...historical, disasters: false }, { ...historical, disasters: true }))
+   .toThrow('recorded start configuration');
+  for (const disasters of [null, 0, 1, 'false', 'true']) {
+   const invalid = { ...historical, disasters } as unknown as StartConfiguration;
+   expect(() => liveStartConfiguration(invalid)).toThrow('disaster flag');
+   expect(() => liveStartConfiguration(historical, invalid)).toThrow('disaster flag');
+  }
+ });
  it('propagates explicit and recorded duration without changing historical omission', () => {
   const historical = { startMap: 'haight' as const, seed: 42 };
   expect(liveStartConfiguration(historical)).not.toHaveProperty('totalYears');

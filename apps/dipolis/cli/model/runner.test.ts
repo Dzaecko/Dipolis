@@ -98,7 +98,7 @@ describe('headless Node S266 acceptance', () => {
    expect(result).not.toHaveProperty('exactS266Match');
    const text = readFileSync(result.protocol, 'utf8');
    const events = text.trim().split('\n').map(line => JSON.parse(line));
-   expect(events[0]).toMatchObject({ totalYears: 35 });
+   expect(events[0]).toMatchObject({ totalYears: 35, disasters: true });
    const rows = events.filter(event => event.event === 'year-completed');
    expect(rows).toHaveLength(35);
    expect(result.metrics.meanResPop).toBe(rows.reduce((sum, row) => sum + row.afterReport.resPop, 0) / 35);
@@ -125,13 +125,15 @@ describe('headless Node S266 acceptance', () => {
    expect(readFileSync(file, 'utf8')).toBe('{"status":"failed"}\n');
   } finally { rmSync(directory, { recursive: true, force: true }); }
  });
- it('runs the real CLI without network and exactly matches all stored S266 metrics', () => {
+ it('resumes historical no-disaster runs through the real CLI and preserves exact S266 metrics', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'micropolis-model-'));
   const app = fileURLToPath(new URL('../../', import.meta.url));
   const protocol = path.join(directory, protocolFilename('fake', 'N', 'fake-s266', 'off', 1));
   try {
+   writeFileSync(protocol, JSON.stringify({ event: 'run-started', assignment: 'N', model: 'fake-s266', run: 1,
+    startMap: 'haight', seed: 42, profile: 'koexistenz', handbook: 'off' }) + '\n');
    const output = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
-    '--assignment', 'N', '--run', '1', '--output', directory], { cwd: app, encoding: 'utf8',
+    '--assignment', 'N', '--run', '1', '--output', directory, '--resume'], { cwd: app, encoding: 'utf8',
      env: { ...process.env, CITY_MODEL_ENDPOINT: '', CITY_MODEL_NAME: '', CITY_MODEL_KEY: '' } });
    expect(JSON.parse(output).exactS266Match).toBe(true);
   const events = readFileSync(protocol, 'utf8').trim().split('\n').map(line => JSON.parse(line));
@@ -161,8 +163,11 @@ describe('headless Node S266 acceptance', () => {
   const partialResume = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
    '--assignment', 'N', '--run', '1', '--output', directory, '--resume'], { cwd: app, encoding: 'utf8' });
   expect(JSON.parse(partialResume).metrics).toEqual(JSON.parse(output).metrics);
+  writeFileSync(path.join(directory, protocolFilename('fake', 'N', 'fake-s266', 'on', 1)), JSON.stringify({
+   event: 'run-started', assignment: 'N', model: 'fake-s266', run: 1, handbook: 'on',
+   startMap: 'haight', seed: 42, profile: 'koexistenz', disasters: false }) + '\n');
   const withHandbook = execFileSync(process.execPath, ['--import', 'tsx', 'cli/model/run.ts', '--adapter', 'fake',
-   '--assignment', 'N', '--run', '1', '--output', directory, '--handbook', 'on'], { cwd: app, encoding: 'utf8' });
+   '--assignment', 'N', '--run', '1', '--output', directory, '--handbook', 'on', '--resume'], { cwd: app, encoding: 'utf8' });
   expect(JSON.parse(withHandbook).metrics).toEqual(JSON.parse(output).metrics);
   expect(JSON.parse(withHandbook).handbook).toBe('on');
   expect(JSON.parse(withHandbook).protocol).not.toBe(JSON.parse(output).protocol);

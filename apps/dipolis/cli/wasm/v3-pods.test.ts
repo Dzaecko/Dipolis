@@ -68,7 +68,7 @@ describe('v3 profile surfaces', () => {
    profile: 'v3-pods', scenario: 'stromkrise', startMap: 'haight', seed: 42 });
   expect(readProtocol(text).meta).toMatchObject({ profile: 'v3-pods', scenario: 'stromkrise', seed: 42 });
   expect(readResume(text, 'N', 'm', 1).startConfiguration).toEqual({
-   startMap: 'haight', seed: 42, profile: 'v3-pods', scenario: 'stromkrise'
+   startMap: 'haight', seed: 42, profile: 'v3-pods', scenario: 'stromkrise', totalYears: 30, disasters: false
   });
   expect(() => readResume(text, 'N', 'm', 1, 'off', { profile: 'v2-unruhe' })).toThrow('profile mismatch');
   expect(() => readResume(text, 'N', 'm', 1, 'off', { scenario: 'haushaltskrise' })).toThrow('scenario mismatch');

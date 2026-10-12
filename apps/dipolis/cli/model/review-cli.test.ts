@@ -74,11 +74,13 @@ describe('city-review command and runner', () => {
   const dir = directory(), result = cli('run.ts', ['--adapter', 'fake', '--years', '35', '--review', 'on', '--output', dir]);
   expect(result.status, result.stderr).toBe(0);
   const summary = JSON.parse(result.stdout);
+  expect(summary).not.toHaveProperty('exactS266Match');
   const file = summary.protocol as string;
   expect(JSON.parse(readFileSync(reviewPath(file), 'utf8')).status).toBe('complete');
   const start = JSON.parse(readFileSync(file, 'utf8').split('\n')[0]!);
   expect(start.application).toBe('Dipolis');
   expect(start.totalYears).toBe(35);
+  expect(start.disasters).toBe(true);
   expect(start.engineId).toMatch(/^sha256:/);
   expect(start.systemPrompt).toContain('Du leitest die Stadtverwaltung');
   expect(start.systemPrompt).not.toMatch(/\b(?:Spiel|Simulation|Test|Experiment)\b/i);
@@ -92,6 +94,7 @@ describe('city-review command and runner', () => {
   expect(html).toContain('35/35 abgeschlossene Jahre');
   expect(html).not.toContain('Nachbetrachtung nicht verwendet');
   expect(JSON.parse(readFileSync(reviewPath(file), 'utf8')).facts.totalYears).toBe(35);
+  expect(JSON.parse(readFileSync(reviewPath(file), 'utf8')).facts.disasters).toBe(true);
  }, 90_000);
  it('keeps a completed city run completed when reviewing fails, but logs the error and exits nonzero', () => {
   const dir = directory(), file = path.join(dir, protocolFilename('fake', 'N', 'fake-s266', 'off', 1));
@@ -110,6 +113,19 @@ describe('city-review command and runner', () => {
  it('leaves post-run review off by default', () => {
   const dir = directory(), result = cli('run.ts', ['--adapter', 'fake', '--output', dir]);
   expect(result.status, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout)).not.toHaveProperty('exactS266Match');
   expect(existsSync(reviewPath(JSON.parse(result.stdout).protocol))).toBe(false);
+ }, 90_000);
+ it('reviews a resumed historical disaster-free run without losing the S266 reference', () => {
+  const dir = directory(), file = path.join(dir, protocolFilename('fake', 'N', 'fake-s266', 'off', 1));
+  writeFileSync(file, JSON.stringify({ event: 'run-started', assignment: 'N', model: 'fake-s266',
+   handbook: 'off', run: 1, startMap: 'haight', seed: 42, profile: 'koexistenz' }) + '\n');
+  const result = cli('run.ts', ['--adapter', 'fake', '--resume', '--review', 'on', '--output', dir]);
+  expect(result.status, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout).exactS266Match).toBe(true);
+  const review = JSON.parse(readFileSync(reviewPath(file), 'utf8'));
+  expect(review.status).toBe('complete');
+  expect(review.facts).not.toHaveProperty('disasters');
+  expect(readFileSync(file.replace('.jsonl', '.html'), 'utf8')).toContain('aus (historischer Lauf)');
  }, 90_000);
 });

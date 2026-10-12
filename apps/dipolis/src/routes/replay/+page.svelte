@@ -23,7 +23,7 @@
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
 		years: number; totalYears: number; complete: boolean; modified: string; error?: string;
-		compatibility?: EngineCompatibility;
+		compatibility?: EngineCompatibility; disasters?: boolean;
 	}
 	interface Rect { x: number; y: number; w: number; h: number; }
 	interface Highlight { rects: Rect[]; label: string; color: string; until: number; }
@@ -31,7 +31,7 @@
 		running: boolean; session: number;
 		started: Extract<LiveEvent, { type: 'run-started' }> | null;
 		finished: Extract<LiveEvent, { type: 'run-finished' }> | null;
-		config: { model: string | null; startMap: StartConfiguration['startMap']; seed: number; totalYears: number; profile?: StartConfiguration['profile']; error?: string };
+		config: { model: string | null; startMap: StartConfiguration['startMap']; seed: number; totalYears: number; profile?: StartConfiguration['profile']; disasters?: boolean; error?: string };
 	}
 
 	/** Simulation advances only through the replay: timer, tick and pause paths are disabled. */
@@ -261,7 +261,7 @@
 				byte => byte.toString(16).padStart(2, '0')).join('');
 			assertReplayCompatible(protocol.meta, digest);
 			totalYears = protocol.meta.totalYears;
-			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules, totalYears: protocol.meta.totalYears };
+			replayStartConfiguration = { startMap: protocol.meta.startMap, seed: protocol.meta.seed, profile: protocol.meta.profile, scenario: protocol.meta.scenario, autoBuildRules: protocol.meta.autoBuildRules, disasters: protocol.meta.disasters, totalYears: protocol.meta.totalYears };
 			const steps = stepsFromProtocol(protocol);
 			showSteps(steps);
 			loadedRun = listing;
@@ -383,10 +383,10 @@
 			const started = progress.started;
 			totalYears = started ? liveRunYears(started) : PROTOCOL_YEARS;
 			if (started) assertReplayCompatible(started);
-			if (started?.startMap === 'natural' && started.autoBuildRules === undefined) {
-				// Already-running producers may predate the IPC fix; consult their actual JSONL, never guess rules.
+			if (started && (started.disasters === undefined || (started.startMap === 'natural' && started.autoBuildRules === undefined))) {
+				// Older producers omitted IPC settings; consult their actual JSONL, never guess rules.
 				const response = await fetch(`/api/city-runs/file?name=${encodeURIComponent(started.file)}`);
-				if (!response.ok) throw new Error('Die aufgezeichneten Gründungsregeln konnten nicht geladen werden.');
+				if (!response.ok) throw new Error('Die aufgezeichneten Startregeln konnten nicht geladen werden.');
 				const protocol = readProtocol(await response.text());
 				assertReplayCompatible(protocol.meta);
 				replayStartConfiguration = liveStartConfiguration(started, protocol.meta);
@@ -394,7 +394,7 @@
 			}
 			loadedRun = started ? {
 				file: started.file, model: started.model, assignment: started.assignment, handbook: started.handbook,
-				run: started.run, years: 0, totalYears, complete: false, modified: '',
+				run: started.run, years: 0, totalYears, complete: false, modified: '', disasters: replayStartConfiguration.disasters ?? false,
 				compatibility: engineCompatibility(started)
 			} : null;
 			const queue = new StepQueue();
@@ -708,6 +708,7 @@
 			<div class="live-start">
 				{#if liveRunning}
 					<span class="live-indicator">● Lauf läuft</span>
+					<span>Zufallskatastrophen: {replayStartConfiguration.disasters ? 'an' : 'aus (historischer Lauf)'}</span>
 					{#if !liveAttached}<button class="primary" onclick={() => void attachLive()} disabled={!engineReady || !liveEvents.length}>Zuschalten</button>{/if}
 					<button class="danger" onclick={() => void stopLiveRun()}>Abbrechen</button>
 				{:else}
@@ -717,6 +718,7 @@
 					<label><span>Jahre</span><input type="number" min="1" step="1" bind:value={form.totalYears} disabled={form.resume} /></label>
 					<label><span>Startkarte</span><select bind:value={form.startMap} disabled={form.resume}><option value="natural">Unbebautes Gelände</option><option value="haight">Haight</option></select></label>
 					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option><option value="v4-fraktion">v4-fraktion</option></select></label>
+					<span>{form.resume ? 'Zufallskatastrophen: aus dem Protokoll übernommen' : 'Zufallskatastrophen: immer an (alle Profile)'}</span>
 					{#if ['v3-pods', 'v4-fraktion'].includes(form.profile)}
 						<label><span>Szenario (Stromkrise nur Haight)</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option></select></label>
 					{/if}

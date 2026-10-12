@@ -133,6 +133,7 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
   version: 1, assignment: summary.assignment, model: summary.model, handbook: summary.handbook,
   profile: summary.profile, startMap: typeof meta.startMap === 'string' ? meta.startMap : 'haight',
   ...(summary.totalYears !== 30 ? { totalYears: summary.totalYears } : {}),
+  ...(typeof meta.disasters === 'boolean' ? { disasters: meta.disasters } : {}),
   complete: !summary.partial, years,
   findings: {
    endMetrics: completeYears.at(-1)?.metrics ?? {},
@@ -154,6 +155,7 @@ export function reviewFactsTable(facts: ReviewFacts): string {
  return [
   'null = nicht dokumentiert, nicht 0. chart.* verwendet exakt die Diagrammeinheiten (Quoten dort ggf. in Prozent).',
   `year ist das Amtsjahr (1 bis ${facts.totalYears ?? 30}). Belege und Jahresverweise verwenden dieses Amtsjahr, nicht ein eventuell enthaltenes Kalenderjahr.`,
+  `Zufallskatastrophen: ${facts.disasters ? 'aktiviert' : 'deaktiviert (historischer Lauf)'}.`,
   'commands enthalten tatsächliche Ergebnisse einschließlich nicht ausgeführter Aufträge. Begründungen sind aufgezeichnete Aussagen, keine gesicherten Ursachen.',
   `|${keys.join('|')}|`, `|${keys.map(() => '---').join('|')}|`,
   ...facts.years.map(year => `|${[year.year, year.completed, ...raw.map(key => year.metrics[key] ?? null),

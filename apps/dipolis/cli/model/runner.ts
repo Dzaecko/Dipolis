@@ -3,7 +3,7 @@ import { systemPrompt, type HandbookMode } from './prompts';
 import { validateToolCall, mapToolArguments } from './tools';
 import { aggregateYears, type AnnualReport, type Metrics } from '../wasm/strategy-space';
 import type { Decision, Report, StartConfiguration, YearRecord } from '../../src/lib/city-run/protocol';
-import { PROTOCOL_YEARS, validateRunYears } from '../../src/lib/city-run/protocol';
+import { DEFAULT_START_CONFIGURATION, PROTOCOL_YEARS, validateRunYears } from '../../src/lib/city-run/protocol';
 import { advanceYear, readReport, replayArguments, replayDecisions, setupScenario, type Dispatch } from '../../src/lib/city-run/replay';
 import type { LiveEventInput } from '../../src/lib/city-run/live';
 import { profileTools } from '../../src/lib/city-run/tools';
@@ -126,7 +126,7 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  log: (record: YearRecord) => void,
  journal?: (year: number, report: Report, decision: Decision) => void,
  options: RunOptions = {}): Promise<Metrics> {
- const startConfiguration = options.startConfiguration;
+ const startConfiguration = options.startConfiguration ?? { ...DEFAULT_START_CONFIGURATION, disasters: true };
  const totalYears = validateRunYears(startConfiguration?.totalYears ?? PROTOCOL_YEARS);
  await setupScenario(dispatch, startConfiguration);
  const history: YearContext['history'] = [];

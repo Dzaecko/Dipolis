@@ -70,7 +70,7 @@ The run length is configurable: enter any positive whole number in the live form
 corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --years 50 --run 2
 ```
 
-The selected duration is included in the mandate, protocol, results CSV, replay, charts and post-run review. Existing protocols without a duration retain their original 30-year horizon. Resuming an interrupted run inherits its recorded horizon; a conflicting explicit duration is rejected. Longer runs can require more time and, with real models, more tokens and cost. The S266 reference comparison remains specific to the default 30-year run.
+The selected duration is included in the mandate, protocol, results CSV, replay, charts and post-run review. Existing protocols without a duration retain their original 30-year horizon. Resuming an interrupted run inherits its recorded horizon; a conflicting explicit duration is rejected. Longer runs can require more time and, with real models, more tokens and cost. The S266 reference comparison remains specific to the historical disaster-free 30-year setup.
 
 ### Local mock adapter: no model account required
 
@@ -78,7 +78,7 @@ The selected duration is included in the mandate, protocol, results CSV, replay,
 corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --handbook off --run 1
 ```
 
-The mock adapter follows the measured **S266** strategy. It makes no network requests and checks the result against the stored reference. Use a new run number if the output already exists.
+The mock adapter follows the measured **S266** strategy and makes no network requests. New runs have random disasters enabled, so they do not claim parity with the historical disaster-free reference. That reference remains checked for compatible historical runs and in regression tests. Use a new run number if the output already exists.
 
 ### Use your own model or Azure Foundry
 
@@ -97,6 +97,8 @@ The tasks read the local configuration each time they start. It is excluded from
 **Real model runs and reviews can cost money.** Never commit API keys or share them in chat. The live city view shows the evolving city; terminal output shows decisions and reports.
 
 While the model is thinking, the live view keeps the last valid city state visible. It does not simulate a speculative year or reset the map when the answer arrives. Decisions are applied first, then the actual year is animated and checked against the recorded outcome.
+
+Random disasters are enabled in every new model and live run, regardless of profile, just as in the free city. Their timing depends on the engine's seeded random generator; enabling them does not guarantee an event each year. The setting is recorded and replayed. Older protocols without a disaster setting retain their original disaster-free behavior when replayed or resumed. Unrest-related fires remain a separate mechanism.
 
 Protocols record tool results, annual reasoning, metrics, errors and token usage. To start on natural terrain without an existing built city, use `--start-map natural --seed 42`.
 

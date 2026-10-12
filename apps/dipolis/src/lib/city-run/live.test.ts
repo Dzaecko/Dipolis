@@ -5,12 +5,28 @@ import { emptyProgress, joinYear, liveRunYears, LiveStepBuilder, updateProgress,
 import { readProtocol } from './protocol';
 import { LiveRunManager, parseStartRequest, readModelConfig } from '../../../vite-plugins/live-runs';
 import { listCityRuns } from '../../../vite-plugins/city-runs';
+import { protocolFilename } from '../../../cli/model/protocol-path';
 
 const started = (year: number): Extract<LiveEvent, { type: 'year-started' }> => ({
 	time: year, type: 'year-started', year, report: { treasury: 60_000 }
 });
 
 describe('live protocol events', () => {
+	it('never exposes a disabling override and lists historical disaster settings', () => {
+		const request = { adapter: 'fake', assignment: 'N', handbook: 'off', run: 1 };
+		expect(parseStartRequest({ ...request, disasters: true })).not.toHaveProperty('disasters');
+		for (const disasters of [false, 0, 1, null, 'true', 'false'])
+			expect(() => parseStartRequest({ ...request, disasters })).toThrow('Zufallskatastrophen');
+		const folder = mkdtempSync(path.join(process.cwd(), '.city-live-disasters-'));
+		try {
+			for (const [name, flag] of [['historical', {}], ['enabled', { disasters: true }], ['disabled', { disasters: false }]] as const)
+				writeFileSync(path.join(folder, `${name}.jsonl`), JSON.stringify({ event: 'run-started', ...flag }));
+			const listing = listCityRuns(folder);
+			expect(listing.find(run => run.file === 'historical.jsonl')?.disasters).toBe(false);
+			expect(listing.find(run => run.file === 'disabled.jsonl')?.disasters).toBe(false);
+			expect(listing.find(run => run.file === 'enabled.jsonl')?.disasters).toBe(true);
+		} finally { rmSync(folder, { recursive: true, force: true }); }
+	});
 	it('keeps historical live durations and validates explicit durations', () => {
 		const event: Extract<LiveEvent, { type: 'run-started' }> = {
 			time: 1, type: 'run-started', adapter: 'fake', model: 'S266', assignment: 'N',
@@ -98,21 +114,40 @@ describe('live runner process (S266, no network)', () => {
 		expect(manager.running).toBe(false);
 		expect(events.filter((event) => event.type === 'year-started')).toHaveLength(30);
 		expect(events.filter((event) => event.type === 'year-completed')).toHaveLength(30);
-		expect(events.find((event) => event.type === 'run-started')).toMatchObject({ totalYears: 30 });
-		expect(manager.config()).toMatchObject({ totalYears: 30 });
+		expect(events.find((event) => event.type === 'run-started')).toMatchObject({ totalYears: 30, disasters: true });
+		expect(manager.config()).toMatchObject({ totalYears: 30, disasters: true });
 		expect(events.some((event) => event.type === 'model-request')).toBe(true);
 		expect(events.some((event) => event.type === 'command')).toBe(true);
 		const finished = events.find((event) => event.type === 'run-finished');
 		expect(finished?.type).toBe('run-finished');
 		if (finished?.type === 'run-finished') {
 			expect(finished.status).toBe('completed');
-			expect(finished.exactS266Match).toBe(true);
+			expect(finished).not.toHaveProperty('exactS266Match');
 		}
 		const jsonl = path.join(output, readdirSync(output).find((name) => name.endsWith('.jsonl'))!);
 		const protocol = readProtocol(readFileSync(jsonl, 'utf8'));
 		expect(protocol.complete).toBe(true);
 		expect(protocol.years).toHaveLength(30);
-		expect(listCityRuns(output)).toMatchObject([{ years: 30, totalYears: 30, complete: true }]);
+		expect(listCityRuns(output)).toMatchObject([{ years: 30, totalYears: 30, complete: true, disasters: true }]);
+	}, 120_000);
+
+	it('resumes historical disaster-free runs with the exact S266 reference intact', async () => {
+		output = mkdtempSync(path.join(process.cwd(), '.city-live-legacy-'));
+		manager = new LiveRunManager({
+			appDirectory: path.resolve(process.cwd()), outputDirectory: output,
+			configFile: path.join(output, '.env.city-model')
+		});
+		const file = path.join(output, protocolFilename('fake', 'N', 'fake-s266', 'off', 1));
+		writeFileSync(file, JSON.stringify({ event: 'run-started', assignment: 'N', model: 'fake-s266',
+			handbook: 'off', run: 1, startMap: 'haight', seed: 42, profile: 'koexistenz' }) + '\n');
+		const events: LiveEvent[] = [];
+		manager.subscribe((_session, event) => events.push(event));
+		manager.start({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, resume: true });
+		await manager.idle();
+		expect(events.find(event => event.type === 'run-started')).toMatchObject({ disasters: false });
+		expect(events.find(event => event.type === 'run-finished')).toMatchObject({ status: 'completed', exactS266Match: true });
+		expect(readProtocol(readFileSync(file, 'utf8')).meta.disasters).toBe(false);
+		expect(listCityRuns(output)).toMatchObject([{ disasters: false, complete: true }]);
 	}, 120_000);
 
 	it('streams a one-year run, exposing duration in events and listing', async () => {
@@ -125,9 +160,9 @@ describe('live runner process (S266, no network)', () => {
 		manager.subscribe((_session, event) => events.push(event));
 		manager.start({ adapter: 'fake', assignment: 'N', handbook: 'off', run: 1, totalYears: 1 });
 		await manager.idle();
-		expect(events.find((event) => event.type === 'run-started')).toMatchObject({ totalYears: 1 });
+		expect(events.find((event) => event.type === 'run-started')).toMatchObject({ totalYears: 1, disasters: true });
 		expect(events.filter((event) => event.type === 'year-completed')).toHaveLength(1);
-		expect(listCityRuns(output)).toMatchObject([{ years: 1, totalYears: 1, complete: true }]);
+		expect(listCityRuns(output)).toMatchObject([{ years: 1, totalYears: 1, complete: true, disasters: true }]);
 	}, 120_000);
 
 	it('stops safely during a model request and resumes the same run', async () => {
@@ -154,8 +189,10 @@ describe('live runner process (S266, no network)', () => {
 		expect(resumed.complete).toBe(true);
 		expect(resumed.years).toHaveLength(2);
 		expect(resumed.meta.totalYears).toBe(2);
+		expect(resumed.meta.disasters).toBe(true);
 		expect(events.filter((event) => event.type === 'run-started')).toHaveLength(2);
 		expect(events.filter((event) => event.type === 'run-started').every((event) => liveRunYears(event) === 2)).toBe(true);
+		expect(events.filter((event) => event.type === 'run-started').every((event) => event.disasters === true)).toBe(true);
 		expect(events.some((event) => event.type === 'run-finished' && event.status === 'completed')).toBe(true);
 	}, 120_000);
 });

@@ -24,6 +24,7 @@ export async function setupScenario(dispatch: Dispatch, start: StartConfiguratio
 		city: start.startMap,
 		profile: start.profile ?? 'koexistenz',
 		seed: start.seed,
+		disasters: start.disasters ?? false,
 		...(start.startMap === 'natural' ? { autoBuildRules: start.autoBuildRules ?? 0 } : {})
 	});
 	await command(dispatch, 'tax.set', { rate: 7 });

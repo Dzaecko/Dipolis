@@ -1,5 +1,20 @@
 # Dipolis model runner
 
+## Random disasters
+
+All new model and live runs enable the engine's random disasters in every profile.
+There is no off switch in the run form or model tools. The `run-started` record,
+live bootstrap and results CSV include `disasters: true`; reports show the setting.
+Replay and resume use the recorded value. Historical protocols without the field
+mean `false`, preserving their original outcomes rather than retroactively changing
+their rules. Random events use the seeded engine generator, so they remain
+reproducible but are not guaranteed every year. Unrest-related fires are separate.
+
+The stored S266 and fixed-strategy measurements used disasters disabled. New
+disaster-enabled mock runs follow the same decisions but do not claim an exact
+reference match. Historical no-disaster resume and regression tests still check
+the stored S266 metrics.
+
 ## Run duration
 
 New runs default to 30 years. `city-model --years 50` (or any positive safe-integer
@@ -137,12 +152,12 @@ Token sums carry `tokenUsageComplete=false` when older resumed records or a prov
 omitted usage. Missing historical token counts cannot be reconstructed; reported
 sums in that case cover only observed usage, not the whole cost of the run.
 
-The runner defaults to Haight using the strategy-space setup: profile koexistenz,
-seed 42, disasters disabled, speed 3, tax 7, imports on and power priority 0.
+The runner defaults to Haight with profile koexistenz, seed 42, disasters enabled,
+speed 3, tax 7, imports on and power priority 0.
 New runs may instead start on generated, unbuilt natural terrain with
 `--start-map natural`; `--seed` selects a reproducible terrain seed (0 through
-2147483647). Haight remains the default so S266 and strategy-space results stay
-unchanged. Both values are recorded in the protocol. Old protocols without these
+2147483647). Haight remains the default; stored S266 and strategy-space measurements
+remain unchanged historical references. Both values are recorded in the protocol. Old protocols without these
 fields are interpreted as Haight/42; resume adopts their recorded setup and
 rejects an explicitly requested mismatch. Browser replay regenerates the same
 starting map before replaying recorded commands.

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildReviewFacts, reviewFactsTable } from './review-facts';
@@ -10,7 +9,7 @@ const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const directories: string[] = [];
 afterEach(() => directories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
 function fixture(records: unknown[]) {
- const directory = mkdtempSync(path.join(tmpdir(), 'review-facts-')); directories.push(directory);
+ const directory = mkdtempSync(path.join(root, '.review-facts-')); directories.push(directory);
  const file = path.join(directory, 'run.jsonl');
  writeFileSync(file, records.map(record => JSON.stringify(record)).join('\n') + '\n');
  return file;
@@ -24,6 +23,14 @@ const year = (n: number, metrics: Record<string, number>, tools: unknown[] = [])
 });
 
 describe('deterministic post-run facts', () => {
+ it('preserves historical sidecar shape and includes explicit disaster metadata', () => {
+  expect(buildReviewFacts(fixture([{ event: 'run-started' }, year(1, {})]))).not.toHaveProperty('disasters');
+  for (const disasters of [true, false]) {
+   const facts = buildReviewFacts(fixture([{ event: 'run-started', disasters }, year(1, {})]));
+   expect(facts.disasters).toBe(disasters);
+   expect(reviewFactsTable(facts)).toContain(`Zufallskatastrophen: ${disasters ? 'aktiviert' : 'deaktiviert (historischer Lauf)'}.`);
+  }
+ });
  it('includes all raw metrics and every plotted series with precisely its plotted value', () => {
   const file = fixture([{ event: 'run-started', assignment: 'R', profile: 'v3-pods', handbook: 'on', model: 'x' },
    year(1, { unemploymentRate: .25, automationShare: .5, lostToHunger: 3, podIntake: 1,

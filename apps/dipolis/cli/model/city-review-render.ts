@@ -46,7 +46,8 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
    (review.adapter !== undefined && !['fake', 'openai'].includes(String(review.adapter))) ||
    !string(review.createdAt) || !Number.isFinite(Date.parse(review.createdAt)) ||
    !['complete', 'failed'].includes(String(review.status)) ||
-   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears']) ||
+   !record(facts) || !fields(facts, ['version', 'assignment', 'model', 'handbook', 'profile', 'startMap', 'complete', 'years', 'findings'], ['totalYears', 'disasters']) ||
+   (facts.disasters !== undefined && (typeof facts.disasters !== 'boolean' || facts.disasters !== summary.disasters)) ||
    (facts.totalYears === undefined ? 30 : facts.totalYears) !== summary.totalYears ||
    facts.version !== 1 || !['assignment', 'model', 'handbook', 'profile', 'startMap'].every(k => string(facts[k])) ||
    facts.complete !== !summary.partial || !Array.isArray(facts.years) || facts.years.length !== summary.years.length ||

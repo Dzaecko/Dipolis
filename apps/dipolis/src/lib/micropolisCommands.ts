@@ -62,8 +62,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
           (autoBuildRules !== 0 && autoBuildRules !== 1) ||
           (city !== 'haight' && city !== 'natural') || !isSimulationProfile(args.profile) ||
           typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff ||
-          args.disasters !== false || args.speed !== 3) {
-          return { handled: false, message: 'expected city haight or natural, profile classic/koexistenz/v2-unruhe/v3-pods/v4-fraktion, seed 0..2147483647, disasters false, speed 3' };
+          typeof args.disasters !== 'boolean' || args.speed !== 3) {
+          return { handled: false, message: 'expected city haight or natural, profile classic/koexistenz/v2-unruhe/v3-pods/v4-fraktion, seed 0..2147483647, disasters boolean, speed 3' };
         }
         // The caller owns the callback and establishes it before dispatching this command.
         m.setFixedSeed(seed);
@@ -81,7 +81,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         for (const [name, value] of Object.entries(PROFILES[args.profile])) {
           if (!m.setParam(name, value)) return { handled: false, message: `could not set scenario parameter ${name}` };
         }
-        m.setEnableDisasters(false);
+        m.setEnableDisasters(args.disasters);
         if (city === 'haight') {
           if (!m.loadCity('/cities/haight.cty')) return { handled: false, message: 'could not load Haight' };
         } else {
@@ -89,7 +89,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         }
         m.setSpeed(3);
         m.setPasses(1);
-        return { data: { city, profile: args.profile, seed, disasters: false, speed: 3, passes: 1 } };
+        return { data: { city, profile: args.profile, seed, disasters: args.disasters, speed: 3, passes: 1 } };
       },
     },
     {

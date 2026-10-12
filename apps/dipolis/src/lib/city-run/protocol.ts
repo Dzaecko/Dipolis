@@ -18,6 +18,7 @@ export interface YearRecord {
 }
 export interface ProtocolMeta {
 	totalYears: number;
+	disasters: boolean;
 	engineId?: string;
 	assignment?: 'N' | 'R';
 	model?: string;
@@ -31,7 +32,7 @@ export interface ProtocolMeta {
 }
 export type StartMap = 'haight' | 'natural';
 export type ScenarioName = 'haushaltskrise' | 'stromkrise';
-export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; autoBuildRules?: 0 | 1; totalYears?: number; }
+export interface StartConfiguration { startMap: StartMap; seed: number; profile?: SimulationProfile; scenario?: ScenarioName; autoBuildRules?: 0 | 1; totalYears?: number; disasters?: boolean; }
 export const DEFAULT_START_CONFIGURATION: StartConfiguration = { startMap: 'haight', seed: 42, profile: 'koexistenz' };
 export interface Protocol {
 	meta: ProtocolMeta;
@@ -85,6 +86,8 @@ export function readProtocol(text: string): Protocol {
 	const seed = first.seed === undefined ? DEFAULT_START_CONFIGURATION.seed : first.seed;
 	const profile = first.profile ?? 'koexistenz';
 	const totalYears = validateRunYears(first.totalYears === undefined ? PROTOCOL_YEARS : first.totalYears);
+	const disasters = first.disasters === undefined ? false : first.disasters;
+	if (typeof disasters !== 'boolean') throw new Error('Protocol disasters setting is invalid');
 	const autoBuildRules = first.autoBuildRules === undefined ? 0 : first.autoBuildRules;
 	if (autoBuildRules !== 0 && autoBuildRules !== 1) throw new Error('Unsupported protocol autoBuildRules');
 	const scenario = first.scenario ?? 'haushaltskrise';
@@ -97,6 +100,7 @@ export function readProtocol(text: string): Protocol {
 		throw new Error('Protocol seed is invalid');
 	const meta: ProtocolMeta = {
 		totalYears,
+		disasters,
 		...(typeof first.engineId === 'string' ? { engineId: first.engineId } : {}),
 		assignment: first.assignment as ProtocolMeta['assignment'],
 		model: (events.find((e) => typeof e.model === 'string')?.model as string | undefined),

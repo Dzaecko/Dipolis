@@ -5,7 +5,7 @@ import type { ReplayStep } from './replay-controller';
 export type LiveStatus = 'completed' | 'failed' | 'stopped';
 
 export type LiveEvent = { time: number } & (
-	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; totalYears?: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; engineId?: string; file: string; resumedYears: number }
+	| { type: 'run-started'; adapter: string; model: string; assignment: 'N' | 'R'; handbook: 'on' | 'off'; run: number; totalYears?: number; startMap: StartMap; seed: number; profile?: import('../params/profiles').SimulationProfile; scenario?: import('./protocol').ScenarioName; autoBuildRules?: 0 | 1; disasters?: boolean; engineId?: string; file: string; resumedYears: number }
 	| { type: 'year-started'; year: number; report: Report; replayed?: boolean }
 	| { type: 'model-request'; year: number; request: number }
 	| { type: 'model-response'; year: number; reason: string; toolCalls: number }

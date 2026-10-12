@@ -85,6 +85,8 @@ export interface StartRequest {
 
 export function parseStartRequest(value: unknown): StartRequest {
 	const body = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+	if (body.disasters !== undefined && body.disasters !== true)
+		throw new Error('Zufallskatastrophen sind bei neuen Läufen immer aktiviert; Fortsetzungen übernehmen das Protokoll.');
 	const adapter = body.adapter === 'fake' ? 'fake' : body.adapter === 'openai' ? 'openai' : null;
 	const assignment = body.assignment === 'N' || body.assignment === 'R' ? body.assignment : null;
 	const handbook = body.handbook === 'on' || body.handbook === 'off' ? body.handbook : null;
@@ -141,18 +143,19 @@ export class LiveRunManager {
 	}
 
 	/** Model name only; endpoint and key are never exposed. */
-	config(): { model: string | null; startMap: StartMap; seed: number; profile: SimulationProfile; totalYears: number; error?: string } {
+	config(): { model: string | null; startMap: StartMap; seed: number; profile: SimulationProfile; totalYears: number; disasters: true; error?: string } {
 		try {
 			const config = readModelConfig(this.options.configFile);
 			return {
 				model: config.CITY_MODEL_NAME ?? null,
 				totalYears: PROTOCOL_YEARS,
+				disasters: true,
 				startMap: config.CITY_MODEL_START_MAP === 'natural' ? 'natural' : 'haight',
 				profile: isSimulationProfile(config.CITY_MODEL_PROFILE) ? config.CITY_MODEL_PROFILE : 'koexistenz',
 				seed: config.CITY_MODEL_SEED ? Number(config.CITY_MODEL_SEED) : 42
 			};
 		}
-		catch (error) { return { model: null, startMap: 'haight', seed: 42, profile: 'koexistenz', totalYears: PROTOCOL_YEARS, error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
+		catch (error) { return { model: null, startMap: 'haight', seed: 42, profile: 'koexistenz', totalYears: PROTOCOL_YEARS, disasters: true, error: error instanceof Error ? error.message : 'Konfiguration unlesbar' }; }
 	}
 
 	subscribe(listener: Listener): () => void {

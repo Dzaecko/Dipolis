@@ -18,6 +18,7 @@ export interface CityRunListing {
 	modified: string;
 	error?: string;
 	compatibility?: EngineCompatibility;
+	disasters?: boolean;
 }
 
 export function listCityRuns(directory: string): CityRunListing[] {
@@ -31,7 +32,7 @@ export function listCityRuns(directory: string): CityRunListing[] {
 			const compatibility = engineCompatibility(protocol.meta, createHash('sha256').update(canonicalProtocolText(text)).digest('hex'));
 			return { file, model: protocol.meta.model ?? 'unbekannt', assignment: protocol.meta.assignment ?? '?',
 				handbook: protocol.meta.handbook, run: protocol.meta.run ?? null, years: protocol.years.length, totalYears: protocol.meta.totalYears,
-				complete: protocol.complete, modified, compatibility };
+				complete: protocol.complete, modified, compatibility, disasters: protocol.meta.disasters };
 		} catch (error) {
 			return { file, model: 'unbekannt', assignment: '?', handbook: '?', run: null, years: 0, totalYears: PROTOCOL_YEARS, complete: false,
 				modified, error: error instanceof Error ? error.message : 'unlesbar' };

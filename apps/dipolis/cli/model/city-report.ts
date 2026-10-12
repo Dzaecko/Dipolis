@@ -34,7 +34,7 @@ export interface ReportChart {
 }
 export interface ReportEvent { year: number; kind: string; label: string; lane: number; color: string; dash: string; }
 export interface ReportSummary {
- id: string; model: string; assignment: string; handbook: string; run: string; profile: string;
+ id: string; model: string; assignment: string; handbook: string; run: string; profile: string; disasters: boolean;
  date: string; dateSource: 'timestamp' | 'file-mtime'; partial: boolean;
  totalYears: number; observedYears: number; partialYears: number; years: ReportYear[]; warnings: string[];
  metrics: ReportMetrics; metricSamples: Record<string, number>; firstInsolvencyYear: number | null;
@@ -96,6 +96,8 @@ export function readReportSummary(protocolPath: string): ReportSummary {
  if (!records.length) throw new Error('Keine lesbaren JSONL-Datensätze.');
  const meta = records.find(r => r.event === 'run-started') ?? records.find(r => r.assignment !== undefined) ?? {};
  const totalYears = validateRunYears(meta.totalYears === undefined ? 30 : meta.totalYears);
+ if (meta.disasters !== undefined && typeof meta.disasters !== 'boolean')
+  throw new Error('Invalid disaster flag: expected a boolean');
  const identity = (key: string) => text(records.find(r => text(r[key]))?.[key]);
  const id = path.basename(protocolPath, path.extname(protocolPath));
  const filenameAssignment = id.match(/(?:^|-)(N|R)(?:-|$)/)?.[1];
@@ -146,6 +148,7 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   run: identity('run') || id.match(/-(\d+)$/)?.[1] || 'unbekannt',
   handbook: identity('handbook') || id.match(/handbook-(on|off)/)?.[1] || 'off',
   profile: identity('profile') || 'koexistenz',
+  disasters: meta.disasters === true,
   compatibility: engineCompatibility({ engineId: identity('engineId') || undefined },
    createHash('sha256').update(canonicalProtocolText(protocolText)).digest('hex')),
   date, dateSource: stamps.length ? 'timestamp' : 'file-mtime',
@@ -459,7 +462,7 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   y.tools.map(t => `<details class="tool"><summary>${show(t.call.name)} · ${obj(t.result).handled === false ? 'nicht ausgeführt' : 'gespeichertes Ergebnis'}</summary><h4>Aufruf</h4><pre>${escapeHtml(displayJson(t.call, options))}</pre><h4>Tatsächliches Ergebnis</h4><pre>${escapeHtml(displayJson(t.result, options))}</pre></details>`).join('') +
   `</details>${y.after ? `<details><summary>Alle gemessenen Jahreswerte</summary><pre>${escapeHtml(displayJson(y.after, options))}</pre></details>` : ''}</article>`).join('');
  const content = `<header><h1>Dipolis · Stadtbericht · ${show(summary.id)}</h1><p class="status ${summary.partial ? 'partial' : ''}">${summary.partial ? 'TEILLAUF / unvollständig' : 'Vollständiger Lauf'} · ${summary.observedYears}/${summary.totalYears} abgeschlossene Jahre · ${summary.partialYears} unvollständige Jahre · Ausgabe: ${summary.logSource === 'original' ? 'Original .log' : 'aus dem Protokoll rekonstruiert'}</p></header><section class="card"><dl class="meta">` +
-  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Engine-Provenienz', summary.compatibility.label], ['Engine-ID', summary.compatibility.engineId ?? 'nicht dokumentiert'], ['Kompatibilität', summary.compatibility.explanation], ['Lauf', summary.run],
+  [['Modell', summary.model], ['Auftrag', summary.assignment], ['Handbuch', summary.handbook], ['Profil', summary.profile], ['Zufallskatastrophen', summary.disasters ? 'an' : 'aus (historischer Lauf)'], ['Engine-Provenienz', summary.compatibility.label], ['Engine-ID', summary.compatibility.engineId ?? 'nicht dokumentiert'], ['Kompatibilität', summary.compatibility.explanation], ['Lauf', summary.run],
    [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC']]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}</section>` +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
@@ -494,7 +497,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
   const loaded = loadCityReview(path.join(absolute, s.id + '.jsonl'), s);
   const grades = REVIEW_CRITERIA.map(k => `<td>${loaded.warning ? 'ungültig' : loaded.review?.status === 'failed' ?
    'fehlgeschlagen' : loaded.review?.judge ? String(loaded.review.judge[k].score) : '—'}</td>`).join('');
-  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/${s.totalYears}</td>` +
+  return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br>Zufallskatastrophen: ${s.disasters ? 'an' : 'aus (historischer Lauf)'}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/${s.totalYears}</td>` +
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
    grades + `<td>${[...s.warnings, ...(loaded.review?.adapter === 'fake' ? ['Schein-Adapter – keine inhaltliche Modellbewertung'] : []), ...(loaded.warning ? [loaded.warning] : []),
     ...(loaded.review?.error ? [`Nachbetrachtung fehlgeschlagen (${loaded.review.error.stage}): ${loaded.review.error.message}`] : [])].map(show).join('<br>')}</td></tr>`;

@@ -119,10 +119,12 @@ async function main() {
   seed: args.seed ?? DEFAULT_START_CONFIGURATION.seed,
   profile: args.profile ?? 'koexistenz',
   totalYears: args.years ?? PROTOCOL_YEARS,
+  disasters: true,
   ...(args.startMap === 'natural' ? { autoBuildRules: 1 as const } : {}),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario })
  };
  const totalYears = validateRunYears(startConfiguration.totalYears ?? PROTOCOL_YEARS);
+ const disasters = startConfiguration.disasters ?? false;
  if (startConfiguration.scenario === 'stromkrise' &&
   (!['v3-pods', 'v4-fraktion'].includes(startConfiguration.profile ?? 'koexistenz') || startConfiguration.startMap !== 'haight'))
   throw new StartupError('Stromkrise requires v3-pods or v4-fraktion and Haight');
@@ -143,7 +145,7 @@ async function main() {
  if (!args.resume) writeFileSync(fd, JSON.stringify({ event: 'run-started', application: 'Dipolis', adapter: args.adapter,
   engineId: CURRENT_ENGINE_ID,
   assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
-  totalYears,
+  totalYears, disasters,
   systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile, totalYears),
   startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
@@ -158,7 +160,7 @@ async function main() {
  process.once('SIGINT', requestStop);
  process.once('SIGTERM', requestStop);
  progress({ type: 'run-started', adapter: args.adapter, model: adapter.model, assignment: args.assignment,
-  totalYears,
+  totalYears, disasters,
   engineId: CURRENT_ENGINE_ID,
   handbook: args.handbook, run: args.run, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
@@ -190,7 +192,7 @@ async function main() {
    kind: event.kind ?? 'adapter', ...(event.status === undefined ? {} : { status: event.status }),
    ...(event.attempts === undefined ? {} : { attempts: event.attempts }) });
   } });
-  const exactS266Match = totalYears === PROTOCOL_YEARS && args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
+  const exactS266Match = !disasters && totalYears === PROTOCOL_YEARS && args.adapter === 'fake' && startConfiguration.startMap === 'haight' && startConfiguration.seed === 42 && startConfiguration.profile === 'koexistenz';
   if (exactS266Match) verifyS266(metrics);
   const columns = ['assignment', 'model', 'run', 'handbook', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'];
   const csvFile = path.join(directory, 'runs.csv');
@@ -199,7 +201,7 @@ async function main() {
   else if (![header, header + ',profile',
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook'].join(','),
    ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete', 'handbook', 'profile'].join(',')]
-   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].replace(/,totalYears$/, ''))) {
+   .includes(readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].replace(/,disasters$/, '').replace(/,totalYears$/, ''))) {
    const old = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
    const legacyHeader = ['assignment', 'model', 'run', ...metricKeys].join(',');
    const previousHeader = ['assignment', 'model', 'run', ...metricKeys, 'inputTokens', 'outputTokens', 'tokenUsageComplete'].join(',');
@@ -218,12 +220,16 @@ async function main() {
   if (!durationCsv[0].split(',').includes('totalYears')) {
    writeFileSync(csvFile, [durationCsv[0] + ',totalYears', ...durationCsv.slice(1).map(row => row + ',30')].join('\n') + '\n');
   }
+  const disasterCsv = readFileSync(csvFile, 'utf8').trimEnd().split(/\r?\n/);
+  if (!disasterCsv[0].split(',').includes('disasters')) {
+   writeFileSync(csvFile, [disasterCsv[0] + ',disasters', ...disasterCsv.slice(1).map(row => row + ',false')].join('\n') + '\n');
+  }
   const actualHeader = readFileSync(csvFile, 'utf8').split(/\r?\n/, 1)[0].split(',');
   const values: Record<string, unknown> = { assignment: args.assignment, model: adapter.model, run: args.run,
-   handbook: args.handbook, profile: startConfiguration.profile, totalYears, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
+   handbook: args.handbook, profile: startConfiguration.profile, totalYears, disasters, ...metrics, inputTokens, outputTokens, tokenUsageComplete };
   appendFileSync(csvFile, actualHeader.map(key => escape(values[key])).join(',') + '\n');
   say(JSON.stringify({ assignment: args.assignment, model: adapter.model, run: args.run,
-  protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile, totalYears,
+  protocol: filename, handbook: args.handbook, startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile, totalYears, disasters,
   metrics, inputTokens, outputTokens, ...(exactS266Match ? { exactS266Match: true } : {}) }, null, 2), 'out');
   progress({ type: 'run-finished', status: 'completed', metrics: { ...metrics },
    ...(exactS266Match ? { exactS266Match: true } : {}) });

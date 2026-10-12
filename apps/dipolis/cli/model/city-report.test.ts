@@ -63,6 +63,32 @@ function reviewSidecar(file: string, overrides: Partial<CityReview> = {}): CityR
 }
 
 describe('Nachbetrachtung reporting', () => {
+ it('shows enabled disasters and historical disabled defaults in reports and index', () => {
+  const dir = temp();
+  for (const [name, flag, enabled] of [['historical', {}, false], ['enabled', { disasters: true }, true],
+   ['disabled', { disasters: false }, false]] as const) {
+   const file = protocol(dir, [{ event: 'run-started', ...flag }, annual(1)], `${name}.jsonl`);
+   expect(readReportSummary(file).disasters).toBe(enabled);
+   const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+   expect(html).toContain(`<dt>Zufallskatastrophen</dt><dd>${enabled ? 'an' : 'aus (historischer Lauf)'}</dd>`);
+  }
+  const index = readFileSync(generateReportIndex(dir).htmlPath, 'utf8');
+  expect(index).toContain('Zufallskatastrophen: an');
+  expect(index).toContain('Zufallskatastrophen: aus (historischer Lauf)');
+ });
+ it('rejects malformed disaster flags and accepts optional disaster metadata in review sidecars', () => {
+  const file = protocol(temp(), [{ event: 'run-started', disasters: true }, annual(1), annual(2)]);
+  const review = reviewSidecar(file);
+  review.facts.disasters = true;
+  const sidecar = file.replace('.jsonl', '.review.json');
+  writeFileSync(sidecar, JSON.stringify(review));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).not.toContain('Ungültige Struktur');
+  review.facts.disasters = false;
+  writeFileSync(sidecar, JSON.stringify(review));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Ungültige Struktur');
+  for (const disasters of [null, 1, 'true'])
+   expect(() => readReportSummary(protocol(temp(), [{ event: 'run-started', disasters }, annual(1)]))).toThrow('disaster flag');
+ });
  it('accepts duration-aware bans after year 30 and links three-digit review years', () => {
   const dir = temp(), file = protocol(dir, [{ event: 'run-started', totalYears: 105 },
    ...Array.from({ length: 105 }, (_, i) => annual(i + 1))]);

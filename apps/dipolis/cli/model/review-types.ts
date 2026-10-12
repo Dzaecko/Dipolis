@@ -19,6 +19,8 @@ export interface ReviewFacts {
  startMap: string;
  /** Omitted in historical 30-year sidecars. */
  totalYears?: number;
+ /** Omitted in historical sidecars, where random disasters were disabled. */
+ disasters?: boolean;
  complete: boolean;
  years: ReviewYear[];
  findings: {
