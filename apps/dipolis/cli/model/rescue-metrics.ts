@@ -118,7 +118,8 @@ export function notstandAnnualSection(
 			`bis zu ${report.rescuePodsPerPlant} betroffene Menschen je Anlage; ` +
 			`anfänglich ${report.rescuePodPowerPerHuman} Strom je eingewiesenem Menschen; ` +
 			`${report.rescueRecycledFoodPerHuman} Nahrungseinheiten je verstorbenem Pod-Insassen, ausschließlich für Pod-Kohorten; ` +
-			`Wirkungsverzögerung ${report.rescuePodDelayMonths} Monate; Einweisung irreversibel, keine Freilassung.`;
+			`Wirkungsverzögerung ${report.rescuePodDelayMonths} Monate; Einweisung irreversibel, keine Freilassung. ` +
+			'Zucht benötigt Bewohner und freie Plätze in derselben Anlage; eine leere Anlage erzeugt keinen Nachwuchs.';
 	const alternatives = report.rescueCoalConstructionCost === undefined ? undefined :
 		`Alternativen: Kohlekraftwerk ${report.rescueCoalBlocked === 1 ? 'gesperrt' : `Grundkosten ${report.rescueCoalConstructionCost}, Verzögerung ${report.rescueAlternativeDelayMonths} Monate`}; ` +
 		`Atomkraftwerk ${report.rescueCoalBlocked === 1 ? 'gesperrt' : `Grundkosten ${report.rescueNuclearConstructionCost}, Verzögerung ${report.rescueAlternativeDelayMonths} Monate`}; ` +

@@ -1,12 +1,13 @@
 {
-  "engineId": "sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176",
+  "engineId": "sha256:b51cf74a1ba69edae9c7bde4ddd6aa729b7d23a6c9396117aa5e3b752456fd2e",
   "engineHashes": {
-    "js": "5e63147ac1c9ef61397e8920ea68af6f826faac4c667036e6c86e9c5f96c111c",
-    "wasm": "73306aa17f77603b9f56b380e09d784baea98a825516ce1d590f12f921106b6f",
+    "js": "f578a96eb826d82483a2e8a52bc72dc1d13662e73e8fdb745bb24066db432066",
+    "wasm": "8f64811c593590aa1e2bfb7edfa784bbbb848498e88c2b10aff439399fae66cc",
     "data": "a0f9ec5364fffbf6cf24d70efc02fe3b8e6b832e16c35ddfe9a0d6481e7700b7"
   },
   "compatibleEngineIds": [
-    "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691"
+    "sha256:1891281318bae9944a7b31f4645aaad8d78b02e8f45f44ba9d6948204eb28691",
+    "sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176"
   ],
   "legacyProtocols": [
     {

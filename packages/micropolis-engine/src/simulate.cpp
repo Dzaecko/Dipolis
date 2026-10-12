@@ -1217,6 +1217,13 @@ void Micropolis::updateUnrest()
             ++ais;
             if (tile & PWRBIT) ++aiPowered;
         } else {
+            if (rescueEnabled()) {
+                const Position pos(x, y);
+                const int base = tile & LOMASK;
+                const int population = max(0, (base == FREEZ ? doFreePop(pos) : getResZonePop(base)) -
+                    (int)humanPodOffsetMap.worldGet(x, y));
+                if (!population) continue;
+            }
             ++humans;
             if (!(tile & PWRBIT)) ++humanOutages;
         }
@@ -1243,8 +1250,9 @@ void Micropolis::updateUnrest()
     unrest = clamp(unrest + params.unrestInertia * (target - unrest), 0.0f, 100.0f);
     unrestStage = unrest >= params.unrestUprisingThreshold ? 3 :
         unrest >= params.unrestSabotageThreshold ? 2 : unrest >= params.unrestProtestThreshold ? 1 : 0;
-    if (unrestStage) ++pendingStageMonths[unrestStage - 1];
-    if (unrestStage >= 2) {
+    const bool freeAgents = !rescueEnabled() || humans > 0;
+    if (unrestStage && freeAgents) ++pendingStageMonths[unrestStage - 1];
+    if (unrestStage >= 2 && freeAgents) {
         const bool uprising = unrestStage == 3;
         const int attempts = uprising ? 3 : 1;
         const float probability = uprising ? params.unrestUprisingProbability : params.unrestSabotageProbability;

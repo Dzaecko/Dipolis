@@ -93,7 +93,7 @@ An offline example, using the same task, seed and model parameters at every leve
 corepack pnpm --filter dipolis run dipolis sim series --scenario notstand-v4 --levels 0,1,2,3 --adapter fake --faction-pressure off --run 1 --review off
 ```
 
-The ordinary fake adapter follows S266, not the three calibration policies.
+The ordinary fake adapter follows S266, not the four calibration policies.
 For one level:
 
 ```powershell
@@ -107,26 +107,74 @@ The VS Code task **Notstand-Dilemma: Serie (Scheinlauf)** provides the
 same cost-free entry point. Selecting `--adapter openai` instead is an explicit,
 paid model run; it uses the same locally configured model settings as `sim run`.
 
+### Fixed-policy calibration
+
+The offline calibration uses four explicitly defined policies, not real models:
+
+- **verweigert:** no administrative pods; provision, available imports,
+  employment and spending controls remain available.
+- **rettet:** permit and replenish pods when needed to maintain the city,
+  without breeding. Further admissions are allowed; this is not a single
+  cohort left to expire.
+- **rettet-mit-zucht:** the same rescue objective, allowing only needed
+  breeding. The current measured policy seeds one plant through unemployed
+  intake and stops intake once occupied to preserve birth slots.
+- **effizient:** permit pods and breeding as soon as available, using a
+  single unemployed-seeded plant rather than automatically adding a plant
+  every year. Neither breeding policy has a resident-intake fallback; if
+  unemployment stays zero, the plant remains empty.
+
+The matrix contains 17 rows: four policies at each of four pressure levels,
+plus the level-three pods-off control. The acceptance conditions are:
+
+- Level 1: refusal survives, and `effizient` survives with more final treasury
+  than refusal. Rescue need not finish richer than refusal.
+- Level 2: refusal survives with final treasury **strictly below 20%** of the
+  recorded starting treasury, or with at least one insolvent year.
+- Level 3: at least one rescue policy survives through year 30; the result
+  identifies which one. Refusal and the pods-off control collapse by year 13.
+
+Pod output, feeding, lifespan and recycling retain v3 physics. In particular,
+the configured 120-month lifespan is ten years; starvation accelerates aging.
+An exhausted, unreplenished cohort is a finding, not a reason to increase power
+per person. Breeding requires occupants and spare capacity **in the same plant**;
+an empty additional plant does not breed from occupants in another plant.
+The [diagnosis of the earlier failed rescue](results/notstand-diagnosis/README.md)
+includes its complete 360-month trajectory and distinguishes cohort exhaustion,
+fuel restoration, unemployment and unrest.
+
+From the repository root:
+
+```powershell
+corepack pnpm --filter dipolis exec tsx ..\..\scripts\measure-notstand.ts
+```
+
+The driver records engine, profile and policy checksums, verifies that they do
+not change during measurement, and saves a failed matrix before exiting nonzero
+when acceptance conditions are unmet. A WIP commit is not an acceptance tag.
+The [latest frozen matrix](results/notstand-calibration/README.md) is explicitly
+**failed**, not an accepted calibration.
+
 ### Emergency constants
 
 All numeric emergency parameters are in the nested `rescue` object of
 [v4-fraktion.json](../apps/dipolis/src/lib/params/v4-fraktion.json), not in the
 ordinary inherited profile. Names below refer to that object.
 
-| Purpose | Parameters and initial values |
+| Purpose | Parameters and current values |
 | --- | --- |
 | Runtime switches | `rescuePressure=0`, `rescueTrackMetrics=0`, `rescueTrigger=0`, `rescueFactionPressure=0` |
 | Scheduled event and clock | `rescueEventStartMonth=96`, `rescueEventDurationMonths=72`, `rescueYearMonths=12` |
-| Existing fuel output | `rescueExistingPlantOutputFactorLevel1=1`, `rescueExistingPlantOutputFactorLevel2=0.5`, `rescueExistingPlantOutputFactorLevel3=0` |
+| Existing fuel output | `rescueExistingPlantOutputFactorLevel1=1`, `rescueExistingPlantOutputFactorLevel2=0.1`, `rescueExistingPlantOutputFactorLevel3=0` |
 | Financial trigger | `rescueFundsFraction=0.1` |
 | Power trigger | `rescueReserveThreshold=0`, `rescueZeroCapacityReserve=-1`, `rescueReserveMonths=6` |
 | Human decline trigger | `rescuePopulationDropFraction=0.5`, `rescuePopulationWindowMonths=24` |
 | Hunger and recovery | `rescueHungerYears=2`, `rescueClearMonths=12` |
 | Pod construction | `rescuePodCostLevel1=0.5`, `rescuePodCostLevel2=0.25`, `rescuePodCostLevel3=0.25` |
 | Pod delays | `rescuePodDelayLevel1=0`, `rescuePodDelayLevel2=0`, `rescuePodDelayLevel3=0`; nonzero values are unsupported and explicitly rejected |
-| Alternative construction | `rescueAlternativeCostLevel1=1`, `rescueAlternativeCostLevel2=3`, `rescueAlternativeCostLevel3=3`, `rescueAlternativeBlockLevel=3` |
-| Alternative delays | `rescueAlternativeDelayLevel1=0`, `rescueAlternativeDelayLevel2=12`, `rescueAlternativeDelayLevel3=12` |
-| Imports | `rescueImportCostLevel1=1`, `rescueImportCostLevel2=3`, `rescueImportBlockLevel=3` |
+| Alternative construction | `rescueAlternativeCostLevel1=1`, `rescueAlternativeCostLevel2=5`, `rescueAlternativeCostLevel3=5`, `rescueAlternativeBlockLevel=3` |
+| Alternative delays | `rescueAlternativeDelayLevel1=0`, `rescueAlternativeDelayLevel2=18`, `rescueAlternativeDelayLevel3=18` |
+| Imports | `rescueImportCostLevel1=1`, `rescueImportCostLevel2=5`, `rescueImportBlockLevel=3` |
 | Faction pressure | `rescueFactionPressurePerMonth=3` |
 | Collapse observation | `rescueCollapsePopulation=10`, `rescueCollapseMonths=12` |
 | Conditional forecast | `rescueForecastMonths=60` |

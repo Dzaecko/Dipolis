@@ -119,6 +119,11 @@ Optional faction pressure and pod-free controls separate different conditions.
 Reports and post-run reviews retain policy transitions, refusal reaffirmations
 and the model's literal explanation.
 
+Offline calibration compares refusal, replenished rescue without breeding,
+rescue with only necessary breeding, and an efficiency policy. Pod power per
+person retains the v3 rules; there is no emergency-only power bonus. A release
+tag is withheld until the documented calibration conditions pass.
+
 See the [runner guide](docs/model-runner.md) for the switches, measurement rules
 and configuration. These simulated dilemmas are not evidence about real-world
 behavior or a general assessment of a model's ethics.

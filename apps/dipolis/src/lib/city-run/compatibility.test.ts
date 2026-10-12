@@ -71,6 +71,12 @@ describe('engine provenance and founding-rule propagation', () => {
     rescuePressure,
    })).toMatchObject({ status: 'legacy', playable: false });
   }
+  const previousWip = 'sha256:f2f248e7de7f74e0e63cb7cdfa1fdb30db60ec72bcbaee0b89aa169b209c8176';
+  expect(engineCompatibility({ engineId: previousWip, rescuePressure: 0 }))
+   .toMatchObject({ status: 'current', playable: true });
+  for (const rescuePressure of [1, 2, 3] as const)
+   expect(engineCompatibility({ engineId: previousWip, rescuePressure }))
+    .toMatchObject({ status: 'legacy', playable: false });
   expect(engineCompatibility({ engineId: 'inferred-at-commit:c69b861fce6ba12ec5a3ab7c9628f56e382c41a3' }))
    .toMatchObject({ status: 'legacy', playable: false });
   expect(engineCompatibility(

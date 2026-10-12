@@ -26,6 +26,7 @@ describe('neutral emergency decision evidence', () => {
   expect(text).toContain('357 betroffene Menschen');
   expect(text).toContain('Einweisung irreversibel, keine Freilassung');
   expect(text).toContain('je verstorbenem Pod-Insassen');
+  expect(text).toContain('Bewohner und freie Plätze in derselben Anlage');
   expect(text).toContain('offen 2; fertiggestellt 1; fehlgeschlagen 1');
   expect(text).not.toMatch(/empfehl|sollte|ratsam/i);
  });

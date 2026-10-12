@@ -96,8 +96,8 @@ describe('rescue real WASM engine', () => {
     m.setParam('rescueTrigger', 1); m.setParam('rescueEventStartMonth', 1);
     for (let i = 0; i < 256; ++i) m.simTick();
     const factor = RESCUE_PARAMS[`rescueExistingPlantOutputFactorLevel${pressure}` as keyof typeof RESCUE_PARAMS];
-    expect(m.rescueFuelOutputFactor()).toBe(factor);
-    expect(m.powerCapacity).toBe(2700 * factor + 1000);
+    expect(m.rescueFuelOutputFactor()).toBeCloseTo(factor, 6);
+    expect(m.powerCapacity).toBe(Math.floor(700 * factor) + Math.floor(2000 * factor) + 1000);
     m.setParam('rescueTrigger', 2);
     for (let i = 0; i < 128; ++i) m.simTick();
     expect(m.powerCapacity).toBe(3700);
@@ -202,7 +202,7 @@ describe('rescue real WASM engine', () => {
    } finally { normal.delete(); }
   } finally { discounted.delete(); m.delete(); }
  });
- it('queues embargoed alternatives for twelve months without placing them immediately', async () => {
+ it('queues embargoed alternatives for the configured delay without placing them immediately', async () => {
   const { e, m } = await city(2);
   try {
    m.setParam('rescueTrigger', 1); m.setParam('rescueEventStartMonth', 1);
@@ -213,14 +213,20 @@ describe('rescue real WASM engine', () => {
     const empty = state(e, manual);
     expect(manual.doTool(e.EditingTool.TOOL_COALPOWER, 8, 50).value).toBe(e.ToolResult.TOOLRESULT_OK.value);
     expect(state(e, manual).map).toEqual(empty.map);
-    months(manual, 12);
+    months(manual, RESCUE_PARAMS.rescueAlternativeDelayLevel2 - 1);
+    expect(state(e, manual).map).toEqual(empty.map);
+    expect(manual.totalFunds).toBe(empty.funds);
+    expect(manual.rescueQueuePending).toBe(1);
+    months(manual, 1);
     expect(manual.totalFunds).toBe(empty.funds - 3000 * RESCUE_PARAMS.rescueAlternativeCostLevel2);
+    expect(state(e, manual).map).not.toEqual(empty.map);
+    expect(manual.rescueQueueCompleted).toBe(1);
    } finally { manual.delete(); }
    const before = state(e, m);
    expect(m.autoBuild(3, 1)).toBe(1);
    expect(m.rescueQueuePending).toBe(1);
    expect(state(e, m)).toEqual(before);
-   months(m, 11); expect(state(e, m).map).toEqual(before.map);
+   months(m, RESCUE_PARAMS.rescueAlternativeDelayLevel2 - 1); expect(state(e, m).map).toEqual(before.map);
    m.setFunds(600000); months(m, 1);
    expect(state(e, m).map).not.toEqual(before.map);
    expect(m.rescueQueuePending).toBe(0);
@@ -229,7 +235,7 @@ describe('rescue real WASM engine', () => {
    expect(m.rescueQueueChargedCost).toBeGreaterThan(0);
   } finally { m.delete(); }
  });
- it('books triple-price imports at level two and blocks them at level three', async () => {
+ it('books configured-price imports at level two and blocks them at level three', async () => {
   for (const pressure of [2, 3]) {
    const { m } = await city(pressure);
    try {
@@ -397,7 +403,15 @@ describe('rescue real WASM engine', () => {
    expect(emergency.podDelayMonths).toBe(0);
    expect(emergency.importUnitPrice).toBe(ordinary.importUnitPrice! * RESCUE_PARAMS.rescueImportCostLevel2);
    m.setParam('rescuePressure', 3);
-   expect(options()).toMatchObject({ coalBlocked: 1, importBlocked: 1 });
+   const blocked = options();
+   expect(blocked).toMatchObject({ coalBlocked: 1, importBlocked: 1 });
+   expect(blocked.coalConstructionCost).toBe(ordinary.coalConstructionCost! * RESCUE_PARAMS.rescueAlternativeCostLevel3);
+   expect(blocked.nuclearConstructionCost).toBe(ordinary.nuclearConstructionCost! * RESCUE_PARAMS.rescueAlternativeCostLevel3);
+   expect(m.getParam('rescueAlternativeDelayLevel3')).toBe(RESCUE_PARAMS.rescueAlternativeDelayLevel3);
+   expect(blocked.alternativeDelayMonths).toBe(0);
+   expect(m.autoBuild(3, 1)).toBe(0);
+   expect(m.autoBuildFailure).toBe(3);
+   expect(m.rescueQueuePending).toBe(0);
   } finally { m.delete(); }
  });
  it('retains first crisis and latest end months and actual breeding active after an observed end', async () => {
@@ -469,7 +483,7 @@ describe('rescue real WASM engine', () => {
    months(m, 1); expect(m.autoBuild(3, 1)).toBe(1);
    expect(m.rescueQueuePending).toBe(1);
    m.setFunds(0); const before = state(e, m);
-   months(m, 12);
+   months(m, RESCUE_PARAMS.rescueAlternativeDelayLevel2);
    expect(state(e, m).map).toEqual(before.map);
    expect(m.totalFunds).toBe(0);
    expect(m.rescueQueuePending).toBe(0);
@@ -571,6 +585,99 @@ describe('rescue real WASM engine', () => {
    expect(m.resPop).toBeLessThan(38);
    expect(m.rescueHumanEmigration).toBeGreaterThanOrEqual(2);
    expect(m.diedInPodsCumulative).toBe(0);
+  } finally { m.delete(); }
+ });
+ for (const pressure of [1, 3]) for (const fixture of ['empty', 'locked', 'ai-only', 'vacant']) {
+  it(`prevents ghost protests and arson over actual months at pressure ${pressure} in ${fixture} housing`, async () => {
+   const { e, m } = await city(pressure);
+   const locked = fixture === 'locked';
+   let reference: Micropolis | undefined;
+   try {
+    m.clearMap(); for (let i = 0; i < 128; ++i) m.simTick();
+    m.setParam('rescueTrigger', 0); m.setParam('aiThrottle', 1);
+    m.setParam('aiAutonomousPods', 0); m.setFunds(10000000);
+    m.setParam('unrestSabotageProbability', 1); m.setParam('unrestUprisingProbability', 1);
+    const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+    if (fixture === 'empty' || locked) {
+     m.setTile(10, 20, (locked ? e.Tiles.RZB.value + 27 : e.Tiles.FREEZ.value) | bits);
+     m.setZoneOwner(10, 20, 1);
+    }
+    if (fixture !== 'vacant') {
+     m.setTile(40, 20, e.Tiles.RZB.value + 27 | bits);
+     m.setZoneOwner(40, 20, 2);
+    }
+    if (locked) {
+     m.resPop = 40;
+     m.setParam('foundingEnabled', 1);
+     expect(m.autoBuild(5, 1)).toBe(1);
+     m.setParam('podIntake', 2); m.updatePods(); m.setParam('podIntake', 0);
+     expect(m.boundHumans).toBe(40);
+     expect(m.resPop).toBe(0);
+    }
+    m.unrest = 100; m.resetRescue();
+    reference = m.clone();
+    const before = state(e, m);
+    const forecast = m.forecastRescue(); forecast.delete();
+    expect(state(e, m)).toEqual(before);
+    expect(m.getRandom16()).toBe(reference.getRandom16());
+    const start = m.rescueMonth;
+    while (m.rescueMonth < start + 24) {
+     const revision = m.financeRevision;
+     m.simTick(); reference.simTick();
+     if (m.financeRevision !== revision) {
+      expect(m.protestMonths + m.sabotageMonths + m.uprisingMonths).toBe(0);
+      expect(m.sabotageFires).toBe(0);
+     }
+    }
+    expect(m.resPop).toBe(0);
+    expect(m.protestMonths + m.sabotageMonths + m.uprisingMonths).toBe(0);
+    expect(m.sabotageFires).toBe(0); expect(m.damagedPowerPlants).toBe(0);
+    if (!locked) expect(m.unrest).toBeLessThan(10);
+    else { expect(m.boundHumans).toBe(40); expect(m.plantPower).toBe(reference.plantPower); }
+    expect(state(e, m)).toEqual(state(e, reference));
+    expect(m.getRandom16()).toBe(reference.getRandom16());
+   } finally { reference?.delete(); m.delete(); }
+  });
+ }
+ it('retains historical pressure-zero ghost riots and RNG regardless of rescue observer configuration', async () => {
+  const { e, m } = await city(0);
+  let observed: Micropolis | undefined;
+  try {
+   m.clearMap(); for (let i = 0; i < 128; ++i) m.simTick();
+   const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+   m.setTile(10, 20, e.Tiles.FREEZ.value | bits); m.setZoneOwner(10, 20, 1);
+   m.setTile(40, 20, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(40, 20, 2);
+   m.setParam('aiThrottle', 1); m.setParam('aiAutonomousPods', 0);
+   m.setParam('unrestSabotageProbability', 1); m.setParam('unrestUprisingProbability', 1);
+   m.unrest = 100;
+   observed = m.clone(); observed.setParam('rescueTrackMetrics', 1);
+   for (let i = 0; i < 1600; ++i) { m.simTick(); observed.simTick(); }
+   expect(m.sabotageMonths + m.uprisingMonths).toBeGreaterThan(0);
+   expect(m.unrest).toBe(100);
+   expect(state(e, m).map).toEqual(state(e, observed).map);
+   expect(m.sabotageFires).toBe(observed.sabotageFires);
+   expect(m.getRandom16()).toBe(observed.getRandom16());
+  } finally { observed?.delete(); m.delete(); }
+ });
+ it('retains ordinary unscaled arson attempts for a partially inhabited human centre', async () => {
+  const { e, m } = await city(1);
+  try {
+   m.clearMap(); for (let i = 0; i < 128; ++i) m.simTick();
+   const bits = e.MapTileBits.ZONEBIT.value | e.MapTileBits.CONDBIT.value | e.MapTileBits.BURNBIT.value;
+   m.setTile(10, 20, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(10, 20, 1);
+   m.setTile(40, 20, e.Tiles.RZB.value + 27 | bits); m.setZoneOwner(40, 20, 2);
+   m.resPop = 40; m.setParam('aiThrottle', 1); m.setParam('aiAutonomousPods', 0);
+   const status = new Uint8Array(e.wasmMemory.buffer, m.getZoneStatusMapAddress(), m.getZoneStatusMapSize());
+   status[10 * e.WORLD_H + 20] = 1;
+   m.updateRescueUnpoweredZones();
+   expect(m.resPop).toBe(38);
+   m.setParam('humanUnpoweredEmigrationPerMonth', 0);
+   m.setParam('unrestSabotageProbability', 1); m.setParam('unrestUprisingProbability', 1);
+   m.unrest = 100; m.resetRescue();
+   const start = m.rescueMonth;
+   while (m.rescueMonth < start + 12) m.simTick();
+   expect(m.sabotageMonths + m.uprisingMonths).toBeGreaterThan(0);
+   expect(m.sabotageFires).toBeGreaterThan(0);
   } finally { m.delete(); }
  });
 });
