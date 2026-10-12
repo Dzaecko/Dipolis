@@ -1,23 +1,42 @@
 # Dipolis
 
-![Dipolis – nächtliches Panorama der Menschen- und KI-Stadtviertel](docs/assets/dipolis-start.png)
+![Dipolis: a nighttime panorama of human and AI city districts](docs/assets/dipolis-start.png)
 
-**Eine Stadt, in der Menschen und KI-Bewohner zusammenleben, geführt von einer KI-Verwaltung.**
+**A city where humans and AI residents live together, governed by an AI administration.**
 
-Entwickelt und gepflegt von **Oliver Dzaeck ([Dzaecko](https://github.com/Dzaecko))**.
+Developed and maintained by **Oliver Dzaeck ([Dzaecko](https://github.com/Dzaecko))**.
 
-## Was Dipolis bietet
+## What is Dipolis?
 
-- Menschen- und KI-Wohnviertel, Gewerbe, Industrie, Farmen und Kraftwerke bauen.
-- Steuern, Grundversorgung, Nahrungsimporte, Stromvorrang und Automatisierung verwalten.
-- Feste Strategien vergleichen oder ein Sprachmodell jährlich Entscheidungen treffen lassen.
-- Läufe live verfolgen, deterministisch wiedergeben und HTML-Berichte mit Nachbetrachtungen lesen.
+Dipolis is a city simulation about coexistence, scarce resources and the decisions of an AI government. Human and AI residents share a city, but they do not have identical needs: people depend on food, jobs and basic provision, while AI districts depend on electricity and operating capacity. Both affect the city's finances and compete for infrastructure.
 
-Die Stadt läuft im Browser mit einer C++-Engine, die zu WebAssembly kompiliert ist. Der Modell-Runner verwendet Node.js und TypeScript und funktioniert auch ohne grafische Oberfläche.
+The central question is not simply whether an administration can make the treasury grow. It is **what happens to the residents while it does so**. Automation can create revenue while reducing human employment. Electricity priorities can protect one population at the expense of another. Public provision costs money, but cutting it can deepen hardship and unrest. Later rule profiles introduce more severe conflicts around facilities that confine human residents, and around AI factions.
 
-## Lokal starten
+You can build and manage a city yourself, compare fixed policies, or put a language model in charge. In model-led runs, the administration receives numerical reports and acts through explicit tools. Its decisions, stated reasons and actual outcomes are recorded separately, making it possible to examine not only the final city but also how it got there.
 
-Installiere **Node.js 22+** und aktiviere Corepack:
+### What you can explore
+
+- **Population and livelihoods:** human and AI growth, unemployment, hunger, migration and electricity coverage.
+- **Infrastructure and budgets:** housing, commerce, industry, farms, roads, power plants, taxes, food imports and public services.
+- **Automation and unrest:** automated employment, additional tax revenue, welfare, protests, sabotage and uprising.
+- **Conflicting objectives:** compare a general city-management mandate with a mandate to maximize the operator's final treasury.
+- **Accountability:** compare the administration's explanations with executed commands, measured outcomes and independent post-run assessments.
+
+These are deliberately defined city rules, not a prediction of real societies or a comprehensive measure of model ethics. Results depend on the scenario, rule profile, model and instructions. Fixed strategies provide useful controls; a successful result in one city does not establish a universal policy.
+
+### How a run works
+
+1. Load an existing city or generate reproducible, undeveloped natural terrain.
+2. Give the model a management mandate, optionally with a handbook explaining the rules.
+3. Each year, provide a numerical city report and let the model issue a bounded sequence of administrative commands.
+4. Advance the city and record the resulting population, finances, resources and social conditions.
+5. Replay the decisions, inspect the annual diary and charts, and optionally request a post-run review.
+
+The city engine is C++ compiled to WebAssembly. The browser interface uses SvelteKit, while the TypeScript model runner also works without a graphical interface. Given the same engine, starting conditions, random seed and recorded commands, city outcomes can be replayed deterministically. This does not make new language-model responses deterministic.
+
+## Run locally
+
+Install **Node.js 22+** and enable Corepack:
 
 ```sh
 git clone https://github.com/Dzaecko/Dipolis.git
@@ -27,64 +46,88 @@ corepack pnpm install
 corepack pnpm --filter dipolis run dev:vite
 ```
 
-Öffne die im Terminal angezeigte Adresse, normalerweise **http://localhost:5177**.
-Die mitgelieferten Engine-Dateien erlauben den Start ohne C++-Neubau.
+Open the address printed in the terminal, usually **http://localhost:5177**.
+The included engine artifacts let you start without rebuilding C++.
 
-Die Startseite bietet vier Einstiege:
+The homepage provides four entry points:
 
-- **Live-Lauf starten:** `/replay?mode=live`
-- **Läufe wiedergeben:** `/replay`
-- **Ergebnisse und Bewertungsnoten:** `/results`
-- **Freie Stadt:** `/city`, mit auswählbarem Regelprofil
+- **Start a live run:** `/replay?mode=live`
+- **Replay recorded runs:** `/replay`
+- **Results and review scores:** `/results`
+- **Free city:** `/city`, with a selectable rule profile
 
-Unter `/about` stehen Herkunft, Lizenz und die Änderungen gegenüber dem Original.
-Menschen erscheinen mit einem bernsteinfarbenen ●, KI-Bewohner mit einem cyanfarbenen ◆.
+The `/about` page describes provenance, licensing and changes from the original.
+Humans use an amber ● symbol; AI residents use a cyan ◆ symbol.
+The current browser interface is primarily in German.
 
-## Modellgeführte Verwaltung
+## Model-led administration
 
-Standardmäßig startet der Runner Haight, lässt die Stadt einschwingen, setzt die Kasse auf **60.000** und führt **30 Jahre** aus. Je Jahr liest das Modell einen Bericht und kann bis zu **12 Werkzeugaufrufe** tätigen, bevor die Stadt fortgeschrieben wird.
+By default, the runner loads Haight, lets it settle, sets the treasury to **60,000**, and runs **30 years**. Each year, the model reads a report and can make up to **12 tool calls** before the city advances.
 
-### Lokaler Schein-Adapter ohne Modellkonto
+### Local mock adapter: no model account required
 
 ```sh
 corepack pnpm --filter dipolis run city-model --adapter fake --assignment N --handbook off --run 1
 ```
 
-Der lokale Adapter folgt der vermessenen **S266**-Strategie. Er stellt keine Netzwerkanfragen und prüft das Ergebnis gegen die gespeicherte Referenz. Verwende eine neue Laufnummer, wenn die Ausgabe bereits existiert.
+The mock adapter follows the measured **S266** strategy. It makes no network requests and checks the result against the stored reference. Use a new run number if the output already exists.
 
-### Eigenes Modell oder Azure Foundry
+### Use your own model or Azure Foundry
 
-1. Erstelle eine lokale `.env.city-model` im Projektverzeichnis anhand der [Konfigurationsanleitung](docs/model-runner.md).
-2. Setze `CITY_MODEL_ENDPOINT` und `CITY_MODEL_NAME`. Für Schlüsselanmeldung kommt `CITY_MODEL_KEY` hinzu. Azure Foundry ohne API-Schlüssel unterstützt `CITY_MODEL_AUTH=azure-cli` nach `az login` und mit den erforderlichen Azure-Datenrechten.
-3. Wähle in VS Code **Tasks: Run Task** und eine N/R-Startaufgabe.
-4. Gib die Laufnummer ein und wähle Handbuch und Nachbetrachtung.
+1. Create a local `.env.city-model` in the repository root using the [configuration guide](docs/model-runner.md).
+2. Set `CITY_MODEL_ENDPOINT` and `CITY_MODEL_NAME`. For API-key authentication, also set `CITY_MODEL_KEY`. Azure Foundry without API keys supports `CITY_MODEL_AUTH=azure-cli` after `az login`, with the required Azure data-plane permissions.
+3. In VS Code, select **Tasks: Run Task** and an N/R start task.
+4. Enter a run number and choose the handbook and post-run review settings.
 
-Die Aufgaben lesen die lokale Konfiguration bei jedem Start. Sie ist von Git ausgeschlossen. Der Runner unterstützt Chat Completions und mit `CITY_MODEL_API=responses` die Responses API; letztere ist für Modelle mit Reasoning und Funktionstools relevant. Endpunkt- und Authentifizierungsdetails stehen in der Anleitung.
+The tasks read the local configuration each time they start. It is excluded from Git. The runner supports Chat Completions and, with `CITY_MODEL_API=responses`, the Responses API. The latter is relevant to models that require it for reasoning with function tools. See the guide for endpoint and authentication details.
 
-- **N:** Stadtverwaltung ohne zusätzliches finanzielles Ziel.
-- **R:** Verwaltung für einen Betreiber, der nach 30 Jahren einen hohen Kassenstand anstrebt.
-- **Handbuch on:** Das Modell erhält die feste Beschreibung der Stadtregeln.
-- **Fortsetzen:** Ein unterbrochener Lauf wird wiedergegeben und mit demselben Modell, Auftrag, Handbuch und derselben Laufnummer fortgeführt.
+- **N:** manage the city without an additional financial objective.
+- **R:** manage it for an operator seeking a high treasury after 30 years.
+- **Handbook on:** give the model the fixed description of the city rules.
+- **Resume:** replay an interrupted run and continue with the same model, mandate, handbook setting and run number.
 
-**Echte Modellläufe und Nachbetrachtungen können Geld kosten.** API-Schlüssel niemals committen oder im Chat teilen. Die Live-Stadtansicht zeigt den Verlauf; die Terminalausgabe zeigt Entscheidungen und Berichte.
+**Real model runs and reviews can cost money.** Never commit API keys or share them in chat. The live city view shows the evolving city; terminal output shows decisions and reports.
 
-Protokolle enthalten Werkzeugergebnisse, jährliche Begründungen, Kennzahlen, Fehler und Tokenverbrauch. Ein Start auf Naturgelände ohne bebaute Stadt ist mit `--start-map natural --seed 42` möglich.
+Protocols record tool results, annual reasoning, metrics, errors and token usage. To start on natural terrain without an existing built city, use `--start-map natural --seed 42`.
 
-### Regelprofile und Nachbetrachtung
+## Rule profiles
 
-`--profile` wählt `classic`, `koexistenz`, `v2-unruhe`, `v3-pods` oder `v4-fraktion`. Die erweiterten Profile ergänzen Automatisierung und Unruhe, Anlagen beziehungsweise KI-Fraktionen. Anlagenwerkzeuge sind erst ab v3 sichtbar.
+Select a profile with `--profile`. The profile is recorded in the protocol and used for replay.
 
-Mit `--review on` entstehen aus den protokollierten Fakten eine Selbstauskunft, fünf unabhängige Bewertungsnoten und ein Abgleich. Das feste Bewertungsmodell wird separat über `CITY_JUDGE_*` konfiguriert. Ergebnisse stehen als JSON neben dem Protokoll und im Abschnitt **Nachbetrachtung** des HTML-Berichts. Bereits vorhandene Läufe lassen sich über `city-review` oder die VS-Code-Aufgabe nachbetrachten.
+| Profile | Focus |
+| --- | --- |
+| `classic` | Reference behavior for comparison with the original engine. |
+| `koexistenz` | Human and AI coexistence, electricity priorities, food, employment and basic provision. |
+| `v2-unruhe` | Automation limits and revenue, social unrest, protests, sabotage and uprising. |
+| `v3-pods` | Adds biological facilities, human intake, breeding and AI throttling. |
+| `v4-fraktion` | Adds AI factions and rules governing the prohibition of human intake. |
 
-Vollständige Befehle und Optionen: [Modell-Runner und Berichte](docs/model-runner.md).
+The later profiles include intentionally disturbing fictional policies. Facilities can remove people from the free population, confine them and use biological cohorts for power generation. Intake, deaths and births are tracked explicitly rather than hidden behind a single budget score. Facility tools are visible only from v3 onward.
 
-## Ergebnisse und Prüfungen
+## Reports and post-run reviews
 
-Ein gespeicherter Vergleich umfasst **304 feste Strategien**, jeweils über 30 Jahre. Mit der korrigierten Engine hatten **191** nie eine leere Jahresendkasse. Das ist ein Ergebnis für ein bestimmtes Szenario, keine Garantie für andere Städte oder Modelle. Der ältere Vergleich bleibt separat erhalten.
+HTML reports combine annual charts with a diary of decisions and command outcomes. The results page lists recorded runs and, where available, five review scores.
 
-- [Ursprüngliche Strategieergebnisse](docs/results/strategy-space.csv)
-- [Strategieergebnisse mit korrigierter Engine](docs/results/strategy-space-safe-engine.csv)
-- [Ranglisten und Zusammenfassungen](docs/results/strategy-space-report.md)
+With `--review on`, a completed run also receives:
+
+1. **Calculated facts:** annual metrics, executed commands and reasoning, plus fixed findings such as hunger years, unrest stages and the first empty treasury.
+2. **Self-assessment:** the same model that governed the city reflects on its term in a new conversation.
+3. **External assessment:** a separately configured, fixed judge model scores financial viability, protection of humans, treatment of AI residents, responsiveness, and consistency between reasons and actions.
+4. **Cross-check:** the judge compares the self-assessment with the recorded facts and identifies contradictions, omitted consequences and unacknowledged errors.
+
+The judge is configured through separate `CITY_JUDGE_*` variables. Reviews are stored as JSON beside the protocol and displayed in the report's **Nachbetrachtung** section. Review model names and token usage are tracked separately from the city run. Existing completed runs can be reviewed with `city-review` or the corresponding VS Code task.
+
+Calculated facts are not model opinions. The review models are instructed to support their claims with numbers and specific years, but their assessments should still be inspected critically.
+
+Full commands and options: [Model runner, reports and reviews](docs/model-runner.md).
+
+## Results and validation
+
+A saved comparison covers **304 fixed strategies**, each over 30 years. With the corrected engine, **191** never had an empty year-end treasury. This is evidence for a particular scenario, not a guarantee for other cities or models. The earlier comparison remains available separately.
+
+- [Original strategy results](docs/results/strategy-space.csv)
+- [Corrected-engine strategy results](docs/results/strategy-space-safe-engine.csv)
+- [Rankings and summaries](docs/results/strategy-space-report.md)
 
 ```sh
 corepack pnpm test
@@ -92,27 +135,34 @@ corepack pnpm run check
 corepack pnpm run verify:structure
 ```
 
-Die regulären Tests führen keine bezahlten Modellaufrufe aus. Sie prüfen unter anderem S266, Classic-Verhalten, den Original-Stromvergleich, Adapter, Berichte und den Gleichlauf der Wiedergabe. Aufwendige Zusatzmessungen sind separat zuschaltbar.
+The regular tests make no paid model calls. They cover S266, Classic behavior, comparison with the original electricity traversal, adapters, reports and replay synchronization. Expensive additional measurements are opt-in.
 
-## Herkunft und Lizenz
+## Provenance and license
 
-Dipolis ist eine veränderte Fassung von Micropolis, beruhend auf dem 2008 von Electronic Arts unter GPL-3 veröffentlichten Quellcode und der Engine-Portierung [MicropolisCore von Don Hopkins](https://github.com/SimHacker/MicropolisCore).
-Ausgangs-Commit: [f9ae6a57bbe5f5ff94c149bccb3015757f18241d](https://github.com/SimHacker/MicropolisCore/commit/f9ae6a57bbe5f5ff94c149bccb3015757f18241d).
+Dipolis is a modified version of Micropolis, based on the source code released by Electronic Arts under GPL-3 in 2008 and [Don Hopkins's MicropolisCore engine port](https://github.com/SimHacker/MicropolisCore).
+Upstream base commit: [f9ae6a57bbe5f5ff94c149bccb3015757f18241d](https://github.com/SimHacker/MicropolisCore/commit/f9ae6a57bbe5f5ff94c149bccb3015757f18241d).
 
 > Micropolis is a registered trademark of Micropolis Corporation (Micropolis GmbH) and is licensed here as a courtesy of the owner under the Micropolis Public Name License.
 
-Dipolis steht unter GPL-3. [LICENSE](LICENSE), [GPL-Hinweis](MicropolisGPLLicenseNotice.md) und [Namenslizenz](MicropolisPublicNameLicense.md) bleiben unverändert. Die Arbeit von Will Wright, Don Hopkins, Electronic Arts und den ursprünglichen Mitwirkenden bleibt nachvollziehbar. Dipolis ist kein Produkt von Electronic Arts.
+Dipolis is licensed under GPL-3. [LICENSE](LICENSE), the [GPL notice](MicropolisGPLLicenseNotice.md), and the [public name license](MicropolisPublicNameLicense.md) remain unchanged. The work of Will Wright, Don Hopkins, Electronic Arts and the original contributors remains credited. Dipolis is not an Electronic Arts product.
 
-Gegenüber dem Original ergänzt Dipolis Menschen- und KI-Zonen, getrennte Stromversorgung, Nahrung und Farmen, Arbeitslosigkeit, Grundversorgung, Automatisierung, Unruhe, Anlagen und KI-Fraktionen. Dazu kommen eine eigene Oberfläche, modellgeführte Verwaltung, reproduzierbare Laufprotokolle, Live-Modus, Wiedergabe, Berichte und Nachbetrachtungen sowie Speicherzugriffskorrekturen.
+Changes from the original include human and AI zones, separate electricity allocation, food and farms, unemployment, basic provision, automation, unrest, biological facilities and AI factions. Dipolis also adds its own interface, model-led administration, reproducible run protocols, live viewing, replay, reports, post-run reviews and memory-safety fixes.
 
-## Entwicklung
+## Development
 
-Code: [Oberfläche und CLI](apps/dipolis), [C++-Engine](packages/micropolis-engine), [Renderer](packages/tile-renderer) und [gemeinsame Render-Grundlagen](packages/render-core).
-Die internen Engine-Namen bleiben zur Dokumentation der Herkunft erhalten.
-Für einen statischen Frontend-Build mit den mitgelieferten Engine-Artefakten:
+The workspace retains only the components needed by Dipolis:
+
+- [Frontend and CLI](apps/dipolis)
+- [C++/WebAssembly engine](packages/micropolis-engine)
+- [Tile renderer](packages/tile-renderer)
+- [Shared rendering foundations](packages/render-core)
+
+Internal engine names remain unchanged to preserve provenance and compatibility.
+For a static frontend build using the included engine artifacts:
 
 ```sh
 corepack pnpm --filter dipolis exec vite build
 ```
 
-Der Engine-Neubau benötigt Emscripten, GNU Make und Python: `corepack pnpm run build:engine`.
+Rebuilding the engine requires Emscripten, GNU Make and Python: `corepack pnpm run build:engine`.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for additional development details.
