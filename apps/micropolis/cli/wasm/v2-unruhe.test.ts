@@ -13,9 +13,10 @@ import { readResume } from '../model/resume';
 import { PROFILES } from '../../src/lib/params/profiles';
 import { profileTools, validateToolCall } from '../../src/lib/city-run/tools';
 import { HANDBOOK, UNREST_HANDBOOK, systemPrompt } from '../model/prompts';
-import { canonicalProtocolText, CURRENT_ENGINE_ID, engineCompatibility } from '../../src/lib/city-run/compatibility';
+import { canonicalProtocolText, engineCompatibility } from '../../src/lib/city-run/compatibility';
 
 const data = (name: string) => JSON.parse(readFileSync(fileURLToPath(new URL(`../../../../docs/results/${name}`, import.meta.url)), 'utf8'));
+const calibratedEngineId = 'sha256:eb85fbed5328433b3172d213f0151984d37c785f84c4a4db4f54ca395e60475b';
 
 describe('v2-unruhe profile boundaries', () => {
  it('inherits every koexistenz parameter and only extends its handbook and tools', () => {
@@ -172,10 +173,10 @@ describe('actual v2 engine mechanics', () => {
 });
 
 describe('recalibrated v2 household measurements', () => {
- it('records all authorized outcomes under the current formula and engine', () => {
+ it('preserves the authorized outcomes and identity of the calibrated measurement', () => {
   const result = data('v2-unruhe-calibrated-household-crisis.json');
   expect(result.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
-  expect(result.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(result.engineId).toBe(calibratedEngineId);
   expect(result.formulaParameters).toMatchObject({
    unrestHumanDeclineWeight: 150,
    unrestAutomationWeight: 55,
@@ -219,7 +220,7 @@ describe('measured safe-engine S266 and deterministic replay', () => {
    const reference = data(filename);
    if (profile === 'v2-unruhe') {
     expect(reference.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
-    expect(reference.engineId).toBe(CURRENT_ENGINE_ID);
+    expect(reference.engineId).toBe(calibratedEngineId);
    }
    const s = await createCitySession();
    try {

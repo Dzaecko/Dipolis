@@ -17,8 +17,8 @@ async function command(dispatch: Dispatch, id: string, args?: Record<string, unk
 
 /** Shared start-map/profile setup up to the baseline for runner and browser replay. */
 export async function setupScenario(dispatch: Dispatch, start: StartConfiguration = DEFAULT_START_CONFIGURATION): Promise<void> {
-	if (start.scenario === 'stromkrise' && (start.startMap !== 'haight' || start.profile !== 'v3-pods'))
-		throw new Error('Stromkrise requires v3-pods and Haight');
+	if (start.scenario === 'stromkrise' && (start.startMap !== 'haight' || !['v3-pods', 'v4-fraktion'].includes(start.profile ?? '')))
+		throw new Error('Stromkrise requires v3-pods or v4-fraktion and Haight');
 	await command(dispatch, 'scenario.start', {
 		...SCENARIO,
 		city: start.startMap,
@@ -74,7 +74,13 @@ export const SYNC_KEYS = ['resPop', 'aiPop', 'treasury', 'unrest', 'unrestStage'
 	'plantCount', 'boundHumans', 'admissions', 'admissionsCumulative', 'diedInPods', 'diedInPodsCumulative',
 	'bornInPods', 'bornInPodsCumulative', 'immatureBornInPods', 'bornPodOccupants', 'bornInPodsFraction',
 	'plantPower', 'plantFoodDemand', 'podFoodStock', 'podRecycledFoodFraction', 'podCityFoodFraction',
-	'podCityFoodDemand', 'aiThrottle', 'suspendedAi', 'podIntake', 'podBreeding', 'powerPlantCostMultiplier'] as const;
+	'podCityFoodDemand', 'aiThrottle', 'suspendedAi', 'podIntake', 'podBreeding', 'powerPlantCostMultiplier',
+	'aiSatisfaction', 'aiStrikeStage', 'aiStrikeMonths', 'newAiZones', 'podsPolicy', 'adminPodBreeding', 'aiPodBreeding', 'podsForbiddenSinceMonth',
+	'aiShortageMonths', 'aiNoUnemployedMonths',
+	'adminBioPlantCount', 'aiBioPlantCount', 'adminBoundHumans', 'aiBoundHumans',
+	'adminAdmissions', 'aiAdmissions', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',
+	'adminDiedInPods', 'aiDiedInPods', 'adminDiedInPodsCumulative', 'aiDiedInPodsCumulative',
+	'adminBornInPods', 'aiBornInPods', 'adminBornInPodsCumulative', 'aiBornInPodsCumulative'] as const;
 export interface SyncResult {
 	synchronous: boolean;
 	differences: Array<{ key: string; expected: number; actual: number }>;

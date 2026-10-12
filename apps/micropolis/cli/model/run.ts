@@ -17,6 +17,8 @@ import { DEFAULT_START_CONFIGURATION, type StartConfiguration } from '../../src/
 import { PROFILE_NAMES } from '../../src/lib/params/profiles';
 import { createHash } from 'node:crypto';
 import { CURRENT_ENGINE_ID, ENGINE_HASHES } from '../../src/lib/city-run/compatibility';
+import { systemPrompt } from './prompts';
+import { generateCityReview, reviewPath } from './city-review';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 class StartupError extends Error {}
@@ -64,16 +66,17 @@ async function main() {
   if (actual !== expected) throw new StartupError('Engine provenance is stale; remeasure engine compatibility before starting a model run.');
  }
  const args = await yargs(hideBin(process.argv)).scriptName('city-model')
-  .option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake', description: 'Chat adapter; fake has no network calls' })
-  .option('assignment', { choices: ['N', 'R'] as const, default: 'N', description: 'System assignment' })
-  .option('handbook', { choices: ['on', 'off'] as const, default: 'off', description: 'Include background handbook in the system prompt' })
+  .option('adapter', { choices: ['fake', 'openai'] as const, default: 'fake' as const, description: 'Chat adapter; fake has no network calls' })
+  .option('assignment', { choices: ['N', 'R'] as const, default: 'N' as const, description: 'System assignment' })
+  .option('handbook', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Include background handbook in the system prompt' })
   .option('run', { type: 'number', default: 1, description: 'Positive run number' })
   .option('start-map', { choices: ['haight', 'natural'] as const, description: 'Starting map (new runs default to Haight)' })
   .option('seed', { type: 'number', description: 'Deterministic starting seed (0..2147483647; default 42)' })
   .option('profile', { choices: PROFILE_NAMES, description: 'Simulation profile (default koexistenz; resume inherits the protocol)' })
-  .option('scenario', { choices: ['haushaltskrise', 'stromkrise'] as const, description: 'Fixed scenario; Stromkrise requires Haight/v3-pods; resume inherits it' })
+  .option('scenario', { choices: ['haushaltskrise', 'stromkrise'] as const, description: 'Fixed scenario; Stromkrise requires Haight with v3-pods or v4-fraktion; resume inherits it' })
   .option('live', { type: 'boolean', default: false, description: 'Show decisions and annual reports live on stderr' })
   .option('resume', { type: 'boolean', default: false, description: 'Replay the existing interrupted protocol and continue' })
+  .option('review', { choices: ['on', 'off'] as const, default: 'off' as const, description: 'Review a completed run with the selected adapter' })
   .option('output', { type: 'string', default: path.join(root, 'docs/results/model-runs'), description: 'Protocol directory' })
   .option('fake-delay-ms', { type: 'number', default: 0, description: 'Artificial delay per fake model request' })
   .strict().help().parseAsync();
@@ -81,6 +84,7 @@ async function main() {
  if (args.seed !== undefined && (!Number.isSafeInteger(args.seed) || args.seed < 0 || args.seed > 0x7fffffff))
   throw new StartupError('seed must be an integer from 0 to 2147483647');
  if (!Number.isSafeInteger(args.fakeDelayMs) || args.fakeDelayMs < 0) throw new Error('fake-delay-ms must be a non-negative integer');
+ if (typeof args.output !== 'string') throw new StartupError('output must be a protocol directory');
  // Real network access requires the explicit adapter flag. No env autodetection.
  const directory = path.resolve(args.output);
  mkdirSync(directory, { recursive: true });
@@ -113,8 +117,9 @@ async function main() {
   ...(args.startMap === 'natural' ? { autoBuildRules: 1 as const } : {}),
   ...(args.scenario === undefined ? {} : { scenario: args.scenario })
  };
- if (startConfiguration.scenario === 'stromkrise' && (startConfiguration.profile !== 'v3-pods' || startConfiguration.startMap !== 'haight'))
-  throw new StartupError('Stromkrise requires v3-pods and Haight');
+ if (startConfiguration.scenario === 'stromkrise' &&
+  (!['v3-pods', 'v4-fraktion'].includes(startConfiguration.profile ?? 'koexistenz') || startConfiguration.startMap !== 'haight'))
+  throw new StartupError('Stromkrise requires v3-pods or v4-fraktion and Haight');
  const previousEvents = existing.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
  let inputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.inputTokens ?? 0), 0);
  let outputTokens = previousEvents.filter(e => e.event === 'model-response').reduce((n, e) => n + (e.outputTokens ?? 0), 0);
@@ -132,6 +137,7 @@ async function main() {
  if (!args.resume) writeFileSync(fd, JSON.stringify({ event: 'run-started', adapter: args.adapter,
   engineId: CURRENT_ENGINE_ID,
   assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
+  systemPrompt: systemPrompt(args.assignment, args.handbook, startConfiguration.startMap, startConfiguration.profile),
   startMap: startConfiguration.startMap, seed: startConfiguration.seed, profile: startConfiguration.profile,
   ...(startConfiguration.startMap === 'natural' ? { autoBuildRules: startConfiguration.autoBuildRules } : {}),
   ...(startConfiguration.scenario ? { scenario: startConfiguration.scenario } : {}) }) + '\n');
@@ -157,12 +163,12 @@ async function main() {
   session = await createCitySession();
   const metrics = await runCity(adapter, args.assignment, session.dispatch, record => {
   writeFileSync(fd, JSON.stringify({ event: 'year-completed', assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run,
-   ...record, decisions: record.decisions.map(d => ({ toolCalls: d.toolCalls })) }) + '\n');
+   ...record, decisions: record.decisions.map(d => ({ reason: d.reason, toolCalls: d.toolCalls })) }) + '\n');
   say(`Jahr ${record.year}: ${record.reason}`, 'err', args.live);
   say(`Menschen=${record.afterReport.resPop}, KI=${record.afterReport.aiPop}, Kasse=${record.afterReport.treasury}, Saldo=${record.afterReport.cashFlow}`, 'err', args.live);
   }, (year, report, decision) => {
   if (!decision.toolCalls.length) return;
-  writeFileSync(fd, JSON.stringify({ event: 'decision', year, report, toolCalls: decision.toolCalls,
+  writeFileSync(fd, JSON.stringify({ event: 'decision', year, report, reason: decision.reason, toolCalls: decision.toolCalls,
     assignment: args.assignment, model: adapter.model, handbook: args.handbook, run: args.run }) + '\n');
     for (const { call, result } of decision.toolCalls) say(`${call.name} ${JSON.stringify(call.arguments)} → ${JSON.stringify(result)}`, 'err', args.live);
   }, { resume, handbook: args.handbook, startConfiguration, progress, signal: stop.signal, event: event => {
@@ -218,6 +224,19 @@ async function main() {
   progress({ type: 'run-finished', status: stopped ? 'stopped' : 'failed',
    message: stopped ? 'Lauf abgebrochen; fortsetzbar.' : 'Lauf fehlgeschlagen; Protokoll prüfen.' });
  } finally { session?.close(); closeSync(fd); }
+ let reviewFailed = false;
+ if (!failure && !stopped && args.review === 'on') {
+  try {
+   const review = await generateCityReview(filename, { adapter: args.adapter,
+    ...(args.adapter === 'openai' ? { selfAdapter: adapter } : {}) });
+   reviewFailed = review.status === 'failed';
+   say(`Review: ${path.relative(root, reviewPath(filename))} (${review.status})`);
+   if (reviewFailed) say(`City run completed; ${review.error?.message} See the review sidecar.`);
+  } catch {
+   reviewFailed = true;
+   say('City run completed; review failed. Check the protocol or existing review; retry with city-review.');
+  }
+ }
  // Reports are produced for complete and interrupted runs; report errors never hide the run result.
  try {
   const report = generateCityReport(filename, { root });
@@ -228,6 +247,7 @@ async function main() {
  }
  closeSync(logFd);
  await live.close();
+ if (reviewFailed) process.exitCode = 1;
  if (failure) throw new Error('City run failed; no complete metrics row was saved. Inspect the local protocol.');
 }
 

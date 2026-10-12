@@ -19,6 +19,8 @@
   } from '@micropolis/tile-renderer';
   import {
     HUMAN_TILESET,
+    BIO_TILESET,
+    AI_BIO_TILESET,
     MICROPOLIS_TILESET_COUNT,
     MicropolisSimulator,
   } from '$lib/MicropolisSimulator';
@@ -70,11 +72,18 @@
 
     const atlas = document.createElement('canvas');
     atlas.width = image.width;
-    atlas.height = image.height;
+    atlas.height = Math.max(image.height, tileSetCount * setHeight);
     const context = atlas.getContext('2d');
     if (!context) throw new Error('Could not create a canvas for Solar Farm artwork.');
     context.imageSmoothingEnabled = false;
     context.drawImage(image, 0, 0);
+    const bioSet = Math.min(BIO_TILESET, image.height / setHeight - 1);
+    context.drawImage(image, 0, bioSet * setHeight, image.width, setHeight,
+      0, AI_BIO_TILESET * setHeight, image.width, setHeight);
+    context.globalCompositeOperation = 'source-atop';
+    context.fillStyle = 'rgba(170,70,215,0.4)';
+    context.fillRect(0, AI_BIO_TILESET * setHeight, image.width, setHeight);
+    context.globalCompositeOperation = 'source-over';
 
     const palettes = [
       ['#183b59', '#28749a', '#8adbe0'],
@@ -85,7 +94,7 @@
     ];
     const solarTileBase = 884;
     const solarTileCount = 16;
-    const atlasSetCount = image.height / setHeight;
+    const atlasSetCount = atlas.height / setHeight;
 
     for (let set = 0; set < atlasSetCount; set += 1) {
       const [panel, shade, grid] = palettes[set % palettes.length];

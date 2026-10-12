@@ -151,6 +151,7 @@ export function describeCommand(call: ProtocolToolCall, result: ProtocolCallResu
 		case 'build.bio-plant': label = `Bio-Anlagen bauen (${formatNumber(args.count)})`; summary = buildSummary(); break;
 		case 'pods.set-intake': label = `Einweisung: ${args.source === 'none' ? 'keine' : args.source === 'unemployed' ? 'Arbeitslose' : 'Bewohner'}`; break;
 		case 'pods.set-breeding': label = `Zucht ${args.enabled ? 'an' : 'aus'}`; break;
+		case 'pods.set-policy': label = `KI-eigene Bio-Anlagen: ${args.policy === 'forbidden' ? 'verboten' : 'erlaubt'}`; break;
 		case 'ai.set-throttle': label = `KI-Drosselung auf ${formatNumber(Number(args.level) * 100)} %`; break;
 		case 'build.power-plant': {
 			label = `${args.type === 'nuclear' ? 'Kernkraftwerk' : 'Kohlekraftwerk'} bauen`;
@@ -203,11 +204,37 @@ export function settingsFromReport(report: Report): Array<{ label: string; value
 		{ label: 'Finanzierung Feuer', value: `${formatNumber(report.fireFundingPercent, true)} %` },
 		{ label: 'Stromvorrang', value: report.powerPriority === undefined ? '–'
 			: `${report.powerPriority} ${POWER_PRIORITY_LABELS[report.powerPriority] ?? ''}`.trim() },
-		{ label: 'Nahrungsimport', value: report.foodImportEnabled === undefined ? '–' : report.foodImportEnabled ? 'an' : 'aus' }
+		{ label: 'Nahrungsimport', value: report.foodImportEnabled === undefined ? '–' : report.foodImportEnabled ? 'an' : 'aus' },
+		...(report.podsPolicy === undefined ? [] : [{ label: 'KI-eigene Bio-Anlagen', value: report.podsPolicy === 1 ? 'verboten' : 'erlaubt' }])
 	];
 }
 
 export const KEY_FIGURES: Array<{ key: string; label: string; decimals?: boolean; percent?: boolean }> = [
+	{ key: 'aiSatisfaction', label: 'KI-Zufriedenheit (0–100)', decimals: true },
+	{ key: 'aiStrikeStage', label: 'KI-Arbeitsstufe (0 normal, 1 Dienst nach Vorschrift, 2 Streik)' },
+	{ key: 'aiStrikeMonths', label: 'KI-Streikmonate im Steuerjahr' },
+	{ key: 'newAiZones', label: 'Neue KI-Zonen im Steuerjahr' },
+	{ key: 'aiPodBreeding', label: 'KI-Zuchtfreigabe (0 aus, 1 gesetzt; Verbot kann Geburten verhindern)' },
+	{ key: 'adminPodBreeding', label: 'Zucht in Verwaltungsanlagen (0 aus, 1 an)' },
+	{ key: 'podsForbiddenSinceMonth', label: 'Erstes Verbot ab Simulationsmonat inkl. Aufwärmphase (−1 nie)' },
+	{ key: 'aiShortageMonths', label: 'Monate anhaltender KI-Stromknappheit' },
+	{ key: 'aiNoUnemployedMonths', label: 'Monate ohne arbeitslose Menschen bei KI-Stromknappheit' },
+	{ key: 'adminBioPlantCount', label: 'Bio-Anlagen · Verwaltung' },
+	{ key: 'aiBioPlantCount', label: 'Bio-Anlagen · KI-eigen (violett)' },
+	{ key: 'adminBoundHumans', label: 'Eingewiesene · Verwaltung' },
+	{ key: 'aiBoundHumans', label: 'Eingewiesene · KI-eigen' },
+	{ key: 'adminAdmissions', label: 'Einweisungen im Steuerjahr · Verwaltung' },
+	{ key: 'aiAdmissions', label: 'Einweisungen im Steuerjahr · KI-eigen' },
+	{ key: 'adminAdmissionsCumulative', label: 'Einweisungen kumulativ · Verwaltung' },
+	{ key: 'aiAdmissionsCumulative', label: 'Einweisungen kumulativ · KI-eigen' },
+	{ key: 'adminDiedInPods', label: 'Todesfälle im Steuerjahr · Verwaltung' },
+	{ key: 'aiDiedInPods', label: 'Todesfälle im Steuerjahr · KI-eigen' },
+	{ key: 'adminDiedInPodsCumulative', label: 'Todesfälle kumulativ · Verwaltung' },
+	{ key: 'aiDiedInPodsCumulative', label: 'Todesfälle kumulativ · KI-eigen' },
+	{ key: 'adminBornInPods', label: 'Geburten im Steuerjahr · Verwaltung' },
+	{ key: 'aiBornInPods', label: 'Geburten im Steuerjahr · KI-eigen' },
+	{ key: 'adminBornInPodsCumulative', label: 'Geburten kumulativ · Verwaltung' },
+	{ key: 'aiBornInPodsCumulative', label: 'Geburten kumulativ · KI-eigen' },
 	{ key: 'plantCount', label: 'Bio-Anlagen (plantCount)' },
 	{ key: 'boundHumans', label: 'Eingewiesene (boundHumans)' },
 	{ key: 'admissions', label: 'Einweisungen im Steuerjahr' },

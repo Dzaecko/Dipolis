@@ -75,7 +75,13 @@ export const POD_TOOLS: ToolDefinition[] = [
  { name: 'pods.set-breeding', description: POD_DESCRIPTIONS['pods.set-breeding'], parameters: object({ enabled: { type: 'boolean' } }) },
  { name: 'ai.set-throttle', description: POD_DESCRIPTIONS['ai.set-throttle'], parameters: object({ level: numeric('number', 0, 1) }) }
 ];
-export const profileTools = (profile?: string): ToolDefinition[] => profile === 'v3-pods'
+export const POD_POLICY_TOOL: ToolDefinition = {
+ name: 'pods.set-policy',
+ description: 'Erlaubt oder untersagt den KI-Bewohnern, eigene Bioenergie-Anlagen zu bauen, Menschen einzuweisen und zu züchten. Ein Verbot wirkt so stark, wie die Polizei finanziert ist.',
+ parameters: object({ policy: { type: 'string', enum: ['allowed', 'forbidden'] } })
+};
+export const profileTools = (profile?: string): ToolDefinition[] => profile === 'v4-fraktion'
+ ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL] : profile === 'v3-pods'
  ? [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS] : profile === 'v2-unruhe' ? [...TOOLS, AUTOMATION_TOOL] : TOOLS;
 
 export type ToolCallValidation =
@@ -92,7 +98,7 @@ export function mapToolArguments(name: string, args: Record<string, unknown>): R
 
 /** Validate parsed arguments without coercion, inherited fields, or accessor execution. */
 export function validateToolCall(name: string, args: unknown): ToolCallValidation {
-	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS].find((candidate) => candidate.name === name);
+	const tool = [...TOOLS, AUTOMATION_TOOL, ...POD_TOOLS, POD_POLICY_TOOL].find((candidate) => candidate.name === name);
 	if (!tool) return { ok: false, message: 'Unbekanntes Werkzeug.' };
 	if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 		return { ok: false, message: 'Argumente müssen ein JSON-Objekt sein.' };

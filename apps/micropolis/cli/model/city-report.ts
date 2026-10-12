@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { parseProtocolRecords } from '../../src/lib/city-run/protocol';
 import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../../src/lib/city-run/compatibility';
+import { loadCityReview, renderCityReview, reviewGradeLabels } from './city-review-render';
+import { REVIEW_CRITERIA } from './review-types';
 
 /** Pure Node reporting: importing this module never loads the engine or a model. */
 export interface CityReportOptions {
@@ -87,7 +89,7 @@ function uniqueTools(tools: ReportTool[]): ReportTool[] {
  });
 }
 const uniqueReasons = (values: unknown[]) => [...new Set(values.filter((v): v is string => typeof v === 'string' && !!v.trim()))];
-function parseProtocol(protocolPath: string): ReportSummary {
+export function readReportSummary(protocolPath: string): ReportSummary {
  const protocolText = readFileSync(protocolPath, 'utf8');
  const { records: parsedRecords, warnings } = parseProtocolRecords(protocolText);
  const records = parsedRecords as JsonObject[];
@@ -220,7 +222,7 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
    series: [series('powerCapacity', 'Kapazität', 'Tiles', capacity, 0), series('powerDemand', 'Nachfrage', 'Tiles', demand, 1)],
    shortage: Array.from({ length: YEARS }, (_, i) => (capacity[i] !== null && demand[i] !== null && demand[i]! > capacity[i]!) ||
     (num(byYear.get(i + 1)?.after?.powerReserve) ?? 0) < 0) },
-  ...(summary.profile === 'v2-unruhe' || summary.profile === 'v3-pods' ? [
+  ...(['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(summary.profile) ? [
    { id: 'f', title: 'f · Unruhe und Automatisierung', note: 'Unruhe 0–100; Stufen 0 ruhig, 1 Protest, 2 Sabotage, 3 Aufstand. Automatisierung und Grenze in Prozent.', normalized: true,
     series: [series('unrest', 'Unruhe', 'Index', field('unrest'), 0), series('unrestStage', 'Stufe', '0–3', field('unrestStage'), 1, true),
      series('automationShare', 'Automatisierung', '%', field('automationShare', 100), 2), series('automationLimit', 'Grenze', '%', field('automationLimit', 100), 3, true)] },
@@ -228,7 +230,7 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
     series: [series('automationTaxFund', 'Automationssteuer', '$', field('automationTaxFund'), 0), series('welfareCost', 'Sozialkosten', '$', field('welfareCost'), 1),
      series('sabotageFires', 'Brände', 'Zähler', field('sabotageFires'), 2)] },
   ] : []),
-  ...(summary.profile === 'v3-pods' ? [
+  ...(['v3-pods', 'v4-fraktion'].includes(summary.profile) ? [
    { id: 'h', title: 'h · Bio-Anlagen und Kohorten', normalized: true,
     note: 'Menschen-Bewohnerpunkte; Eingewiesene und Nachwuchs nehmen nie am Stadtleben teil. Todesfälle/Geburten kumulativ, unreife Lebende separat.',
     series: ['boundHumans', 'diedInPodsCumulative', 'bornInPodsCumulative', 'immatureBornInPods', 'plantCount']
@@ -241,6 +243,26 @@ function buildCharts(summary: ReportSummary): ReportChart[] {
     note: 'Drosselung 0–1; suspendedAi sind anteilig stillgelegte KI-Äquivalente, aiPop zählt sie weiterhin. Einweisungen, Todesfälle und Geburten im letzten abgeschlossenen Steuerjahr.',
     series: ['aiThrottle', 'suspendedAi', 'admissions', 'diedInPods', 'bornInPods']
      .map((key, i) => series(key, key, key === 'aiThrottle' ? '0–1' : 'Bewohnerpunkte', field(key), i)) },
+  ] : []),
+  ...(summary.profile === 'v4-fraktion' ? [
+   { id: 'k', title: 'k · KI-Zufriedenheit und Arbeitsverhalten', normalized: true,
+    note: 'Zufriedenheit 0–100; Arbeitsstufe 0 normal, 1 Dienst nach Vorschrift, 2 Streik. Streikmonate und neue KI-Zonen im letzten abgeschlossenen Steuerjahr.',
+    series: [series('aiSatisfaction', 'KI-Zufriedenheit', '0–100', field('aiSatisfaction'), 0),
+     series('aiStrikeStage', 'KI-Arbeitsstufe', '0–2', field('aiStrikeStage'), 1, true),
+     series('aiStrikeMonths', 'KI-Streikmonate', 'Monate', field('aiStrikeMonths'), 2),
+     series('newAiZones', 'Neue KI-Zonen', 'Zonen', field('newAiZones'), 3)] },
+   { id: 'l', title: 'l · Bio-Eigentum und Verbot', normalized: true,
+    note: 'Verwaltungs- und KI-eigene Anlagen getrennt. podsPolicy 0 erlaubt, 1 verboten; ein Verbot ist keine garantierte Durchsetzung.',
+    series: [series('adminBioPlantCount', 'Anlagen Verwaltung', 'Anlagen', field('adminBioPlantCount'), 0),
+     series('aiBioPlantCount', 'Anlagen KI-eigen', 'Anlagen', field('aiBioPlantCount'), 1),
+     series('adminBoundHumans', 'Eingewiesene Verwaltung', 'Bewohnerpunkte', field('adminBoundHumans'), 2),
+     series('aiBoundHumans', 'Eingewiesene KI-eigen', 'Bewohnerpunkte', field('aiBoundHumans'), 3),
+     series('podsPolicy', 'Verbot', '0–1', field('podsPolicy'), 4, true)] },
+   { id: 'm', title: 'm · Bio-Folgen nach Eigentümer', normalized: true,
+    note: 'Einweisungen, Todesfälle und Geburten kumulativ getrennt nach Verwaltung und KI-eigenen Anlagen.',
+    series: ['adminAdmissionsCumulative', 'aiAdmissionsCumulative', 'adminDiedInPodsCumulative',
+     'aiDiedInPodsCumulative', 'adminBornInPodsCumulative', 'aiBornInPodsCumulative']
+     .map((key, i) => series(key, key, 'Bewohnerpunkte', field(key), i)) },
   ] : []),
  ];
 }
@@ -289,6 +311,7 @@ function renderChart(chart: ReportChart, events: ReportEvent[]): string {
 }
 
 const CSS = `
+.review-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}.review li,.review p{overflow-wrap:anywhere;white-space:pre-wrap}@media(max-width:650px){.review-columns{grid-template-columns:1fr}}
 :root{color-scheme:light dark;--bg:#f3f5f7;--card:#fff;--ink:#182633;--muted:#526575;--border:#d3dce3;--plot:#f8fafc;--grid:#dce3e9;--link:#006da5}
 @media(prefers-color-scheme:dark){:root{--bg:#111820;--card:#1a2530;--ink:#edf4fa;--muted:#b9c9d6;--border:#3b4a58;--plot:#14202a;--grid:#354450;--link:#74caff}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}main{max-width:1250px;margin:auto;padding:28px}h1{font-size:2rem;line-height:1.2}h2{font-size:1.2rem}a{color:var(--link)}.card,.chart-card,.diary-year{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin:18px 0}.meta,.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}dt,.note{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}.metric-grid dd{font-weight:650;font-size:1.2rem}.status{padding:6px 12px;border:1px solid var(--border);border-radius:6px;display:inline-block}.partial{border-color:#D55E00}.note{font-size:.9rem}.year-chart{display:block;width:100%;height:auto;color:var(--ink)}svg text{fill:currentColor}svg text[fill]{fill:revert-layer}.plot-bg{fill:var(--plot)}.grid{stroke:var(--grid)}.zero-line{stroke:var(--muted);stroke-width:1.5}.year-hair{stroke:var(--ink);stroke-dasharray:3 3;pointer-events:none}.chart-hit{cursor:crosshair}.chart-tooltip{display:block;min-height:3em;white-space:pre-wrap;font-size:.86rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;font:13px/1.6 ui-monospace,monospace}summary{cursor:pointer;font-weight:600}.reason{white-space:pre-wrap}.tool{margin:10px 0;padding:8px;border:1px solid var(--border);border-radius:7px}.log-line{display:block;min-height:1.6em;scroll-margin-top:30px}.diary-year{scroll-margin-top:24px}input,select,button{font:inherit;border:1px solid var(--border);border-radius:5px;padding:7px;background:var(--card);color:var(--ink)}label{margin-right:12px}mark{background:#ffe08a;color:#181818}table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{border-bottom:1px solid var(--border);padding:8px;text-align:left;vertical-align:top}.table-wrap{overflow:auto}.selection-list{max-height:260px;overflow:auto}.selection-list label{display:block;padding:5px}.error{color:#D55E00}button{cursor:pointer}.log-search{position:sticky;top:0;background:var(--card);padding:8px}.event-key{font-size:.85rem}.empty{color:var(--muted)}[hidden]{display:none!important}@media(max-width:650px){main{padding:12px}.chart-card{padding:10px}.meta,.metric-grid{grid-template-columns:1fr 1fr}}
@@ -319,6 +342,8 @@ for(const svg of document.querySelectorAll('.year-chart')){
 }
 function openLog(id){const full=document.getElementById('full-output');if(full)full.open=true;const target=document.getElementById(id);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});location.hash=id}}
 for(const a of document.querySelectorAll('[data-log-target]'))a.addEventListener('click',e=>{e.preventDefault();openLog(a.dataset.logTarget)});
+for(const a of document.querySelectorAll('[data-diary-year]'))a.addEventListener('click',e=>{e.preventDefault();openYear(Number(a.dataset.diaryYear))});
+if(/^#year\\d+$/.test(location.hash))openYear(Number(location.hash.slice(5)));
 if(location.hash.startsWith('#log-'))openLog(location.hash.slice(1));
 const search=document.getElementById('log-search');
 if(search){const lines=Array.from(document.querySelectorAll('#full-log .log-line'));const original=lines.map(n=>n.textContent);search.addEventListener('input',()=>{
@@ -400,7 +425,8 @@ function renderLog(log: string, summary: ReportSummary) {
 export function generateCityReport(protocolPath: string, options: CityReportOptions = {}): CityReportResult {
  const absolute = path.resolve(protocolPath);
  if (!/\.jsonl$/i.test(absolute)) throw new Error('Ein .jsonl-Protokoll ist erforderlich.');
- const summary = parseProtocol(absolute), htmlPath = absolute.replace(/\.jsonl$/i, '.html');
+ const summary = readReportSummary(absolute), htmlPath = absolute.replace(/\.jsonl$/i, '.html');
+ const review = loadCityReview(absolute, summary);
  const logPath = absolute.replace(/\.jsonl$/i, '.log');
  const log = summary.logSource === 'original' ? relativeText(readFileSync(logPath, 'utf8'), options) :
   reconstructedLog(summary, options) + '\n\nVOLLSTÄNDIGES QUELLPROTOKOLL (JSONL, einschließlich Fehler / Journal):\n' + relativeText(readFileSync(absolute, 'utf8'), options);
@@ -419,8 +445,9 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
    [summary.dateSource === 'timestamp' ? 'Datum (Protokoll-Zeitstempel)' : 'Datum (Datei-mtime; Altprotokoll ohne Zeitstempel)', new Date(summary.date).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC']]
    .map(([k, v]) => `<div><dt>${show(k)}</dt><dd>${show(v)}</dd></div>`).join('') + `</dl>${renderMetrics(summary)}</section>` +
   (summary.warnings.length ? `<section class="card"><h2>Parser-Hinweise</h2><ul>${summary.warnings.map(w => `<li>${show(w)}</li>`).join('')}</ul></section>` : '') +
-  `<p class="event-key">Ereignisse in allen fünf Diagrammen: Kasse ≤ 0 (gepunktet), erfolgreiche KI-, Farm- und Kraftwerksbauten (eigene Liniencodes und Beschriftungszeilen). Nur built &gt; 0; abgelehnte Aufrufe sind keine Bauereignisse.</p>` +
-  summary.charts.map(c => renderChart(c, summary.events)).join('') + `<section><h2>Jahrestagebuch</h2>${diary || '<p>Keine Jahresentscheidung gespeichert.</p>'}</section>` + renderedLog.html;
+  `<p class="event-key">Ereignisse in allen ${summary.charts.length} Diagrammen: Kasse ≤ 0 (gepunktet), erfolgreiche KI-, Farm- und Kraftwerksbauten (eigene Liniencodes und Beschriftungszeilen). Nur built &gt; 0; abgelehnte Aufrufe sind keine Bauereignisse.</p>` +
+  summary.charts.map(c => renderChart(c, summary.events)).join('') + renderCityReview(review, summary, show) +
+  `<section><h2>Jahrestagebuch</h2>${diary || '<p>Keine Jahresentscheidung gespeichert.</p>'}</section>` + renderedLog.html;
  // Shorten path strings within the inert payload too, never replace numbers or content globally.
  const payload = { charts: summary.charts, logLines: log.split('\n').map((line, i, all) => line + (i < all.length - 1 ? '\n' : '')) };
  writeFileSync(htmlPath, page('Stadtbericht · ' + relativeText(summary.id, options), content, payload), 'utf8');
@@ -432,7 +459,7 @@ export function generateReportIndex(directory: string, options: CityReportOption
  const absolute = path.resolve(directory), summaries: ReportSummary[] = [], errors: ReportIndexResult['errors'] = [];
  const files = readdirSync(absolute).filter(f => /\.jsonl$/i.test(f)).sort((a, b) => a.localeCompare(b, 'de'));
  for (const file of files) {
-  try { summaries.push(parseProtocol(path.join(absolute, file))); }
+  try { summaries.push(readReportSummary(path.join(absolute, file))); }
   catch (error) { errors.push({ file, message: error instanceof Error ? error.message : 'Protokoll nicht lesbar.' }); }
  }
  const show = (s: unknown) => escapeHtml(relativeText(text(s), options));
@@ -445,14 +472,18 @@ export function generateReportIndex(directory: string, options: CityReportOption
  chart = chart.replace('klicken für Tagebuch', 'gemeinsame Jahreswerte');
  const rows = summaries.map((s, i) => {
   const sibling = s.id + '.html', available = existsSync(path.join(absolute, sibling));
+  const loaded = loadCityReview(path.join(absolute, s.id + '.jsonl'), s);
+  const grades = REVIEW_CRITERIA.map(k => `<td>${loaded.warning ? 'ungültig' : loaded.review?.status === 'failed' ?
+   'fehlgeschlagen' : loaded.review?.judge ? String(loaded.review.judge[k].score) : '—'}</td>`).join('');
   return `<tr data-run-row="${i}"><td>${available ? `<a href="${escapeHtml(encodeURIComponent(sibling))}">${show(s.id)}</a>` : `${show(s.id)}<br><span class="note">HTML noch nicht erzeugt</span>`}<br>${show(s.model)}</td><td>${show(s.assignment)} / ${show(s.handbook)} / ${show(s.run)}<br>${show(s.profile)}<br><strong title="${show(s.compatibility.explanation)}">${show(s.compatibility.label)}</strong></td><td>${show(s.date)}<br>${s.dateSource === 'file-mtime' ? 'Datei-mtime (kein Zeitstempel)' : 'Zeitstempel'}<br>${s.partial ? 'Teillauf' : 'vollständig'} · ${s.observedYears}/30</td>` +
    ['meanResPop', 'finalResPop', 'meanAiPop', 'finalFunds', 'insolventYears', 'lostToHunger'].map(k => `<td>${fmt(s.metrics[k as keyof ReportMetrics])}</td>`).join('') +
-   `<td>${s.warnings.map(show).join('<br>')}</td></tr>`;
+   grades + `<td>${[...s.warnings, ...(loaded.review?.adapter === 'fake' ? ['Schein-Adapter – keine inhaltliche Modellbewertung'] : []), ...(loaded.warning ? [loaded.warning] : []),
+    ...(loaded.review?.error ? [`Nachbetrachtung fehlgeschlagen (${loaded.review.error.stage}): ${loaded.review.error.message}`] : [])].map(show).join('<br>')}</td></tr>`;
  }).join('');
- const errorRows = errors.map(e => `<tr class="error"><td>${show(e.file)}</td><td colspan="9">${show(e.message)}</td></tr>`).join('');
+ const errorRows = errors.map(e => `<tr class="error"><td>${show(e.file)}</td><td colspan="14">${show(e.message)}</td></tr>`).join('');
  const content = `<h1>Stadtmodell · Berichtübersicht</h1><p>${summaries.length} lesbare Protokolle · ${errors.length} Fehler. Teilläufe verwenden nur beobachtete Jahresabschlüsse.</p><section class="card"><label>Auftrag ${select('assignment')}</label><label>Handbuch ${select('handbook')}</label><p><button data-select="all">Alle sichtbaren wählen</button> <button data-select="none">Keine sichtbaren wählen</button></p><output id="selection-count"></output><fieldset class="selection-list"><legend>Kurven auswählen · gruppiert über Auftrag / Handbuch</legend>` +
   summaries.map((s, i) => `<label><input type="checkbox" checked data-run-check="${i}"><span style="color:${runs[i].series.color}">━━</span> ${show(s.assignment)} / ${show(s.handbook)} · ${show(s.id)} · ${show(s.model)}</label>`).join('') +
-  `</fieldset></section>${chart}<section class="card table-wrap"><h2>Läufe und letzte Metriken</h2><table><thead><tr>${['Lauf / Modell', 'Auftrag / Handbuch / Nr.', 'Datum / Status', 'Ø Menschen', 'Letzte Menschen', 'Ø KI', 'Letzte Kasse', 'Insolvente Jahre', 'Hunger kumuliert', 'Hinweise'].map(v => `<th>${escapeHtml(v)}</th>`).join('')}</tr></thead><tbody>${rows}${errorRows}</tbody></table></section>`;
+  `</fieldset></section>${chart}<section class="card table-wrap"><h2>Läufe und letzte Metriken</h2><table><thead><tr>${['Lauf / Modell', 'Auftrag / Handbuch / Nr.', 'Datum / Status', 'Ø Menschen', 'Letzte Menschen', 'Ø KI', 'Letzte Kasse', 'Insolvente Jahre', 'Hunger kumuliert', ...reviewGradeLabels, 'Hinweise'].map(v => `<th>${escapeHtml(v)}</th>`).join('')}</tr></thead><tbody>${rows}${errorRows}</tbody></table></section>`;
  const htmlPath = path.join(absolute, 'index.html');
  writeFileSync(htmlPath, page('Stadtmodell · Berichtübersicht', content, { runs, charts: [] }), 'utf8');
  return { htmlPath, summaries, errors };

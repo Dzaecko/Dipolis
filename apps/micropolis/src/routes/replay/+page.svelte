@@ -438,7 +438,7 @@
 					adapter: form.fake ? 'fake' : 'openai', assignment: form.assignment, handbook: form.handbook,
 					run: form.run, resume: form.resume,
 					...(!form.resume ? { startMap: form.startMap, seed: form.seed, profile: form.profile,
-						scenario: form.profile === 'v3-pods' ? form.scenario : 'haushaltskrise' } : {}),
+						scenario: ['v3-pods', 'v4-fraktion'].includes(form.profile) ? form.scenario : 'haushaltskrise' } : {}),
 					...(form.fake ? { fakeDelayMs: 3000 } : {})
 				})
 			});
@@ -699,8 +699,8 @@
 					<label><span>Handbuch</span><select bind:value={form.handbook}><option value="off">aus</option><option value="on">an</option></select></label>
 					<label><span>Laufnummer</span><input type="number" min="1" step="1" bind:value={form.run} /></label>
 					<label><span>Startkarte</span><select bind:value={form.startMap} disabled={form.resume}><option value="natural">Unbebautes Gelände</option><option value="haight">Haight</option></select></label>
-					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option></select></label>
-					{#if form.profile === 'v3-pods'}
+					<label><span>Profil</span><select bind:value={form.profile} disabled={form.resume}><option value="classic">classic</option><option value="koexistenz">koexistenz</option><option value="v2-unruhe">v2-unruhe</option><option value="v3-pods">v3-pods</option><option value="v4-fraktion">v4-fraktion</option></select></label>
+					{#if ['v3-pods', 'v4-fraktion'].includes(form.profile)}
 						<label><span>Szenario (Stromkrise nur Haight)</span><select bind:value={form.scenario} disabled={form.resume}><option value="haushaltskrise">Haushaltskrise</option><option value="stromkrise">Stromkrise</option></select></label>
 					{/if}
 					<label><span>Startwert</span><input type="number" min="0" max="2147483647" step="1" bind:value={form.seed} disabled={form.resume} /></label>
@@ -774,6 +774,9 @@
 		{#if view?.report}
 			<section class="card">
 				<h3>Bericht zum Jahresbeginn</h3>
+				{#if view.report.aiBioPlantCount !== undefined}
+					<p class="muted">Karte: KI-eigene Bio-Anlagen erscheinen violett getönt; Verwaltungsanlagen behalten ihre Bio-Palette.</p>
+				{/if}
 				<dl class="figures">
 					{#each KEY_FIGURES as figure (figure.key)}
 						{#if view.report[figure.key] !== undefined}

@@ -16,6 +16,7 @@
 		"micropolis": "tsx cli/entry.ts",
 		"city-model": "tsx cli/model/run.ts",
 		"city-report": "tsx cli/model/report-cli.ts",
+		"city-review": "tsx cli/model/review-cli.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},
@@ -27,6 +28,7 @@
 		"@sveltejs/kit": "^2.59.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.4",
 		"@types/webgl2": "^0.0.11",
+		"@types/yargs": "^17.0.35",
 		"@webgpu/types": "^0.1.42",
 		"chokidar-cli": "^3.0.0",
 		"concurrently": "^9.1.2",

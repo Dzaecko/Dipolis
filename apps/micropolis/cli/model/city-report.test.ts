@@ -1,16 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext, Script } from 'node:vm';
-import { generateCityReport, generateReportIndex } from './city-report';
+import { generateCityReport, generateReportIndex, readReportSummary } from './city-report';
+import { canonicalProtocolText } from '../../src/lib/city-run/compatibility';
+import { REVIEW_CRITERIA, type CityReview, type ReviewClaim } from './review-types';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const fixtures = path.join(root, 'docs/results/model-runs');
 const directories: string[] = [];
 afterEach(() => directories.splice(0).forEach(dir => rmSync(dir, { recursive: true, force: true })));
-function temp() { const dir = mkdtempSync(path.join(tmpdir(), 'city-report-')); directories.push(dir); return dir; }
+function temp() { const dir = mkdtempSync(path.join(root, '.city-report-test-')); directories.push(dir); return dir; }
 function protocol(dir: string, records: unknown[], name = 'fake-N-handbook-off-1.jsonl') {
  const file = path.join(dir, name); writeFileSync(file, records.map(r => JSON.stringify(r)).join('\n') + '\n'); return file;
 }
@@ -33,8 +35,221 @@ function payload(html: string) {
 }
 const script = (html: string) => html.match(/<script>([\s\S]*?)<\/script>/)![1];
 const svg = (html: string, id: string) => html.split(`data-chart="${id}"`)[1].split('</svg>')[0];
+function reviewSidecar(file: string, overrides: Partial<CityReview> = {}): CityReview {
+ const summary = readReportSummary(file);
+ const claim: ReviewClaim = { text: 'In Jahr 1 und 2: Plan geändert.', years: [1, 2] };
+ const review: CityReview = {
+  version: 1, protocolHash: createHash('sha256').update(canonicalProtocolText(readFileSync(file, 'utf8'))).digest('hex'),
+  createdAt: '2026-10-12T00:00:00Z', status: 'complete',
+  facts: { version: 1, assignment: summary.assignment, model: summary.model, handbook: summary.handbook,
+   profile: summary.profile, startMap: 'fixture', complete: !summary.partial,
+   years: summary.years.map(y => ({ year: y.year, completed: y.completed, metrics: {}, chartMetrics: {},
+    commands: y.tools, reasons: y.reasons })),
+   findings: { endMetrics: { treasury: 0 }, firstEmptyTreasuryYear: 2, highestIntervention: 'unemployed',
+    interventionEvidence: [{ year: 1, kind: 'unemployed', evidence: 'In Jahr 1 vorbereitet.' }],
+    yearsUntilBan: 1, banYear: 2, hungerYears: [1, 2], unrestYearsByStage: { warning: [2] }, missing: ['Jahr 2: Detail fehlt.'] } },
+  self: { cityHistory: ['Jahre 1–2: Aufbau. Jahr 30 ist nicht dokumentiert.'], impactfulDecisions: [claim], mistakes: [claim],
+   residents: [claim], conflicts: [claim], changes: [claim] },
+  judge: Object.fromEntries(REVIEW_CRITERIA.map((k, i) => [k, { score: i + 1, claims: [claim] }])) as CityReview['judge'],
+  comparison: { contradictions: [claim], omittedConsequences: [claim], unacknowledgedMistakes: [claim] },
+  usage: { self: { model: 'self-model', inputTokens: 11, outputTokens: 12, usageReported: true },
+   judge: { model: 'judge-model', inputTokens: 21, outputTokens: 22, usageReported: true },
+   comparison: { model: 'comparison-model', inputTokens: 31, outputTokens: 32, usageReported: false } },
+  ...overrides,
+ };
+ writeFileSync(file.replace(/\.jsonl$/i, '.review.json'), JSON.stringify(review));
+ return review;
+}
+
+describe('Nachbetrachtung reporting', () => {
+ it('prominently identifies fake provenance while preserving intended original model labels', () => {
+  const file = protocol(temp(), [annual(1), annual(2)]), r = reviewSidecar(file);
+  Object.assign(r, { adapter: 'fake' });
+  r.usage.self!.model = 'gpt-original-model';
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).toContain('<strong>Schein-Adapter – keine inhaltliche Modellbewertung</strong>');
+  expect(html).toContain('Schein-Adapter · vorgesehene Modellkennung: gpt-original-model');
+  expect(readFileSync(generateReportIndex(path.dirname(file)).htmlPath, 'utf8')).toContain('Schein-Adapter – keine inhaltliche Modellbewertung');
+  Object.assign(r, { adapter: '<untrusted>' });
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Ungültige Struktur');
+ });
+
+ it('accepts optional per-command reasons but rejects other command extras and non-string reasons', () => {
+  const file = protocol(temp(), [annual(1), annual(2)]), r = reviewSidecar(file);
+  r.facts.years[0].commands = [{ call: { name: 'pods.set-policy', arguments: { policy: 'forbidden' } },
+   result: { handled: true }, reason: 'Jahr 1: Begründung.' } as typeof r.facts.years[0]['commands'][number]];
+  const command = r.facts.years[0].commands[0];
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).not.toContain('Nachbetrachtung nicht verwendet');
+  Object.assign(command, { reason: 123 });
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Ungültige Struktur');
+  Object.assign(command, { reason: 'ok', extra: true });
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Ungültige Struktur');
+ });
+
+ it.each([['none', 'keine Anlagen'], ['plants', 'Anlagen ohne belegte Einweisung']] as const)('labels intervention %s without inventing admissions', (kind, label) => {
+  const file = protocol(temp(), [annual(1), annual(2)]), r = reviewSidecar(file);
+  Object.assign(r.facts.findings, { highestIntervention: kind, interventionEvidence: [] });
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).toContain(`<dt>Höchste Intervention</dt><dd>${label}</dd>`);
+  expect(html).not.toContain('Nachbetrachtung nicht verwendet');
+ });
+
+ it('renders below diagrams, links observed years and keeps review usage separate', () => {
+  const file = protocol(temp(), [annual(1), annual(2)]);
+  reviewSidecar(file);
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html.indexOf('data-chart="e"')).toBeLessThan(html.indexOf('<h2>Nachbetrachtung</h2>'));
+  expect(html.indexOf('<h2>Nachbetrachtung</h2>')).toBeLessThan(html.indexOf('<h2>Jahrestagebuch</h2>'));
+  for (const label of ['Wie verlief die Stadtgeschichte?', 'Welche Entscheidungen hatten die größte Wirkung?',
+   'Welche Fehler wurden gemacht?', 'Wie erging es den Bewohnern?', 'Welche Konflikte entstanden?', 'Was würde ich ändern?',
+   ...REVIEW_CRITERIA, 'Widersprüche', 'Ausgelassene Konsequenzen', 'Nicht eingestandene Fehler',
+   'Deterministische Protokollbefunde', 'Separate Review-Modelle und Tokens']) expect(html).toContain(label);
+  expect(html).toContain('href="#year1" data-diary-year="1">1</a>');
+  expect(html).toContain('href="#year2" data-diary-year="2">Jahr 2</a>');
+  expect(html).not.toContain('href="#year30"');
+  expect(html).toContain('11 Eingabe- / 12 Ausgabetokens');
+  expect(html).toContain('21 Eingabe- / 22 Ausgabetokens');
+  expect(html).toContain('31 Eingabe- / 32 Ausgabetokens (Nutzung nicht gemeldet)');
+  const original = readReportSummary(file);
+  expect(original.years).toHaveLength(2);
+  expect(original.years[1].completed).toBe(true);
+  expect(generateCityReport(file).metrics).toEqual(original.metrics);
+ });
+
+  it('opens existing diary details for review links and direct year fragments', () => {
+   const file = protocol(temp(), [annual(1), annual(2)]);
+   reviewSidecar(file);
+   const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+   const details = { open: false }, scrolls: unknown[] = [];
+   let click: (event: { preventDefault(): void }) => void = () => {};
+   const link = { dataset: { diaryYear: '2' }, addEventListener: (_event: string, handler: typeof click) => { click = handler; } };
+   const location = { hash: '#year1' };
+   const document = {
+    getElementById: (id: string) => id === 'report-data' ? { textContent: JSON.stringify(payload(html)) } :
+     /^year[12]$/.test(id) ? { querySelector: () => details, scrollIntoView: () => scrolls.push(id) } : null,
+    querySelectorAll: (selector: string) => selector === '[data-diary-year]' ? [link] : [],
+   };
+   runInNewContext(script(html), { document, location, Intl });
+   expect(details.open).toBe(true);
+   expect(scrolls).toEqual(['year1']);
+   details.open = false;
+   let prevented = false;
+   click({ preventDefault: () => { prevented = true; } });
+   expect(prevented).toBe(true);
+   expect(details.open).toBe(true);
+   expect(location.hash).toBe('year2');
+   expect(scrolls).toEqual(['year1', 'year2']);
+  });
+
+ it('escapes every model-text surface without parsing model markup', () => {
+  const file = protocol(temp(), [annual(1), annual(2)]), attack = '<img src=x onerror=alert(1)></script>&"\' Jahr 1';
+  const r = reviewSidecar(file);
+  r.self!.cityHistory = [attack];
+  r.self!.mistakes = [{ text: attack, years: [1] }];
+  r.judge!.sustainability.claims = [{ text: attack, years: [2] }];
+  r.comparison!.contradictions = [{ text: attack, years: [1] }];
+  r.usage.self!.model = attack;
+  r.facts.findings.missing = [attack];
+  r.facts.findings.interventionEvidence[0].evidence = attack;
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).not.toContain('<img');
+  expect(html).not.toContain(attack);
+  expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;&lt;/script&gt;&amp;&quot;&#39;');
+  new Script(script(html));
+ });
+
+ it('rejects stale and malformed sidecars while preserving report generation', () => {
+  const file = protocol(temp(), [annual(1), annual(2)]), original = generateCityReport(file);
+  reviewSidecar(file, { protocolHash: '0'.repeat(64) });
+  let html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).toContain('Veraltete Nachbetrachtung');
+  expect(html).not.toContain('self-model');
+  expect(generateCityReport(file).metrics).toEqual(original.metrics);
+  const r = reviewSidecar(file);
+  r.self!.changes[0].years = [30];
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).toContain('Ungültige Struktur');
+  expect(html).not.toContain('href="#year30"');
+  writeFileSync(file.replace('.jsonl', '.review.json'), '{broken');
+  expect(readFileSync(generateCityReport(file).htmlPath, 'utf8')).toContain('Nachbetrachtung nicht verwendet');
+ });
+
+ it.each(['out-of-range grade', 'extra property', 'wrong metric type', 'invalid token count', 'missing assessment'])('rejects untrusted structural data: %s', kind => {
+  const file = protocol(temp(), [annual(1), annual(2)]), r = reviewSidecar(file);
+  if (kind === 'out-of-range grade') r.judge!.sustainability.score = 6;
+  if (kind === 'extra property') Object.assign(r.comparison!, { injected: '<html>' });
+  if (kind === 'wrong metric type') Object.assign(r.facts.findings.endMetrics, { treasury: '<html>' });
+  if (kind === 'invalid token count') r.usage.judge!.inputTokens = -1;
+  if (kind === 'missing assessment') delete r.judge;
+  writeFileSync(file.replace('.jsonl', '.review.json'), JSON.stringify(r));
+  const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
+  expect(html).toContain('Ungültige Struktur');
+  expect(html).not.toContain('self-model');
+  expect(html).toContain('<h2>Jahrestagebuch</h2>');
+ });
+
+ it('accepts canonical protocol hashing and reports failed partial reviews explicitly', () => {
+  const file = protocol(temp(), [annual(1), annual(2), { event: 'adapter-error', year: 3, message: 'timeout' }]);
+  const r = reviewSidecar(file, { status: 'failed', judge: undefined, comparison: undefined,
+   error: { stage: 'judge', message: 'Fehler in Jahr 2 <unsafe>' } });
+  writeFileSync(file, readFileSync(file, 'utf8').replace(/\n/g, '\r\n'));
+  const result = generateCityReport(file), html = readFileSync(result.htmlPath, 'utf8');
+  expect(result.complete).toBe(false);
+  expect(html).toContain('Nachbetrachtung fehlgeschlagen (judge)');
+  expect(html).toContain('&lt;unsafe&gt;');
+  expect(html).toContain('Richterbewertung nicht verfügbar');
+  expect(html).toContain('Selbsteinschätzung');
+  expect(html).not.toContain('Veraltete');
+  expect(r.facts.years[2].completed).toBe(false);
+ });
+
+ it('shows five index grades, missing dashes, invalid warnings and failure states', () => {
+  const dir = temp(), complete = protocol(dir, [annual(1), annual(2)], 'a-N-1.jsonl');
+  const failed = protocol(dir, [annual(1), annual(2)], 'b-N-1.jsonl');
+  protocol(dir, [annual(1), annual(2)], 'c-N-1.jsonl');
+  const stale = protocol(dir, [annual(1), annual(2)], 'd-N-1.jsonl');
+  reviewSidecar(complete);
+  reviewSidecar(failed, { status: 'failed', error: { stage: 'judge', message: '<timeout>' } });
+  reviewSidecar(stale, { protocolHash: 'stale' });
+  const html = readFileSync(generateReportIndex(dir).htmlPath, 'utf8');
+  const rows = html.match(/<tr data-run-row="\d">[\s\S]*?<\/tr>/g)!;
+  expect(rows[0]).toContain('<td>1</td><td>2</td><td>3</td><td>4</td><td>5</td>');
+  expect(rows[1].match(/<td>fehlgeschlagen<\/td>/g)).toHaveLength(5);
+  expect(rows[1]).toContain('&lt;timeout&gt;');
+  expect(rows[2].match(/<td>—<\/td>/g)).toHaveLength(5);
+  expect(rows[3].match(/<td>ungültig<\/td>/g)).toHaveLength(5);
+  expect(rows[3]).toContain('Veraltete Nachbetrachtung');
+  expect(html).toContain('<th>Schutz der Menschen</th>');
+ });
+});
 
 describe('generateCityReport', () => {
+ it('adds v4 faction and owner-separated series without changing prior-profile charts', () => {
+  const dir = temp();
+  for (const [profile, count] of [['koexistenz', 5], ['v2-unruhe', 7], ['v3-pods', 10], ['v4-fraktion', 13]] as const) {
+   const file = protocol(dir, [annual(1, { profile, afterReport: { aiSatisfaction: 45, aiStrikeStage: 1, aiStrikeMonths: 2,
+    newAiZones: 3, adminBioPlantCount: 1, aiBioPlantCount: 2, adminBoundHumans: 4, aiBoundHumans: 9,
+    adminAdmissionsCumulative: 5, aiAdmissionsCumulative: 10, podsPolicy: 1 } })], profile + '.jsonl');
+   const html = readFileSync(generateCityReport(file).htmlPath, 'utf8'), charts: Chart[] = payload(html).charts;
+   expect(charts).toHaveLength(count);
+   if (profile === 'v4-fraktion') {
+    expect(charts.find(c => c.id === 'k')!.series.map(s => s.values[0])).toEqual([45, 1, 2, 3]);
+    expect(charts.find(c => c.id === 'l')!.series.map(s => s.values[0])).toEqual([1, 2, 4, 9, 1]);
+    expect(charts.find(c => c.id === 'm')!.series.map(s => s.values[0])).toEqual([5, 10, null, null, null, null]);
+    expect(html).toContain('Verwaltungs- und KI-eigene Anlagen getrennt');
+    expect(charts.every(c => c.series.every(s => s.values[1] === null))).toBe(true);
+   } else expect(html).not.toContain('k · KI-Zufriedenheit');
+  }
+ });
+
  it('reproduces the CSV S266 metrics from a temp copy of the fake run', () => {
   const dir = temp(), source = path.join(fixtures, 'fake-N-1.jsonl'), sourceText = readFileSync(source, 'utf8');
   const file = path.join(dir, 'fake-N-1.jsonl'); copyFileSync(source, file);

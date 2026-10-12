@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BASELINE_CONTROLS, baselineGate, csv, summaryRow } from '../../../../scripts/measure-v3-stromkrise-baseline';
-import { CURRENT_ENGINE_ID } from '../../src/lib/city-run/compatibility';
 
 describe('fixed Stromkrise A prerequisite', () => {
  it('requires all 30 years, all 360 months, strictly positive funds, unemployment and reconciled finances', () => {
@@ -57,7 +56,7 @@ describe('fixed Stromkrise A prerequisite', () => {
  it('completes the corrected-engine horizon without turning bankruptcy into a passing gate', () => {
   const result = JSON.parse(readFileSync(new URL(
    '../../../../docs/results/v3-pods-stromkrise-welfare1-ai30-baseline-complete.json', import.meta.url), 'utf8'));
-  expect(result.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(result.engineId).toBe('sha256:eb85fbed5328433b3172d213f0151984d37c785f84c4a4db4f54ca395e60475b');
   expect(result.completedAnnualSamples).toBe(30);
   expect(result.completedMonthlySamples).toBe(360);
   expect(result.gate.passed).toBe(false);

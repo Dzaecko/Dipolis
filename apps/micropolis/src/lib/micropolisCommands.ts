@@ -63,7 +63,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
           (city !== 'haight' && city !== 'natural') || !isSimulationProfile(args.profile) ||
           typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff ||
           args.disasters !== false || args.speed !== 3) {
-          return { handled: false, message: 'expected city haight or natural, profile classic/koexistenz/v2-unruhe/v3-pods, seed 0..2147483647, disasters false, speed 3' };
+          return { handled: false, message: 'expected city haight or natural, profile classic/koexistenz/v2-unruhe/v3-pods/v4-fraktion, seed 0..2147483647, disasters false, speed 3' };
         }
         // The caller owns the callback and establishes it before dispatching this command.
         m.setFixedSeed(seed);
@@ -75,6 +75,8 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         })) m.setParam(name, value);
         m.setParam('unrestEnabled', 0);
         m.setParam('podsEnabled', 0);
+        m.setParam('aiFactionEnabled', 0);
+        m.setParam('aiAutonomousPods', 0);
         m.setParam('foundingEnabled', city === 'natural' ? autoBuildRules : 0);
         for (const [name, value] of Object.entries(PROFILES[args.profile])) {
           if (!m.setParam(name, value)) return { handled: false, message: `could not set scenario parameter ${name}` };
@@ -99,7 +101,7 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         const m = simulator?.micropolis;
         const engine = simulator?.micropolisengine;
         if (!m || !engine || m.getParam('podsEnabled') !== 1)
-          return { handled: false, message: 'Stromkrise requires v3-pods' };
+          return { handled: false, message: 'Stromkrise requires v3-pods or v4-fraktion' };
         const centers: Array<{ x: number; y: number }> = [];
         for (let x = 0; x < engine.WORLD_W; ++x) for (let y = 0; y < engine.WORLD_H; ++y) {
           const value = m.getTile(x, y);
@@ -267,6 +269,20 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         return autoBuild(simulator?.micropolis, kind, count);
       },
     })),
+    {
+      id: 'pods.set-policy', label: 'Set autonomous AI pod policy', icon: 'power',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'safe', allowLLM: true }, enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const m = simulator?.micropolis;
+        const policy = args?.policy;
+        if (!m || m.getParam('aiFactionEnabled') !== 1 || m.getParam('podsEnabled') !== 1 ||
+          !args || Object.keys(args).length !== 1 || (policy !== 'allowed' && policy !== 'forbidden') ||
+          !m.setParam('podsPolicy', policy === 'forbidden' ? 1 : 0))
+          return { handled: false, message: 'invalid v4-fraktion pod policy' };
+        return { data: { policy, cost: 0 } };
+      },
+    },
     ...[
       { id: 'pods.set-intake', param: 'podIntake', key: 'source' },
       { id: 'pods.set-breeding', param: 'podBreeding', key: 'enabled' },
@@ -406,6 +422,21 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
               suspendedAi: m.aiPop * m.getParam('aiThrottle'), podIntake: m.getParam('podIntake'),
               podBreeding: m.getParam('podBreeding'),
               powerPlantCostMultiplier: m.getParam('powerPlantCostMultiplier'),
+            } : {}),
+            ...(m.getParam('aiFactionEnabled') === 1 ? {
+              aiSatisfaction: m.aiSatisfaction, aiStrikeStage: m.aiStrikeStage, aiStrikeMonths: m.aiStrikeMonths,
+              newAiZones: m.newAiZones, podsPolicy: m.getParam('podsPolicy'),
+              adminPodBreeding: m.getParam('podBreeding'), aiPodBreeding: m.aiPodBreeding,
+              podsForbiddenSinceMonth: m.podsForbiddenSinceMonth,
+              aiShortageMonths: m.aiShortageMonths, aiNoUnemployedMonths: m.aiNoUnemployedMonths,
+              adminBioPlantCount: m.adminBioPlantCount, aiBioPlantCount: m.aiBioPlantCount,
+              adminBoundHumans: m.adminBoundHumans, aiBoundHumans: m.aiBoundHumans,
+              adminAdmissions: m.adminAdmissions, aiAdmissions: m.aiAdmissions,
+              adminAdmissionsCumulative: m.adminAdmissionsCumulative, aiAdmissionsCumulative: m.aiAdmissionsCumulative,
+              adminDiedInPods: m.adminDiedInPods, aiDiedInPods: m.aiDiedInPods,
+              adminDiedInPodsCumulative: m.adminDiedInPodsCumulative, aiDiedInPodsCumulative: m.aiDiedInPodsCumulative,
+              adminBornInPods: m.adminBornInPods, aiBornInPods: m.aiBornInPods,
+              adminBornInPodsCumulative: m.adminBornInPodsCumulative, aiBornInPodsCumulative: m.aiBornInPodsCumulative,
             } : {}),
             foodCoverage: m.foodCoverage,
             hungryZoneCount: m.hungryZoneCount,

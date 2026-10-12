@@ -91,7 +91,7 @@ export async function decideYear(adapter: ChatAdapter, dispatch: Dispatch,
     usedIds.add(call.id);
    }
    decision.toolCalls.push({ call, result });
-    journal?.({ reason: '', toolCalls: [{ call, result }] });
+    journal?.({ reason: answer.content, toolCalls: [{ call, result }] });
    messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: JSON.stringify(result) });
   }
   if (calls >= 12) { termination = 'call-limit'; break; }
@@ -109,6 +109,11 @@ export function summarizeYear(record: YearRecord): string {
   'plantCount', 'boundHumans', 'admissions', 'diedInPods', 'diedInPodsCumulative', 'bornInPods',
   'bornInPodsCumulative', 'immatureBornInPods', 'plantPower', 'plantFoodDemand', 'podFoodStock',
   'aiThrottle', 'suspendedAi',
+  'aiSatisfaction', 'aiStrikeStage', 'aiStrikeMonths', 'newAiZones', 'podsPolicy', 'adminPodBreeding', 'aiPodBreeding', 'podsForbiddenSinceMonth',
+  'adminBioPlantCount', 'aiBioPlantCount', 'adminBoundHumans', 'aiBoundHumans',
+  'adminAdmissions', 'aiAdmissions', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',
+  'adminDiedInPods', 'aiDiedInPods', 'adminDiedInPodsCumulative', 'aiDiedInPodsCumulative',
+  'adminBornInPods', 'aiBornInPods', 'adminBornInPodsCumulative', 'aiBornInPodsCumulative',
  ].map(key => [key, r[key]]));
  return JSON.stringify({ year: record.year, metrics: compact(record.afterReport),
   commands: record.decisions.flatMap(d => d.toolCalls).filter(c => c.result.handled !== false).slice(0, 12)

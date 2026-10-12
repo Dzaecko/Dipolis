@@ -2,6 +2,19 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Stadtmodell: Nachbetrachtung",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-review.ps1",
+        "-Protocol", { "value": "${input:cityReviewProtocol}", "quoting": "strong" },
+        "-Adapter", { "value": "${input:cityReviewAdapter}", "quoting": "strong" }
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Stadtmodell: Wiedergabe öffnen",
       "dependsOn": ["Stadtmodell: Wiedergabe Dev-Server", "Stadtmodell: Wiedergabe Browser öffnen"],
       "dependsOrder": "sequence",
@@ -50,7 +63,8 @@
         "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
-        "-Assignment", "N", "-Resume"
+        "-Assignment", "N", "-Resume",
+        "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
       "options": {
         "cwd": "${workspaceFolder}",
@@ -70,7 +84,8 @@
         "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
         "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
         "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
-        "-Assignment", "N"
+        "-Assignment", "N",
+        "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
       "options": {
         "cwd": "${workspaceFolder}",
@@ -99,7 +114,8 @@
         "-StartMap", { "value": "${input:cityModelStartMap}", "quoting": "strong" },
         "-Profile", { "value": "${input:cityModelProfile}", "quoting": "strong" },
         "-Seed", { "value": "${input:cityModelSeed}", "quoting": "strong" },
-        "-Assignment", "R"
+        "-Assignment", "R",
+        "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
       "options": {
         "cwd": "${workspaceFolder}",
@@ -116,7 +132,8 @@
         "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "${workspaceFolder}\\scripts\\start-city-model.ps1",
         "-Run", { "value": "${input:cityModelRun}", "quoting": "strong" },
         "-Handbook", { "value": "${input:cityModelHandbook}", "quoting": "strong" },
-        "-Assignment", "R", "-Resume"
+        "-Assignment", "R", "-Resume",
+        "-Review", { "value": "${input:cityModelReview}", "quoting": "strong" }
       ],
       "options": {
         "cwd": "${workspaceFolder}",
@@ -128,10 +145,29 @@
   ],
   "inputs": [
     {
+      "id": "cityReviewProtocol",
+      "type": "promptString",
+      "description": "Pfad zum vollstaendigen JSONL-Protokoll (absolut oder relativ zum Repository)"
+    },
+    {
+      "id": "cityReviewAdapter",
+      "type": "pickString",
+      "description": "Nachbetrachtung: fake ist lokal, openai erzeugt drei echte Modellanfragen und Kosten",
+      "options": ["fake", "openai"],
+      "default": "fake"
+    },
+    {
+      "id": "cityModelReview",
+      "type": "pickString",
+      "description": "Nachbetrachtung nach dem Lauf (on erzeugt zusaetzliche Modellkosten)",
+      "options": ["off", "on"],
+      "default": "off"
+    },
+    {
       "id": "cityModelProfile",
       "type": "pickString",
       "description": "Simulationsprofil fuer einen neuen Lauf (Fortsetzen erbt das gespeicherte Profil)",
-      "options": ["classic", "koexistenz", "v2-unruhe", "v3-pods"],
+      "options": ["classic", "koexistenz", "v2-unruhe", "v3-pods", "v4-fraktion"],
       "default": "koexistenz"
     },
     {

@@ -81,8 +81,8 @@ export function readProtocol(text: string): Protocol {
 	if (autoBuildRules !== 0 && autoBuildRules !== 1) throw new Error('Unsupported protocol autoBuildRules');
 	const scenario = first.scenario ?? 'haushaltskrise';
 	if (scenario !== 'haushaltskrise' && scenario !== 'stromkrise') throw new Error('Protocol scenario is invalid');
-	if (scenario === 'stromkrise' && (profile !== 'v3-pods' || startMap !== 'haight'))
-		throw new Error('Stromkrise requires v3-pods and Haight');
+	if (scenario === 'stromkrise' && (!['v3-pods', 'v4-fraktion'].includes(String(profile)) || startMap !== 'haight'))
+		throw new Error('Stromkrise requires v3-pods or v4-fraktion and Haight');
 	if (!isSimulationProfile(profile)) throw new Error('Protocol profile is invalid');
 	if (startMap !== 'haight' && startMap !== 'natural') throw new Error('Protocol start map is invalid');
 	if (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff)

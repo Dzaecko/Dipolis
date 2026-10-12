@@ -1,0 +1,11 @@
+{
+  "aiFactionEnabled": 1,
+  "aiAutonomousPods": 1,
+  "aiSatisfactionInertia": 0.15,
+  "aiCoverageWeight": 70,
+  "aiThrottleWeight": 45,
+  "aiFireWeight": 40,
+  "aiHumanPriorityWeight": 15,
+  "aiNewZoneWeight": 10,
+  "aiWorkToRuleTaxFactor": 0.5
+}

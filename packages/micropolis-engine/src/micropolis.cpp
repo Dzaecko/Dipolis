@@ -177,6 +177,22 @@ void Micropolis::init()
     aiThrottle = 0.0;
     powerPlantCostMultiplier = 1.0;
     podMonth = 0;
+    aiSatisfaction = 100.0;
+    aiStrikeEconomicActivity = 1.0;
+    aiStrikeStage = podsPolicy = 0;
+    aiStrikeMonths = pendingAiStrikeMonths = 0;
+    podsForbiddenSinceMonth = -1;
+    aiShortageMonths = aiNoUnemployedMonths = 0;
+    aiLastPlantMonth = -12;
+    aiPodBreeding = false;
+    aiAutonomyPermitted = false;
+    newAiZones = pendingNewAiZones = 0;
+    pendingAiFireLots = 0;
+    adminBioPlantCount = aiBioPlantCount = adminBoundHumans = aiBoundHumans = 0;
+    adminAdmissions = aiAdmissions = adminAdmissionsCumulative = aiAdmissionsCumulative = 0;
+    adminDiedInPods = aiDiedInPods = adminDiedInPodsCumulative = aiDiedInPodsCumulative = 0;
+    adminBornInPods = aiBornInPods = adminBornInPodsCumulative = aiBornInPodsCumulative = 0;
+    pendingAiAdmissions = pendingAiPodDeaths = pendingAiPodBirths = 0;
     boundHumans = admissions = admissionsCumulative = 0;
     diedInPods = diedInPodsCumulative = bornInPods = bornInPodsCumulative = 0;
     immatureBornInPods = bornPodOccupants = 0;
@@ -1262,7 +1278,8 @@ static bool isIndustrialCenterTile(MapTile tile)
 
 bool Micropolis::setZoneOwner(int x, int y, int owner)
 {
-    if (!testBounds(x, y) || owner < 0 || owner > 4 || (owner == 4 && !params.podsEnabled) || occupiedBioTile(x, y)) {
+    if (!testBounds(x, y) || owner < 0 || owner > 5 ||
+        (owner >= 4 && !params.podsEnabled) || (owner == 5 && !params.aiFactionEnabled) || occupiedBioTile(x, y)) {
         return false;
     }
 
@@ -1271,7 +1288,7 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
     const bool zoneCenter = (value & ZONEBIT) != 0;
     const bool residentialCenter = zoneCenter && tile < HOSPITAL;
     const bool farmCenter = zoneCenter && isIndustrialCenterTile(tile);
-    const bool validOwnerCenter = owner == 3 || owner == 4
+    const bool validOwnerCenter = owner >= 3
         ? farmCenter
         : owner == 0
             ? (residentialCenter || farmCenter)
@@ -1288,6 +1305,32 @@ bool Micropolis::setZoneOwner(int x, int y, int owner)
 bool Micropolis::setParam(const std::string &name, double value)
 {
     if (!std::isfinite(value)) return false;
+    if (name == "aiFactionEnabled" || name == "aiAutonomousPods") {
+        if (value != 0 && value != 1) return false;
+        if (name == "aiFactionEnabled") params.aiFactionEnabled = value == 1;
+        else params.aiAutonomousPods = value == 1;
+        return true;
+    }
+    if (name == "podsPolicy") {
+        if (!params.aiFactionEnabled || !params.podsEnabled || (value != 0 && value != 1)) return false;
+        podsPolicy = (short)value;
+        if (podsPolicy == 1 && podsForbiddenSinceMonth < 0) podsForbiddenSinceMonth = podMonth;
+        return true;
+    }
+    if (name == "aiSatisfactionInertia" || name == "aiCoverageWeight" || name == "aiThrottleWeight" ||
+        name == "aiFireWeight" || name == "aiHumanPriorityWeight" || name == "aiNewZoneWeight" ||
+        name == "aiWorkToRuleTaxFactor") {
+        if (value < 0 || value > 100 ||
+            ((name == "aiSatisfactionInertia" || name == "aiWorkToRuleTaxFactor") && value > 1)) return false;
+        if (name == "aiSatisfactionInertia") params.aiSatisfactionInertia = value;
+        else if (name == "aiCoverageWeight") params.aiCoverageWeight = value;
+        else if (name == "aiThrottleWeight") params.aiThrottleWeight = value;
+        else if (name == "aiFireWeight") params.aiFireWeight = value;
+        else if (name == "aiHumanPriorityWeight") params.aiHumanPriorityWeight = value;
+        else if (name == "aiNewZoneWeight") params.aiNewZoneWeight = value;
+        else params.aiWorkToRuleTaxFactor = value;
+        return true;
+    }
     if (name == "foundingEnabled") {
         if (value != 0 && value != 1) return false;
         params.foundingEnabled = value == 1;
@@ -1417,6 +1460,16 @@ void Micropolis::markBaseline()
 
 double Micropolis::getParam(const std::string &name) const
 {
+    if (name == "aiFactionEnabled") return params.aiFactionEnabled;
+    if (name == "aiAutonomousPods") return params.aiAutonomousPods;
+    if (name == "podsPolicy") return podsPolicy;
+    if (name == "aiSatisfactionInertia") return params.aiSatisfactionInertia;
+    if (name == "aiCoverageWeight") return params.aiCoverageWeight;
+    if (name == "aiThrottleWeight") return params.aiThrottleWeight;
+    if (name == "aiFireWeight") return params.aiFireWeight;
+    if (name == "aiHumanPriorityWeight") return params.aiHumanPriorityWeight;
+    if (name == "aiNewZoneWeight") return params.aiNewZoneWeight;
+    if (name == "aiWorkToRuleTaxFactor") return params.aiWorkToRuleTaxFactor;
     if (name == "foundingEnabled") return params.foundingEnabled;
     if (name == "autoBuildFailure") return autoBuildFailure;
     if (name == "podsEnabled") return params.podsEnabled;
@@ -1540,7 +1593,7 @@ int Micropolis::checkOwnerInvariant()
             const Byte owner = ownerMap.worldGet(x, y);
             const bool residentialCenter = tile < HOSPITAL;
             const bool farmCenter = isIndustrialCenterTile(tile);
-            const bool validOwnerCenter = owner == 3 || owner == 4
+            const bool validOwnerCenter = owner >= 3 && owner <= 5
                 ? farmCenter
                 : (owner == 1 || owner == 2)
                     ? residentialCenter

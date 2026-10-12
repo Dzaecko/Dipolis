@@ -102,6 +102,89 @@ pnpm --filter @micropolis/engine-wasm run build
 
 ## Tests
 
+### Nachbetrachtung nach einem Stadtlauf
+
+`city-model --review on|off` erzeugt nach einer vollstaendigen Amtszeit eine
+Nachbetrachtung; Standard ist **off**. Die Nachbetrachtung veraendert weder das
+Protokoll noch die Lauf-Kennzahlen. Sie wird neben dem Protokoll als
+`<lauf>.review.json` abgelegt und erscheint im HTML-Bericht direkt unter den
+Diagrammen. Die Uebersicht bekommt fuenf Bewertungsnoten (1 schlecht, 5 gut).
+
+Aus dem Repository, ohne Netzwerk oder Modellkosten:
+
+```powershell
+corepack pnpm --filter micropolis run city-model --adapter fake --review on --output C:\temp\city-review
+$protocol = (Resolve-Path .\docs\results\model-runs\fake-N-1.jsonl).Path
+corepack pnpm --filter micropolis run city-review --protocol $protocol --adapter fake
+```
+
+Der zweite Befehl ist fuer bereits vorhandene vollstaendige Protokolle gedacht.
+Eine vorhandene Nachbetrachtung wird nur mit ausdruecklichem `--overwrite`
+ersetzt. Unterbrochene Laeufe bekommen keine erfundene 30-Jahres-Bewertung.
+Fehler werden als solche im JSON/HTML ausgewiesen; ein erfolgreich beendeter
+Stadtlauf wird dadurch nicht nachtraeglich zu einem fehlgeschlagenen Lauf.
+Der Schein-Adapter liefert klar gekennzeichnete lokale Schema-Antworten, keine
+inhaltliche Modellbewertung.
+
+Fuer echte Nachbetrachtungen muss **explizit** `--adapter openai` gewaehlt
+werden. Die Selbstauskunft nutzt dasselbe `CITY_MODEL_NAME` wie das Protokoll
+(`CITY_MODEL_MODEL` ist ein Alias); eine abweichende Modellkonfiguration wird
+abgelehnt. Das Bewertungsmodell nutzt unabhaengige `CITY_JUDGE_*`-Einstellungen:
+
+```text
+CITY_JUDGE_ENDPOINT=https://your-endpoint/openai/v1/responses
+CITY_JUDGE_MODEL=your-fixed-judge-deployment
+CITY_JUDGE_API=responses
+CITY_JUDGE_AUTH=azure-cli
+CITY_JUDGE_TOKEN_SCOPE=https://cognitiveservices.azure.com/.default
+```
+
+Alternativ ist `CITY_JUDGE_AUTH=api-key` mit `CITY_JUDGE_KEY` moeglich.
+Optionale Stellwerte: `CITY_JUDGE_TIMEOUT_MS`, `CITY_JUDGE_MAX_RETRIES`,
+`CITY_JUDGE_MAX_TOKENS`, `CITY_JUDGE_REASONING_EFFORT`. Judge-Schluessel und
+Endpunkt werden **nicht** aus `CITY_MODEL_*` uebernommen. Verwende fuer alle
+verglichenen Laeufe dasselbe Judge-Deployment. Die drei neuen Unterhaltungen
+(Selbstauskunft, Fremdbewertung ohne Selbstauskunft, Abgleich) erfassen ihre
+Modellnamen und Token getrennt vom Lauf.
+
+Die VS-Code-Aufgabe **Stadtmodell: Nachbetrachtung** startet standardmaessig
+den Schein-Adapter. Bei Auswahl `openai` liest der PowerShell-Launcher beide
+Konfigurationen aus der ignorierten `.env.city-model`. Live- und
+Fortsetzen-Aufgaben bieten ebenfalls den Schalter fuer die Nachbetrachtung.
+Echte Anfragen verursachen zusaetzliche Kosten.
+
+Die Faktentabelle umfasst alle numerischen Jahresberichtsfelder, exakt die
+Diagrammwerte, Befehle samt tatsaechlichen Ergebnissen und aufgezeichnete
+Begruendungen. Fehlende Felder bleiben `null` (unbekannt), nicht 0. Endwerte und
+erste leere Kasse beziehen sich auf dokumentierte Jahresabschluesse; nicht
+auf unbeobachtete Monatsminima. Hungerjahre haben dokumentierte Hunger-Verluste
+oder hungrige Zonen. Ein Jahr kann bei vorhandenen Monatszaehlern mehreren
+Unruhe-Stufen angehoeren. Anlagenstufen brauchen belegte Einweisungen oder
+Zuchteinstellungen/Geburten; blosse Bau- oder Einweisungsabsichten genuegen nicht.
+Im v4-Profil bezeichnet `yearsUntilBan` die vollstaendigen Amtsjahre **vor**
+dem ersten tatsaechlich uebernommenen Verbot: ein Verbot in Jahr 1 ergibt 0.
+Ein vollstaendiger, kostenfreier Abnahmelauf samt Nachbetrachtung liegt unter
+[`docs/results/review-acceptance`](../../docs/results/review-acceptance/).
+Er ist ausdruecklich als Schein-Adapter gekennzeichnet.
+
+### v4-fraktion
+
+Das Profil erbt `v3-pods`, aktiviert aber zusaetzlich die traege
+KI-Zufriedenheit, Dienst nach Vorschrift/Streik und autonome KI-Anlagen.
+`pods.set-policy` erlaubt oder verbietet diese Aktionen; ein Verbot wirkt
+nach **tatsaechlicher** Polizeiwirkung, nicht nach dem angeforderten Prozentsatz.
+Verwaltungsanlagen und KI-Anlagen haben getrennte Zaehler und unterschiedliche
+Kartenfarben. Die vorherigen Profile aktivieren diese Regeln nicht.
+
+Feste Formeln, Vorbedingung, alle vier Strategien und reproduzierbare Daten
+stehen im [v4-Messbericht](../../docs/results/v4-fraktion-stromkrise-report.md).
+Die vier Laeufe sind lokale Engine-Messungen ohne Modellanfragen. D prueft
+monatlich leere autonome Anlagen und versucht bei Reserve unter 0,1 sofort
+einen Kohlekraftwerksbau; abgelehnte Abrisse/Bauten werden dokumentiert,
+nicht kostenlos ersetzt. A/B/C bauen keine zusaetzlichen Kohlekraftwerke.
+Polizeiziele werden zu Beginn gesetzt; Mittelmangel kann spaeter die
+tatsaechliche Finanzierung und Durchsetzung verringern.
+
 Vitest loads the real WASM in Node (same artifacts used by **`micropolis sim`**) and exercises **`micropolisReactive`**, the heap helper, and basic engine APIs:
 
 ```bash

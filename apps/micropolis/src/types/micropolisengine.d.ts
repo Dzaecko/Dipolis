@@ -4,14 +4,15 @@ declare namespace RuntimeExports {
     let wasmMemory: any;
     function FS_createPath(...args: any[]): any;
     function FS_createDataFile(...args: any[]): any;
-    function FS_createPreloadedFile(parent: any, name: any, url: any, canRead: any, canWrite: any, onload: any, onerror: any, dontCreateFile: any, canOwn: any, preFinish: any): void;
+    function FS_preloadFile(parent: any, name: any, url: any, canRead: any, canWrite: any, dontCreateFile: any, canOwn: any, preFinish: any): Promise<void>;
     function FS_unlink(...args: any[]): any;
     function FS_createLazyFile(...args: any[]): any;
     function FS_createDevice(...args: any[]): any;
-    let addRunDependency: any;
-    let removeRunDependency: any;
+    function addRunDependency(id: any): void;
+    function removeRunDependency(id: any): void;
 }
 interface WasmModule {
+  ___set_stack_limits(_0: number, _1: number): void;
 }
 
 type EmbindString = ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string;
@@ -330,13 +331,35 @@ export interface Micropolis extends ClassHandle {
   policePercent: number;
   firePercent: number;
   aiCoverage: number;
+  aiSatisfaction: number;
+  aiStrikeStage: number;
+  aiStrikeMonths: number;
+  newAiZones: number;
+  aiShortageMonths: number;
+  aiNoUnemployedMonths: number;
+  aiPodBreeding: number;
+  podsPolicy: number;
+  podsForbiddenSinceMonth: number;
+  adminBioPlantCount: number;
+  aiBioPlantCount: number;
+  adminBoundHumans: number;
+  aiBoundHumans: number;
+  adminAdmissions: number;
+  aiAdmissions: number;
+  adminAdmissionsCumulative: number;
+  aiAdmissionsCumulative: number;
+  adminDiedInPods: number;
+  aiDiedInPods: number;
+  adminDiedInPodsCumulative: number;
+  aiDiedInPodsCumulative: number;
+  adminBornInPods: number;
+  aiBornInPods: number;
+  adminBornInPodsCumulative: number;
+  aiBornInPodsCumulative: number;
   automationShare: number;
   automationTaxFund: number;
   automatedJobs: number;
   unrest: number;
-  updatePods(): void;
-  getBioPlantCount(): number;
-  occupiedBioTile(x: number, y: number): boolean;
   boundHumans: number;
   admissions: number;
   admissionsCumulative: number;
@@ -476,6 +499,12 @@ export interface Micropolis extends ClassHandle {
   buildOwnedResidential(_0: number, _1: number, _2: number): ToolResult;
   buildFarm(_0: number, _1: number): ToolResult;
   checkOwnerInvariant(): number;
+  updateAiFaction(): void;
+  aiWorkFactor(): number;
+  aiEconomicActivity(): number;
+  updatePods(): void;
+  getBioPlantCount(): number;
+  occupiedBioTile(_0: number, _1: number): boolean;
   doTool(_0: EditingTool, _1: number, _2: number): ToolResult;
   getActiveSprites(): any;
   generateMap(_0: number): void;

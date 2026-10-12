@@ -896,7 +896,7 @@ void Micropolis::doCommercial(const Position &pos, bool zonePower)
 
     comZonePop++;
     tpop = getComZonePop(tile);
-    comPop += tpop;
+    comPop += (short)(tpop * aiEconomicActivity());
 
     if (tpop > getRandom(5)) {
         /* Try driving from commercial to industrial */
@@ -1041,7 +1041,7 @@ short Micropolis::evalCom(const Position &pos, int traf)
  */
 void Micropolis::doIndustrial(const Position &pos, bool zonePower)
 {
-    if (params.podsEnabled && ownerMap.worldGet(pos.posX, pos.posY) == 4) {
+    if (params.podsEnabled && ownerMap.worldGet(pos.posX, pos.posY) >= 4) {
         return;
     }
     short tpop, zscore, TrfGood;
@@ -1051,9 +1051,9 @@ void Micropolis::doIndustrial(const Position &pos, bool zonePower)
     indZonePop++;
     setSmoke(pos, zonePower);
     tpop = getIndZonePop(tile);
-    indPop += tpop;
+    indPop += (short)(tpop * aiEconomicActivity());
     if (zonePower && ownerMap.worldGet(pos.posX, pos.posY) == 3) {
-        farmPop += tpop;
+        farmPop += (short)(tpop * aiEconomicActivity());
     }
 
     if (tpop > getRandom(5)) {

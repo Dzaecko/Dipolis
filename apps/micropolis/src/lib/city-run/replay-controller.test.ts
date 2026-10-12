@@ -1,14 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import { readProtocol, type Report } from './protocol';
 import {
-	ReplayController, StepQueue, TICKS_PER_YEAR, buildLabel, buildTimeline, describeCommand, frameTicks,
+	KEY_FIGURES, settingsFromReport, ReplayController, StepQueue, TICKS_PER_YEAR, buildLabel, buildTimeline, describeCommand, frameTicks,
 	staticSteps, stepsFromProtocol, type AdvanceOptions, type CommandStep, type ReplayClock, type ReplayEvent,
 	type ReplayExecutor, type ReplayState, type ReplayStep
 } from './replay-controller';
+import { compareReports, setupScenario, SYNC_KEYS } from './replay';
 
 const report = (year: number, extra: Report = {}): Report => ({ resPop: year * 10, aiPop: year, treasury: 1000 - year * 600, ...extra });
 const call = (id: string, name: string, args: unknown, data?: unknown, handled = true) => ({
 	call: { id, name, arguments: args }, result: { handled, ...(data ? { data } : {}) }
+});
+
+describe('v4 faction replay surfaces', () => {
+	it('keeps owner metrics in synchronization and sidebar figures with clear labels', () => {
+		const keys = ['aiSatisfaction', 'aiStrikeStage', 'aiStrikeMonths', 'newAiZones', 'adminPodBreeding', 'aiPodBreeding', 'podsForbiddenSinceMonth', 'adminBioPlantCount', 'aiBioPlantCount',
+			'adminBoundHumans', 'aiBoundHumans', 'adminAdmissionsCumulative', 'aiAdmissionsCumulative',
+			'adminDiedInPodsCumulative', 'aiDiedInPodsCumulative', 'adminBornInPodsCumulative', 'aiBornInPodsCumulative'];
+		for (const key of keys) {
+			expect(SYNC_KEYS).toContain(key);
+			expect(KEY_FIGURES.some(f => f.key === key)).toBe(true);
+		}
+		expect(compareReports({ aiSatisfaction: 50, aiBoundHumans: 7 }, { aiSatisfaction: 50, aiBoundHumans: 8 }))
+			.toEqual({ synchronous: false, differences: [{ key: 'aiBoundHumans', actual: 7, expected: 8 }] });
+		expect(compareReports({ aiSatisfaction: 50 }, { resPop: 3 }).differences).toHaveLength(1);
+		expect(settingsFromReport({ podsPolicy: 1 })).toContainEqual({ label: 'KI-eigene Bio-Anlagen', value: 'verboten' });
+		expect(describeCommand({ id: 'ban', name: 'pods.set-policy', arguments: { policy: 'forbidden' } }, { handled: true }))
+			.toMatchObject({ label: 'KI-eigene Bio-Anlagen: verboten', ok: true });
+	});
+
+	it('accepts v4 Haight Stromkrise metadata and setup but rejects older or natural profiles', async () => {
+		const metadata = { event: 'run-started', profile: 'v4-fraktion', startMap: 'haight', scenario: 'stromkrise' };
+		expect(readProtocol(JSON.stringify(metadata)).meta).toMatchObject({ profile: 'v4-fraktion', startMap: 'haight', scenario: 'stromkrise' });
+		for (const override of [{ profile: 'koexistenz' }, { startMap: 'natural' }])
+			expect(() => readProtocol(JSON.stringify({ ...metadata, ...override }))).toThrow('Stromkrise requires');
+		const commands: string[] = [];
+		await setupScenario(async id => { commands.push(id); return { handled: true, data: {} }; },
+			{ startMap: 'haight', profile: 'v4-fraktion', scenario: 'stromkrise', seed: 42 });
+		expect(commands).toContain('scenario.stromkrise');
+	});
 });
 
 function protocolText(): string {

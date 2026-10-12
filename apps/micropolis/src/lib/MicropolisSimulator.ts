@@ -13,7 +13,8 @@ export const HUMAN_TILESET = 0;
 export const AI_TILESET = 8;
 export const FARM_TILESET = 9;
 export const BIO_TILESET = 10;
-export const MICROPOLIS_TILESET_COUNT = 11;
+export const AI_BIO_TILESET = 11;
+export const MICROPOLIS_TILESET_COUNT = 12;
 
 let sharedSimulator: MicropolisSimulator | null = null;
 let viewCount = 0;
@@ -174,7 +175,7 @@ export class MicropolisSimulator {
     setHumanTileSet(value: number): void {
         if (!Number.isFinite(value)) return;
         let next = ((Math.trunc(value) % MICROPOLIS_TILESET_COUNT) + MICROPOLIS_TILESET_COUNT) % MICROPOLIS_TILESET_COUNT;
-        while (next === AI_TILESET || next === FARM_TILESET || next === BIO_TILESET) {
+        while (next === AI_TILESET || next === FARM_TILESET || next === BIO_TILESET || next === AI_BIO_TILESET) {
             const direction = value < this.humanTileSet ? -1 : 1;
             next = (next + direction + MICROPOLIS_TILESET_COUNT) % MICROPOLIS_TILESET_COUNT;
         }
@@ -219,7 +220,7 @@ export class MicropolisSimulator {
                 const tile = mapTile & tileMask;
                 const owner = owners[center];
                 const aiResidential = owner === 2 && (mapTile & zoneBit) !== 0 && tile < lastResidentialCenter;
-                const farm = (owner === 3 || owner === 4) && (mapTile & zoneBit) !== 0 &&
+                const farm = (owner === 3 || owner === 4 || owner === 5) && (mapTile & zoneBit) !== 0 &&
                     (tile === emptyIndustryCenter ||
                         (tile >= firstIndustryCenter && tile <= lastIndustryCenter && (tile - firstIndustryCenter) % 9 === 0));
                 if (!aiResidential && !farm) continue;
@@ -230,7 +231,8 @@ export class MicropolisSimulator {
                         const tileY = y + dy;
                         if (tileX < 0 || tileX >= width || tileY < 0 || tileY >= height) continue;
                         const index = tileX * height + tileY;
-                        mopData[index] = (mopData[index]! & 0xff00) | (owner === 4 ? BIO_TILESET : farm ? FARM_TILESET : AI_TILESET);
+                        mopData[index] = (mopData[index]! & 0xff00) |
+                            (owner === 5 ? AI_BIO_TILESET : owner === 4 ? BIO_TILESET : farm ? FARM_TILESET : AI_TILESET);
                     }
                 }
             }

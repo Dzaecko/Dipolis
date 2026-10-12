@@ -65,7 +65,7 @@ describe('city model runner authorization and annual loop', () => {
   await expect(decideYear(adapter, async () => ({ data: { rate: 9 } }), context, 'N',
    decision => journal.push(decision))).rejects.toThrow('offline');
   expect(journal).toHaveLength(1);
-  expect(journal[0]).toMatchObject({ toolCalls: [{ result: { data: { rate: 9 } } }] });
+  expect(journal[0]).toMatchObject({ reason: 'Maßnahme.', toolCalls: [{ result: { data: { rate: 9 } } }] });
  });
  it('does not carry oversized rejected arguments into future history', () => {
   const summary = summarizeYear({ year: 1, report: context.report, afterReport: {}, termination: 'done',

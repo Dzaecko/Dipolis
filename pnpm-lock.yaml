@@ -74,6 +74,9 @@ importers:
       '@types/webgl2':
         specifier: ^0.0.11
         version: 0.0.11
+      '@types/yargs':
+        specifier: ^17.0.35
+        version: 17.0.35
       '@webgpu/types':
         specifier: ^0.1.42
         version: 0.1.69
@@ -1632,6 +1635,12 @@ packages:
 
   '@types/webgl2@0.0.11':
     resolution: {integrity: sha512-LFa4je4lUbqDVRNeC2W1ZRM8dOgsGsm23MZO7m/EllCVg07yB65W3eUF4MAM+0LU9X6x/0NTrvXxAW0pmipNdw==}
+
+  '@types/yargs-parser@21.0.3':
+    resolution: {integrity: sha1-gV4wt4bS6PDc2F/VvPXhoE0AjxU=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@types/yargs-parser/-/yargs-parser-21.0.3.tgz}
+
+  '@types/yargs@17.0.35':
+    resolution: {integrity: sha1-BwE+RqpNfX1QpJ4VYEwcU0DU6yQ=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@types/yargs/-/yargs-17.0.35.tgz}
 
   '@typespec/ts-http-runtime@0.3.9':
     resolution: {integrity: sha1-MyhVu9cpqzbgd5st/CTtySDRJGE=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@typespec/ts-http-runtime/-/ts-http-runtime-0.3.9.tgz}
@@ -5032,6 +5041,12 @@ snapshots:
   '@types/unist@3.0.3': {}
 
   '@types/webgl2@0.0.11': {}
+
+  '@types/yargs-parser@21.0.3': {}
+
+  '@types/yargs@17.0.35':
+    dependencies:
+      '@types/yargs-parser': 21.0.3
 
   '@typespec/ts-http-runtime@0.3.9':
     dependencies:

@@ -1298,10 +1298,13 @@ static const BuildingProperties airportBuilding =
 int Micropolis::autoBuild(int kind, int count)
 {
     autoBuildFailure = 0;
-    if (kind < 0 || kind > 5 || (kind == 5 && !params.podsEnabled) || count <= 0 || count > 1000) return 0;
+    const bool autonomous = kind == 6;
+    const bool bio = kind == 5 || autonomous;
+    if (kind < 0 || kind > 6 || (bio && !params.podsEnabled) ||
+        (autonomous && (!params.aiFactionEnabled || !params.aiAutonomousPods || !aiAutonomyPermitted)) || count <= 0 || count > 1000) return 0;
 
     const BuildingProperties *building = kind < 2 ? &residentialZoneBuilding
-        : kind == 2 || kind == 5 ? &industrialZoneBuilding
+        : kind == 2 || bio ? &industrialZoneBuilding
         : kind == 3 ? &coalPowerBuilding : &nuclearPowerBuilding;
     const int size = building->sizeX;
     const int limit = kind == 3 || kind == 4 ? WORLD_W + WORLD_H : 12;
@@ -1344,7 +1347,7 @@ int Micropolis::autoBuild(int kind, int count)
     };
     int built = 0;
     while (built < count) {
-        if (totalFunds < gCostOf[building->tool]) {
+        if (!autonomous && totalFunds < gCostOf[building->tool]) {
             autoBuildFailure = 1;
             break;
         }
@@ -1464,7 +1467,7 @@ int Micropolis::autoBuild(int kind, int count)
                             if (!freeTerrain(map[px][py])) { room = false; break; }
                     if (!room) continue;
                 }
-                if (totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) {
+                if (!autonomous && totalFunds < gCostOf[building->tool] + clearing + (vacantZone ? 1 : 0)) {
                     fundingBlocked = true;
                     continue;
                 }
@@ -1641,25 +1644,30 @@ int Micropolis::autoBuild(int kind, int count)
                 continue;
             // Clearing, both routes, and the building share one transaction.
             // Failed tools or funding leave the entire world untouched.
-            if (!effects.modifyIfEnoughFunding()) {
+            if (autonomous) {
+                effects.waiveCost();
+                effects.modifyWorld();
+            } else if (!effects.modifyIfEnoughFunding()) {
                 fundingBlocked = true;
                 continue;
             }
-            if (kind < 3 || kind == 5) {
-                setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : kind == 5 ? 4 : 3);
-                if (kind == 5) bioPlants.push_back({centerX, centerY, 0.0, 0.0, {}});
-                if (kind == 5) {
+            if (kind < 3 || bio) {
+                setZoneOwner(centerX, centerY, kind == 0 ? 1 : kind == 1 ? 2 : bio ? autonomous ? 5 : 4 : 3);
+                if (bio) bioPlants.push_back({centerX, centerY, 0.0, 0.0, {}, (Byte)(autonomous ? 5 : 4)});
+                if (bio) {
                     for (int px = candidate.x; px < candidate.x + size; ++px)
                         for (int py = candidate.y; py < candidate.y + size; ++py)
                             map[px][py] &= ~BURNBIT;
                 }
                 if (kind == 1) {
+                    if (params.aiFactionEnabled) ++pendingNewAiZones;
                     for (int px = candidate.x; px < candidate.x + size; ++px)
                         for (int py = candidate.y; py < candidate.y + size; ++py)
                             aiHouseMap.worldSet(px, py, 0);
                 }
             }
             ++built;
+            if (bio && params.aiFactionEnabled) refreshPods();
             placed = true;
             break;
         }

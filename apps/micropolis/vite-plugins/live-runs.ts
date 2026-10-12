@@ -15,7 +15,10 @@ import { modelAuth, tokenScope } from '../cli/model/authentication';
 const ALLOWED_SETTINGS = ['CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', 'CITY_MODEL_KEY', 'CITY_MODEL_ASSIGNMENT',
 	'CITY_MODEL_RUN', 'CITY_MODEL_TIMEOUT_MS', 'CITY_MODEL_MAX_RETRIES', 'CITY_MODEL_MAX_TOKENS',
 	'CITY_MODEL_REASONING_EFFORT', 'CITY_MODEL_API', 'CITY_MODEL_AUTH', 'CITY_MODEL_TOKEN_SCOPE',
-	'CITY_MODEL_START_MAP', 'CITY_MODEL_SEED', 'CITY_MODEL_PROFILE'];
+	'CITY_MODEL_START_MAP', 'CITY_MODEL_SEED', 'CITY_MODEL_PROFILE', 'CITY_MODEL_MODEL',
+	'CITY_JUDGE_ENDPOINT', 'CITY_JUDGE_NAME', 'CITY_JUDGE_MODEL', 'CITY_JUDGE_KEY',
+	'CITY_JUDGE_API', 'CITY_JUDGE_AUTH', 'CITY_JUDGE_TOKEN_SCOPE', 'CITY_JUDGE_TIMEOUT_MS',
+	'CITY_JUDGE_MAX_RETRIES', 'CITY_JUDGE_MAX_TOKENS', 'CITY_JUDGE_REASONING_EFFORT'];
 
 // Keep the process events explicit even if a consuming TS project has incomplete Node event overloads.
 type RunnerChild = ChildProcess & {
@@ -42,8 +45,13 @@ export function readModelConfig(file: string): Record<string, string> {
 		config[name] = value;
 	}
 	const auth = modelAuth(config.CITY_MODEL_AUTH);
+	if (config.CITY_MODEL_MODEL) {
+		if (config.CITY_MODEL_NAME && config.CITY_MODEL_NAME !== config.CITY_MODEL_MODEL)
+			throw new Error('CITY_MODEL_NAME und CITY_MODEL_MODEL müssen übereinstimmen.');
+		config.CITY_MODEL_NAME = config.CITY_MODEL_MODEL;
+	}
 	if (config.CITY_MODEL_PROFILE && !isSimulationProfile(config.CITY_MODEL_PROFILE))
-		throw new Error('CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe oder v3-pods sein.');
+		throw new Error('CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe, v3-pods oder v4-fraktion sein.');
 	tokenScope(config.CITY_MODEL_TOKEN_SCOPE);
 	for (const name of ['CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', ...(auth === 'api-key' ? ['CITY_MODEL_KEY'] : [])]) {
 		if (!config[name]?.trim()) throw new Error(`Bitte ${name} in .env.city-model ausfüllen.`);
@@ -84,8 +92,8 @@ export function parseStartRequest(value: unknown): StartRequest {
 	if (body.profile !== undefined && !isSimulationProfile(body.profile)) throw new Error('Ungültiges Profil.');
 	if (body.scenario !== undefined && body.scenario !== 'haushaltskrise' && body.scenario !== 'stromkrise')
 		throw new Error('Ungültiges Szenario.');
-	if (body.scenario === 'stromkrise' && (body.profile !== 'v3-pods' || startMap !== 'haight'))
-		throw new Error('Stromkrise benötigt Haight und v3-pods.');
+	if (body.scenario === 'stromkrise' && (!['v3-pods', 'v4-fraktion'].includes(String(body.profile)) || startMap !== 'haight'))
+		throw new Error('Stromkrise benötigt Haight und v3-pods oder v4-fraktion.');
 	if (body.startMap !== undefined && !startMap) throw new Error('Ungültige Startkarte.');
 	if (seed !== undefined && (typeof seed !== 'number' || !Number.isSafeInteger(seed) || seed < 0 || seed > 0x7fffffff))
 		throw new Error('Der Startwert muss eine ganze Zahl von 0 bis 2147483647 sein.');

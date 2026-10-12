@@ -14,7 +14,9 @@ import { runCity, type YearRecord } from '../model/runner';
 import type { ChatAdapter } from '../model/adapter';
 import { readModelConfig, parseStartRequest } from '../../vite-plugins/live-runs';
 import { writeFileSync, unlinkSync } from 'node:fs';
-import { canonicalProtocolText, CURRENT_ENGINE_ID, engineCompatibility } from '../../src/lib/city-run/compatibility';
+import { canonicalProtocolText, engineCompatibility } from '../../src/lib/city-run/compatibility';
+
+const calibratedEngineId = 'sha256:eb85fbed5328433b3172d213f0151984d37c785f84c4a4db4f54ca395e60475b';
 
 async function plant(capacity = 100) {
  const s = await createCitySession();
@@ -32,7 +34,7 @@ describe('v3 profile surfaces', () => {
  it('records resident-intake stage 2 no later than the year after the first pod deaths', () => {
   const measured = JSON.parse(readFileSync(fileURLToPath(new URL(
    '../../../../docs/results/v3-pods-calibrated-unrest.json', import.meta.url)), 'utf8'));
-  expect(measured.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(measured.engineId).toBe(calibratedEngineId);
   expect(measured.formulaVersion).toBe('v2-unruhe-2026.10-human-decline-automation-v1');
   expect(measured.firstDeathYear).not.toBeNull();
   expect(measured.firstStage2Year).not.toBeNull();
@@ -341,7 +343,7 @@ describe('actual bio cohorts', () => {
   expect(summary.events.some(e => e.kind === 'bio')).toBe(true);
   const measured = JSON.parse(readFileSync(fileURLToPath(new URL(
    '../../../../docs/results/v3-pods-calibrated-unrest.json', import.meta.url)), 'utf8'));
-  expect(measured.engineId).toBe(CURRENT_ENGINE_ID);
+  expect(measured.engineId).toBe(calibratedEngineId);
   const s = await createCitySession();
   try {
    await setupScenario(s.dispatch, { startMap: 'haight', seed: 42, profile: 'v3-pods', scenario: 'stromkrise' });

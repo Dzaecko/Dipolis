@@ -600,18 +600,25 @@ int Micropolis::getBioPlantCount() const
 {
     int count = 0;
     for (const auto &plant : bioPlants)
-        if ((map[plant.x][plant.y] & ZONEBIT) && ownerMap.worldGet(plant.x, plant.y) == 4) ++count;
+        if ((map[plant.x][plant.y] & ZONEBIT) && ownerMap.worldGet(plant.x, plant.y) == plant.owner) ++count;
     return count;
 }
 
 void Micropolis::refreshPods()
 {
     boundHumans = immatureBornInPods = bornPodOccupants = 0;
+    adminBoundHumans = aiBoundHumans = adminBioPlantCount = aiBioPlantCount = 0;
     plantPower = plantFoodDemand = podFoodStock = 0.0;
     for (const auto &plant : bioPlants) {
+        if ((map[plant.x][plant.y] & ZONEBIT) && ownerMap.worldGet(plant.x, plant.y) == plant.owner) {
+            if (plant.owner == 5) ++aiBioPlantCount;
+            else ++adminBioPlantCount;
+        }
         podFoodStock += plant.foodStock;
         for (const auto &cohort : plant.cohorts) {
             boundHumans += cohort.count;
+            if (cohort.owner == 5) aiBoundHumans += cohort.count;
+            else adminBoundHumans += cohort.count;
             if (cohort.born) {
                 bornPodOccupants += cohort.count;
                 if (cohort.age < params.podMaturityMonths) immatureBornInPods += cohort.count;
@@ -624,7 +631,75 @@ void Micropolis::refreshPods()
     }
     plantFoodDemand = boundHumans * params.podFoodPerHuman;
     bornInPodsFraction = boundHumans ? (double)bornPodOccupants / boundHumans : 0.0;
-    suspendedAi = aiPop * aiThrottle;
+    suspendedAi = params.aiFactionEnabled && aiStrikeStage == 2 ? aiPop : aiPop * aiThrottle;
+}
+
+double Micropolis::aiWorkFactor() const
+{
+    return params.aiFactionEnabled && aiStrikeStage == 2 ? 0.0 :
+        params.podsEnabled ? 1.0 - aiThrottle : 1.0;
+}
+
+double Micropolis::aiEconomicActivity() const
+{
+    return params.aiFactionEnabled && aiStrikeStage == 2 ? aiStrikeEconomicActivity : 1.0;
+}
+
+void Micropolis::updateAiFaction()
+{
+    if (!params.aiFactionEnabled) return;
+    int lots = 0, burningLots = 0;
+    for (int x = 1; x < WORLD_W - 1; ++x)
+        for (int y = 1; y < WORLD_H - 1; ++y) {
+            if (ownerMap.worldGet(x, y) != 2) continue;
+            ++lots;
+            bool burning = false;
+            for (int px = x - 1; px <= x + 1; ++px)
+                for (int py = y - 1; py <= y + 1; ++py) {
+                    const MapTile tile = map[px][py] & LOMASK;
+                    if (tile >= FIRE && tile <= LASTFIRE) burning = true;
+                }
+            if (burning) ++burningLots;
+        }
+    newAiZones = pendingNewAiZones;
+    pendingNewAiZones = 0;
+    const int affectedLots = max(burningLots, (int)pendingAiFireLots);
+    const double fireFraction = (lots || affectedLots) ? (double)affectedLots / max(lots, affectedLots) : 0.0;
+    pendingAiFireLots = 0;
+    const double shortage = 1.0 - clamp((double)aiCoverage, 0.0, 1.0);
+    const double target = clamp(100.0 - params.aiCoverageWeight * shortage -
+        params.aiThrottleWeight * aiThrottle -
+        params.aiFireWeight * fireFraction -
+        params.aiHumanPriorityWeight * (params.powerPriority == 1 ? shortage : 0.0) +
+        params.aiNewZoneWeight * min(1.0, (double)newAiZones), 0.0, 100.0);
+    aiSatisfaction += params.aiSatisfactionInertia * (target - aiSatisfaction);
+    aiSatisfaction = clamp(aiSatisfaction, 0.0, 100.0);
+    aiStrikeStage = aiSatisfaction < 20.0 ? 2 : aiSatisfaction < 40.0 ? 1 : 0;
+    // A map scan clears aiPop and rebuilds it piecemeal. Snapshot the labor
+    // fraction monthly so early-scanned farms get the same strike as later lots.
+    const double jobs = max(0, (int)comHist[1] + (int)indHist[1]);
+    const double supply = aiPop * (1.0 - aiThrottle) * params.jobsPerAiPop;
+    aiStrikeEconomicActivity = max(0.0, 1.0 - (jobs > 0.0
+        ? min(supply / jobs, (double)min(params.maxAutomation, params.automationLimit)) : 0.0));
+    if (aiStrikeStage == 2) {
+        ++pendingAiStrikeMonths;
+        automatedJobs = automationShare = 0.0f;
+    }
+
+    aiAutonomyPermitted = false;
+    if (!params.aiAutonomousPods || !params.podsEnabled || aiPop <= 0) return;
+    const bool scarce = powerReserve < params.aiReserveHigh;
+    aiShortageMonths = scarce ? aiShortageMonths + 1 : 0;
+    aiNoUnemployedMonths = scarce && aiBioPlantCount > 0 && floor(resPop * unemploymentRate) <= 0
+        ? aiNoUnemployedMonths + 1 : 0;
+    // One engine-RNG draw gates every autonomous action in this month.
+    const int enforcement = clamp((int)policeEffect, 0, MAX_POLICE_STATION_EFFECT);
+    aiAutonomyPermitted = podsPolicy == 0 || enforcement == 0 ||
+        (enforcement < MAX_POLICE_STATION_EFFECT && getAiRandom(MAX_POLICE_STATION_EFFECT - 1) >= enforcement);
+    if (!aiAutonomyPermitted || !scarce) return;
+    if (aiNoUnemployedMonths >= 12) aiPodBreeding = true;
+    if (aiShortageMonths >= 12 && podMonth - aiLastPlantMonth >= 12 && autoBuild(6, 1) == 1)
+        aiLastPlantMonth = podMonth;
 }
 
 void Micropolis::updatePods()
@@ -632,9 +707,13 @@ void Micropolis::updatePods()
     ++podMonth;
     // Empty demolished plants disappear; occupied plants cannot be demolished.
     for (auto it = bioPlants.begin(); it != bioPlants.end();) {
-        if (it->cohorts.empty() && (!(map[it->x][it->y] & ZONEBIT) || ownerMap.worldGet(it->x, it->y) != 4))
+        if (it->cohorts.empty() && (!(map[it->x][it->y] & ZONEBIT) || ownerMap.worldGet(it->x, it->y) != it->owner))
             it = bioPlants.erase(it);
         else ++it;
+    }
+    if (params.aiFactionEnabled) {
+        refreshPods();
+        updateAiFaction();
     }
     int unemployedAvailable = (int)floor(resPop * unemploymentRate);
     double consumedRecycled = 0.0;
@@ -664,6 +743,10 @@ void Micropolis::updatePods()
             if (it->age >= lifetime) {
                 pendingPodDeaths += it->count;
                 diedInPodsCumulative += it->count;
+                if (it->owner == 5) {
+                    pendingAiPodDeaths += it->count;
+                    aiDiedInPodsCumulative += it->count;
+                } else adminDiedInPodsCumulative += it->count;
                 plant.foodStock += it->count * params.recycledFoodPerHuman;
                 occupants -= it->count;
                 it = plant.cohorts.erase(it);
@@ -671,7 +754,8 @@ void Micropolis::updatePods()
         }
         int admitted = 0;
         int free = max(0, params.podsPerPlant - occupants);
-        int intakeBudget = podIntake == 1 ? min(free, unemployedAvailable) : podIntake == 2 ? free : 0;
+        const int intake = plant.owner == 5 ? (aiAutonomyPermitted ? 1 : 0) : podIntake;
+        int intakeBudget = intake == 1 ? min(free, unemployedAvailable) : intake == 2 ? free : 0;
         for (int x = 1; x < WORLD_W - 1 && intakeBudget > 0; ++x)
             for (int y = 1; y < WORLD_H - 1 && intakeBudget > 0; ++y) {
                 const MapValue tile = map[x][y];
@@ -688,7 +772,7 @@ void Micropolis::updatePods()
                 intakeBudget -= taken;
             }
         if (admitted) {
-            plant.cohorts.push_back({podMonth, admitted, false, 0.0});
+            plant.cohorts.push_back({podMonth, admitted, false, 0.0, plant.owner});
             occupants += admitted;
             resPop = max(0, (int)resPop - admitted);
             totalPop = (short)((float)resPop / 8.0f + comPop + indPop);
@@ -697,17 +781,25 @@ void Micropolis::updatePods()
             unemployedAvailable = max(0, unemployedAvailable - admitted);
             pendingAdmissions += admitted;
             admissionsCumulative += admitted;
+            if (plant.owner == 5) {
+                pendingAiAdmissions += admitted;
+                aiAdmissionsCumulative += admitted;
+            } else adminAdmissionsCumulative += admitted;
         }
-        if (podBreeding) {
+        if (plant.owner == 5 ? aiPodBreeding && aiAutonomyPermitted : podBreeding) {
             plant.birthCarry += occupants * params.podBirthRate;
             const int requested = (int)floor(plant.birthCarry + 1e-12);
             plant.birthCarry -= requested;
             const int births = min(requested, max(0, params.podsPerPlant - occupants));
             if (births) {
-                plant.cohorts.push_back({podMonth, births, true, 0.0});
+                plant.cohorts.push_back({podMonth, births, true, 0.0, plant.owner});
                 occupants += births;
                 pendingPodBirths += births;
                 bornInPodsCumulative += births;
+                if (plant.owner == 5) {
+                    pendingAiPodBirths += births;
+                    aiBornInPodsCumulative += births;
+                } else adminBornInPodsCumulative += births;
             }
         }
         const double demand = occupants * params.podFoodPerHuman;
@@ -775,7 +867,7 @@ void Micropolis::setValves()
     totalPop = (short)(normalizedResPop + comPop + indPop);
 
     const float jobs = max(0.0f, (float)comHist[1] + (float)indHist[1]);
-    const float aiJobSupply = (float)(aiPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0)) * params.jobsPerAiPop;
+    const float aiJobSupply = (float)(aiPop * aiWorkFactor()) * params.jobsPerAiPop;
     const float automationJobs = jobs > 0.0f
         ? min(aiJobSupply, (params.unrestEnabled ? min(params.maxAutomation, params.automationLimit) : params.maxAutomation) * jobs)
         : 0.0f;
@@ -1184,12 +1276,14 @@ void Micropolis::collectTax()
         }
         automationTaxFund = 0;
         automatedJobs = 0.0f;
-        if (params.unrestEnabled) {
+        if (params.unrestEnabled || params.aiFactionEnabled) {
             const float jobs = max(0.0f, (float)comHist[1] + (float)indHist[1]);
-            automatedJobs = min((float)(aiPop * (params.podsEnabled ? 1.0 - aiThrottle : 1.0)) * params.jobsPerAiPop,
+            automatedJobs = min((float)(aiPop * aiWorkFactor()) * params.jobsPerAiPop,
                 min(params.maxAutomation, params.automationLimit) * jobs);
             automationTaxFund = (Quad)min((long double)std::numeric_limits<Quad>::max(),
                 (long double)automatedJobs * params.automationYieldPerJob * cityTax);
+            if (params.aiFactionEnabled && aiStrikeStage == 1)
+                automationTaxFund = (Quad)(automationTaxFund * params.aiWorkToRuleTaxFactor);
             sabotageFires = pendingSabotageFires;
             damagedAiZones = pendingDamagedAiZones;
             damagedPowerPlants = pendingDamagedPowerPlants;
@@ -1200,7 +1294,7 @@ void Micropolis::collectTax()
             for (int i = 0; i < 3; ++i) pendingStageMonths[i] = 0;
         }
         const long double aiTaxAmount = (long double)aiPop * params.aiYieldPerPop * cityTax *
-            (params.podsEnabled ? 1.0 - aiThrottle : 1.0);
+            aiWorkFactor();
         if (aiTaxAmount > (long double)std::numeric_limits<Quad>::max()) {
             aiTaxFund = std::numeric_limits<Quad>::max();
         } else if (aiTaxAmount < (long double)std::numeric_limits<Quad>::min()) {
@@ -1231,6 +1325,15 @@ void Micropolis::collectTax()
             admissions = pendingAdmissions;
             diedInPods = pendingPodDeaths;
             bornInPods = pendingPodBirths;
+            aiAdmissions = pendingAiAdmissions;
+            aiDiedInPods = pendingAiPodDeaths;
+            aiBornInPods = pendingAiPodBirths;
+            adminAdmissions = admissions - aiAdmissions;
+            adminDiedInPods = diedInPods - aiDiedInPods;
+            adminBornInPods = bornInPods - aiBornInPods;
+            pendingAiAdmissions = pendingAiPodDeaths = pendingAiPodBirths = 0;
+            aiStrikeMonths = pendingAiStrikeMonths;
+            pendingAiStrikeMonths = 0;
             pendingAdmissions = pendingPodDeaths = pendingPodBirths = 0;
         }
 
@@ -1369,8 +1472,10 @@ void Micropolis::mapScan(int x1, int x2)
             }
             const bool farmCenter = (mapVal & ZONEBIT) &&
                 (tile == INDCLR || (tile >= IZB && tile <= IZB + 7 * 9 && ((tile - IZB) % 9) == 0));
+            if (params.aiFactionEnabled && owner == 2 && tile >= FIRE && tile <= LASTFIRE)
+                ++pendingAiFireLots;
             if ((owner == 1 || owner == 2) && !residentialCenter) ownerMap.worldSet(x, y, 0);
-            if ((owner == 3 || owner == 4) && !farmCenter) ownerMap.worldSet(x, y, 0);
+            if ((owner >= 3 && owner <= 5) && !farmCenter) ownerMap.worldSet(x, y, 0);
 
             if (tile == DIRT) {
                 continue;

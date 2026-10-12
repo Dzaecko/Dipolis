@@ -218,6 +218,7 @@ public:
     inline int getCost() const;
 
     inline void addCost(int amount);
+    inline void waiveCost() { cost = 0; }
     void setMapValue(const Position& pos, MapValue mapVal);
     inline void setMapValue(int x, int y, MapValue mapVal);
     inline void addFrontendMessage(FrontendMessage *msg);

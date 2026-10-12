@@ -89,7 +89,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmplbp5xqpz.js
+// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpk5_26btc.js
 
   if (!Module['expectedDataFileDownloads']) Module['expectedDataFileDownloads'] = 0;
   Module['expectedDataFileDownloads']++;
@@ -108,7 +108,7 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build/production/micropolisengine.data';
+      var PACKAGE_NAME = '/mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/build/production/micropolisengine.data';
       var REMOTE_PACKAGE_BASE = 'micropolisengine.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
       var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
@@ -197,9 +197,9 @@ Module['FS_createPath']("/", "cities", true, true);
         Module['FS_createDataFile'](name, null, data, true, true, true);
         Module['removeRunDependency'](`fp ${name}`);
           }
-          Module['removeRunDependency']('datafile_build/production/micropolisengine.data');
+          Module['removeRunDependency']('datafile_/mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/build/production/micropolisengine.data');
       }
-      Module['addRunDependency']('datafile_build/production/micropolisengine.data');
+      Module['addRunDependency']('datafile_/mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/build/production/micropolisengine.data');
 
       if (!Module['preloadResults']) Module['preloadResults'] = {};
 
@@ -222,21 +222,21 @@ Module['FS_createPath']("/", "cities", true, true);
 
   })();
 
-// end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmplbp5xqpz.js
-// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpz7xqryol.js
+// end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpk5_26btc.js
+// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpmdnw_j5e.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if ((typeof ENVIRONMENT_IS_WASM_WORKER != 'undefined' && ENVIRONMENT_IS_WASM_WORKER) || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD) || (typeof ENVIRONMENT_IS_AUDIO_WORKLET != 'undefined' && ENVIRONMENT_IS_AUDIO_WORKLET)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpz7xqryol.js
-// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmppdm_ukow.js
+  // end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpmdnw_j5e.js
+// include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpvf1l0k6c.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmppdm_ukow.js
+  // end include: /mnt/c/Users/oliverdzaeck/repos/Dipolis/packages/micropolis-engine/.compiler-scratch/tmpvf1l0k6c.js
 
 
 var arguments_ = [];

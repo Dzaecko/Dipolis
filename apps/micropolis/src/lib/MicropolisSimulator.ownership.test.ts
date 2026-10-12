@@ -1,11 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { AI_TILESET, FARM_TILESET, BIO_TILESET, HUMAN_TILESET, MicropolisSimulator } from './MicropolisSimulator';
+import { AI_TILESET, AI_BIO_TILESET, FARM_TILESET, BIO_TILESET, HUMAN_TILESET, MICROPOLIS_TILESET_COUNT, MicropolisSimulator } from './MicropolisSimulator';
 import { createNoopJsCallback } from './wasm/callbacks';
 import { loadMicropolisMainModule } from './wasm/node';
 
 const centerIndex = (x: number, y: number, height: number) => x * height + y;
 
 describe('Micropolis owner tileset synchronization', () => {
+	it('distinguishes AI-owned pods from administrative pods across their entire footprint', () => {
+		const width = 12, height = 6, memory = new ArrayBuffer(width * height), owners = new Uint8Array(memory);
+		const simulator = new MicropolisSimulator();
+		simulator.micropolisengine = {
+			WORLD_W: width, WORLD_H: height, wasmMemory: { buffer: memory },
+			MapTileBits: { ZONEBIT: { value: 0x400 }, LOMASK: { value: 0x3ff } },
+			Tiles: { HOSPITAL: { value: 409 }, INDCLR: { value: 616 }, IZB: { value: 625 } },
+		} as unknown as NonNullable<MicropolisSimulator['micropolisengine']>;
+		simulator.micropolis = {
+			getOwnerMapAddress: () => 0, getOwnerMapSize: () => owners.length,
+		} as unknown as NonNullable<MicropolisSimulator['micropolis']>;
+		simulator.mapData = new Uint16Array(width * height);
+		simulator.mopData = new Uint16Array(width * height).fill(0x1200);
+		for (const [x, owner] of [[2, 4], [7, 5]]) {
+			simulator.mapData[centerIndex(x, 2, height)] = 616 | 0x400;
+			owners[centerIndex(x, 2, height)] = owner;
+		}
+		simulator.syncOwnerToMop();
+		expect(AI_BIO_TILESET).not.toBe(BIO_TILESET);
+		expect(MICROPOLIS_TILESET_COUNT).toBeGreaterThan(AI_BIO_TILESET);
+		simulator.setHumanTileSet(AI_BIO_TILESET);
+		expect(simulator.humanTileSet).not.toBe(AI_BIO_TILESET);
+		for (const [x, tileset] of [[2, BIO_TILESET], [7, AI_BIO_TILESET]])
+			for (let dx = -1; dx <= 1; ++dx) for (let dy = -1; dy <= 1; ++dy)
+				expect(simulator.mopData[centerIndex(x + dx, 2 + dy, height)]).toBe(0x1200 | tileset);
+		owners[centerIndex(7, 2, height)] = 0;
+		simulator.syncOwnerToMop();
+		expect(simulator.mopData[centerIndex(7, 2, height)] & 0xff).toBe(HUMAN_TILESET);
+	});
+
 	it('colors all nine AI-zone tiles and restores the human tileset after demolition and map scan', async () => {
 		const engine = await loadMicropolisMainModule();
 		const micropolis = new engine.Micropolis();

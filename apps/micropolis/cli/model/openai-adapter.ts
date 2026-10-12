@@ -453,7 +453,7 @@ export function createEnvironmentAdapter(env: Environment = process.env): ChatAd
 	return new OpenAIAdapter({
 		endpoint: required(env.CITY_MODEL_ENDPOINT, 'CITY_MODEL_ENDPOINT'),
 		api: env.CITY_MODEL_API as OpenAIAdapterOptions['api'],
-		model: required(env.CITY_MODEL_NAME, 'CITY_MODEL_NAME'),
+		model: required(env.CITY_MODEL_MODEL ?? env.CITY_MODEL_NAME, 'CITY_MODEL_NAME'),
 		key: auth === 'api-key' ? required(env.CITY_MODEL_KEY, 'CITY_MODEL_KEY') : undefined,
 		tokenProvider: provider,
 		timeoutMs: optionalInteger(env, 'CITY_MODEL_TIMEOUT_MS', 300_000),

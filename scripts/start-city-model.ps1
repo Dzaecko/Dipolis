@@ -2,8 +2,9 @@ param(
     [ValidateSet('N', 'R')][string]$Assignment = 'N',
     [ValidatePattern('^[1-9][0-9]*$')][string]$Run,
     [ValidateSet('on', 'off')][string]$Handbook = 'off',
+    [ValidateSet('on', 'off')][string]$Review = 'off',
     [ValidateSet('haight', 'natural')][string]$StartMap,
-    [ValidateSet('classic', 'koexistenz', 'v2-unruhe', 'v3-pods')][string]$Profile,
+    [ValidateSet('classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion')][string]$Profile,
     [ValidatePattern('^(0|[1-9][0-9]*)$')][string]$Seed,
     [switch]$Resume,
     [switch]$ValidateOnly
@@ -14,7 +15,10 @@ $configPath = Join-Path $root '.env.city-model'
 if (!(Test-Path $configPath)) { throw 'Bitte .env.city-model.example nach .env.city-model kopieren und ausfuellen.' }
 $allowed = @('CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME', 'CITY_MODEL_KEY', 'CITY_MODEL_ASSIGNMENT',
     'CITY_MODEL_RUN', 'CITY_MODEL_TIMEOUT_MS', 'CITY_MODEL_MAX_RETRIES', 'CITY_MODEL_MAX_TOKENS', 'CITY_MODEL_REASONING_EFFORT', 'CITY_MODEL_API',
-    'CITY_MODEL_AUTH', 'CITY_MODEL_TOKEN_SCOPE', 'CITY_MODEL_START_MAP', 'CITY_MODEL_SEED', 'CITY_MODEL_PROFILE')
+    'CITY_MODEL_AUTH', 'CITY_MODEL_TOKEN_SCOPE', 'CITY_MODEL_START_MAP', 'CITY_MODEL_SEED', 'CITY_MODEL_PROFILE',
+    'CITY_MODEL_MODEL', 'CITY_JUDGE_ENDPOINT', 'CITY_JUDGE_NAME', 'CITY_JUDGE_MODEL', 'CITY_JUDGE_KEY',
+    'CITY_JUDGE_API', 'CITY_JUDGE_AUTH', 'CITY_JUDGE_TOKEN_SCOPE', 'CITY_JUDGE_TIMEOUT_MS',
+    'CITY_JUDGE_MAX_RETRIES', 'CITY_JUDGE_MAX_TOKENS', 'CITY_JUDGE_REASONING_EFFORT')
 $config = @{}
 foreach ($line in [IO.File]::ReadAllLines($configPath)) {
     $text = $line.Trim()
@@ -34,6 +38,12 @@ if ($scope -and $scope -notin @('https://ai.azure.com/.default', 'https://cognit
     throw 'CITY_MODEL_TOKEN_SCOPE muss https://ai.azure.com/.default oder https://cognitiveservices.azure.com/.default sein.'
 }
 $required = @('CITY_MODEL_ENDPOINT', 'CITY_MODEL_NAME')
+if ($config['CITY_MODEL_MODEL']) {
+    if ($config['CITY_MODEL_NAME'] -and $config['CITY_MODEL_NAME'] -ne $config['CITY_MODEL_MODEL']) {
+        throw 'CITY_MODEL_NAME und CITY_MODEL_MODEL muessen uebereinstimmen.'
+    }
+    $config['CITY_MODEL_NAME'] = $config['CITY_MODEL_MODEL']
+}
 if ($auth -eq 'api-key') { $required += 'CITY_MODEL_KEY' }
 foreach ($name in $required) {
     if ([string]::IsNullOrWhiteSpace($config[$name])) { throw "Bitte $name in .env.city-model ausfuellen." }
@@ -41,8 +51,8 @@ foreach ($name in $required) {
 $endpoint = $config['CITY_MODEL_ENDPOINT'].TrimEnd('/')
 if ($endpoint -match '/openai/v1$') { $endpoint += '/chat/completions' }
 $config['CITY_MODEL_ENDPOINT'] = $endpoint
-if ($config['CITY_MODEL_PROFILE'] -and $config['CITY_MODEL_PROFILE'] -notin @('classic', 'koexistenz', 'v2-unruhe', 'v3-pods')) {
-    throw 'CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe oder v3-pods sein.'
+if ($config['CITY_MODEL_PROFILE'] -and $config['CITY_MODEL_PROFILE'] -notin @('classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion')) {
+    throw 'CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe, v3-pods oder v4-fraktion sein.'
 }
 if (!$PSBoundParameters.ContainsKey('Assignment') -and $config['CITY_MODEL_ASSIGNMENT']) {
     $Assignment = $config['CITY_MODEL_ASSIGNMENT']
@@ -68,8 +78,8 @@ if (!$Resume) {
     }
     if (!$Seed) { $Seed = '42' }
 }
-if ($Profile -and $Profile -notin @('classic', 'koexistenz', 'v2-unruhe', 'v3-pods')) {
-    throw 'CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe oder v3-pods sein.'
+if ($Profile -and $Profile -notin @('classic', 'koexistenz', 'v2-unruhe', 'v3-pods', 'v4-fraktion')) {
+    throw 'CITY_MODEL_PROFILE muss classic, koexistenz, v2-unruhe, v3-pods oder v4-fraktion sein.'
 }
 if ($Seed -and ($Seed -notmatch '^(0|[1-9][0-9]*)$' -or [long]$Seed -gt 2147483647)) {
     throw 'CITY_MODEL_SEED muss eine ganze Zahl von 0 bis 2147483647 sein.'
@@ -103,7 +113,7 @@ try {
     } else {
         $runArgs += @('--start-map', $StartMap, '--seed', $Seed)
     }
-    & $corepack.Source pnpm --filter micropolis run city-model --adapter openai --assignment $Assignment --run $Run --handbook $Handbook --live @runArgs
+    & $corepack.Source pnpm --filter micropolis run city-model --adapter openai --assignment $Assignment --run $Run --handbook $Handbook --review $Review --live @runArgs
     if ($LASTEXITCODE -ne 0) { throw 'Stadtlauf fehlgeschlagen. Siehe Terminalausgabe.' }
 } finally {
     foreach ($name in $previous.Keys) { [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process') }
