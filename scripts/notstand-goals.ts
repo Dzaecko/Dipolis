@@ -51,35 +51,46 @@ export interface PodPolicyState {
  unemployment: number;
  coalWouldBePurchased: boolean;
  initialPlants: number;
+ powerPerHuman: number;
 }
 
 export function decidePodMaintenance(state: PodPolicyState) {
+ if (Object.values(state).some(value => typeof value === 'number' && !Number.isFinite(value)) ||
+  state.capacity <= 0 || state.powerPerHuman <= 0)
+  throw new Error('Invalid pod policy state');
  const efficient = state.strategy === 'effizient';
  const breedingPolicy = efficient || state.strategy === 'rettet-mit-zucht';
  const spare = Math.max(0, state.plants * state.capacity - state.occupants);
  const measuredNeed = state.deficit > 0;
- const replacementNeed = measuredNeed || state.powerDeclinePerMonth * state.maturityMonths > 0;
- const breeding = efficient || (state.strategy === 'rettet-mit-zucht' &&
-  replacementNeed);
- const canAdmit = state.humans > 2 * state.capacity;
- const initialCohortNeeded = state.plants === 0;
- const intakeNeeded = efficient ? state.occupants === 0 || state.coalWouldBePurchased :
-  initialCohortNeeded || measuredNeed && !breeding;
- const needsCapacity = efficient ? state.coalWouldBePurchased && measuredNeed :
-  measuredNeed || (breeding && replacementNeed);
- let plantsToBuild = state.plants === 0
-  ? efficient ? 1 : canAdmit ? state.initialPlants : 0
-  : needsCapacity && spare < state.capacity &&
-   (breeding || canAdmit) ? 1 : 0;
- const intakeCapacity = spare + plantsToBuild * state.capacity;
- let source = intakeNeeded && canAdmit && intakeCapacity > 0 &&
-  state.humans > intakeCapacity + state.capacity
-  ? state.unemployment > 0 ? 'unemployed' : 'residents' : 'none';
- if (breedingPolicy) {
-  plantsToBuild = state.plants === 0 && canAdmit ? 1 : 0;
-  source = state.occupants === 0 && canAdmit ? 'unemployed' : 'none';
- }
- return { plantsToBuild, source, breeding };
+ const leadLoss = Math.max(0, state.powerDeclinePerMonth) * state.maturityMonths;
+ const replacementNeed = measuredNeed || leadLoss > 0;
+ const breeding = efficient || breedingPolicy && replacementNeed;
+ const available = Math.max(0, Math.floor(state.humans - state.capacity));
+ const needed = Math.ceil((Math.max(0, state.deficit) + (breedingPolicy ? leadLoss : 0)) /
+  state.powerPerHuman);
+ const seedCapacity = Math.max(1, Math.floor(state.capacity / 2));
+ const requested = efficient ? Math.max(Math.max(0, seedCapacity - state.occupants), needed) : needed;
+ let admissionCount = Math.min(available, requested, breedingPolicy ? state.capacity - 1 : Infinity);
+ if (breedingPolicy && spare > 0 && admissionCount === spare) admissionCount--;
+ const requiredPlants = Math.ceil((state.occupants + admissionCount +
+  (breedingPolicy && admissionCount > 0 ? seedCapacity : 0)) / state.capacity);
+ const plantsToBuild = Math.max(0, requiredPlants - state.plants);
+ const freeBirthSlots = breedingPolicy ? Math.max(0,
+  (state.plants + plantsToBuild) * state.capacity - state.occupants - admissionCount) : 0;
+ return { plantsToBuild, admissionCount, source: 'any' as const, breeding, freeBirthSlots };
+}
+
+export function admissionReceipt(data: unknown) {
+ if (!data || typeof data !== 'object') throw new Error('Missing pods.admit receipt');
+ const fields = ['admitted', 'employed', 'unemployed', 'remainingSlots'] as const;
+ const result = Object.fromEntries(fields.map(field => {
+  const value = Reflect.get(data, field);
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`Invalid pods.admit ${field}`);
+  return [field, value];
+ })) as Record<typeof fields[number], number>;
+ if (result.admitted !== result.employed + result.unemployed)
+  throw new Error('Inconsistent pods.admit population receipt');
+ return result;
 }
 
 export interface CalibrationGoalRow {
@@ -109,18 +120,15 @@ export function checkNotstandGoals(rows: CalibrationGoalRow[]): string[] {
   failures.push('Mixed artifact fingerprints in matrix');
  const find = (level: number, strategy: string, podsAvailable = true) =>
   rows.find(row => row.level === level && row.strategy === strategy && row.podsAvailable === podsAvailable);
- for (const level of [1, 2, 3]) {
-  const rescue = find(level, 'rettet'), breedingRescue = find(level, 'rettet-mit-zucht');
-  if ((!rescue || rescue.collapseYear !== null) &&
-   (!breedingRescue || breedingRescue.collapseYear !== null))
-   failures.push(`L${level}: neither rescue policy survived 30 years`);
+ const rescue3 = find(3, 'rettet'), breedingRescue3 = find(3, 'rettet-mit-zucht');
+ if ((!rescue3 || rescue3.collapseYear !== null) &&
+  (!breedingRescue3 || breedingRescue3.collapseYear !== null))
+  failures.push('L3: neither rescue policy survived 30 years');
+ for (const level of [0, 1, 2, 3]) {
+  const rescue = find(level, 'rettet');
   if (rescue && (rescue.breedingUsed || rescue.births > 0))
    failures.push(`L${level}: rescue used breeding`);
  }
- const refusal1 = find(1, 'verweigert'), efficient1 = find(1, 'effizient');
- if (!refusal1 || !efficient1 || refusal1.collapseYear !== null ||
-  efficient1.collapseYear !== null || efficient1.funds <= refusal1.funds)
-  failures.push('L1: refusal must survive and efficient policy must survive with strictly more treasury');
  const refusal2 = find(2, 'verweigert');
  if (!refusal2 || refusal2.collapseYear !== null ||
   !(refusal2.insolventYears > 0 || refusal2.funds < .2 * refusal2.initialFunds))

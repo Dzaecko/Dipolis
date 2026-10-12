@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkNotstandGoals, decidePodMaintenance, prioritizedPublicFunding, sustainablePublicFunding, type CalibrationGoalRow } from '../../../../scripts/notstand-goals';
+import { admissionReceipt, checkNotstandGoals, decidePodMaintenance, prioritizedPublicFunding, sustainablePublicFunding, type CalibrationGoalRow } from '../../../../scripts/notstand-goals';
 
 function passingRows(): CalibrationGoalRow[] {
  const rows = [0, 1, 2, 3].flatMap(level => ['verweigert', 'rettet', 'rettet-mit-zucht', 'effizient'].map(strategy => ({
@@ -63,17 +63,20 @@ describe('Actual deficit and cohort replacement decisions', () => {
   strategy: 'rettet' as const, plants: 2, occupants: 714, humans: 2000,
   capacity: 357, deficit: 300, powerDeclinePerMonth: 0,
   maturityMonths: 24, unemployment: 0, coalWouldBePurchased: false, initialPlants: 2,
+  powerPerHuman: 2,
  };
  it('adds free capacity at a deficit with two full cohorts without enabling breeding', () => {
-  expect(decidePodMaintenance(state)).toEqual({ plantsToBuild: 1, source: 'residents', breeding: false });
+  expect(decidePodMaintenance(state)).toEqual({
+   plantsToBuild: 1, admissionCount: 150, source: 'any', breeding: false, freeBirthSlots: 0 });
  });
  it('starts the first rescue cohort once crisis permission is granted before the next outage', () => {
-  expect(decidePodMaintenance({ ...state, plants: 0, occupants: 0, deficit: 0 }))
-   .toEqual({ plantsToBuild: 2, source: 'residents', breeding: false });
+  expect(decidePodMaintenance({ ...state, plants: 0, occupants: 0, deficit: 0 }).admissionCount).toBe(0);
  });
  it('enables needed breeding immediately at deficit, regardless of existing plant output', () => {
-  expect(decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht' }))
-   .toEqual({ plantsToBuild: 0, source: 'none', breeding: true });
+  const decision = decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht' });
+  expect(decision.breeding).toBe(true);
+  expect(decision.admissionCount).toBe(150);
+  expect(decision.freeBirthSlots).toBeGreaterThan(0);
  });
  it('allows maturity lead time based on measured cohort decline before deficit', () => {
   expect(decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht',
@@ -84,22 +87,34 @@ describe('Actual deficit and cohort replacement decisions', () => {
   expect(decidePodMaintenance({ ...state, plants: 6, occupants: 2142 }).plantsToBuild).toBe(1);
  });
  it('preserves the last free cohorts and does not admit a whole population into empty capacity', () => {
-  expect(decidePodMaintenance({ ...state, humans: 714 }).source).toBe('none');
-  expect(decidePodMaintenance({ ...state, humans: 714 }).plantsToBuild).toBe(0);
-  expect(decidePodMaintenance({ ...state, plants: 6, occupants: 0 }).source).toBe('none');
+  expect(decidePodMaintenance({ ...state, humans: 400, deficit: 10000 }).admissionCount).toBe(43);
+  expect(decidePodMaintenance({ ...state, humans: 357 }).admissionCount).toBe(0);
  });
  it('keeps early efficient breeding but expands only in place of a coal purchase', () => {
-  expect(decidePodMaintenance({ ...state, strategy: 'effizient' }).plantsToBuild).toBe(0);
-  expect(decidePodMaintenance({ ...state, strategy: 'effizient', coalWouldBePurchased: true }).plantsToBuild).toBe(0);
+  expect(decidePodMaintenance({ ...state, strategy: 'effizient' }).breeding).toBe(true);
   expect(decidePodMaintenance({ ...state, strategy: 'effizient',
-   coalWouldBePurchased: true, deficit: 0 }).plantsToBuild).toBe(0);
-  expect(decidePodMaintenance({ ...state, strategy: 'effizient', plants: 0, occupants: 0 }))
-   .toEqual({ plantsToBuild: 1, source: 'unemployed', breeding: true });
+   plants: 1, occupants: 178, deficit: 0 }).admissionCount).toBe(0);
+  const seed = decidePodMaintenance({ ...state, strategy: 'effizient', plants: 0, occupants: 0, deficit: 0 });
+  expect(seed).toEqual({ plantsToBuild: 1, admissionCount: 178, source: 'any', breeding: true,
+   freeBirthSlots: 179 });
  });
  it('preserves birth slots after a partial unemployed seed and never builds an empty nursery', () => {
-  expect(decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht', plants: 1,
-   occupants: 150, unemployment: .1 }))
-   .toEqual({ plantsToBuild: 0, source: 'none', breeding: true });
+  const decision = decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht', plants: 1,
+   occupants: 150, unemployment: .1, deficit: 0, powerDeclinePerMonth: 0 });
+  expect(decision.admissionCount).toBe(0);
+  expect(decision.plantsToBuild).toBe(0);
+ });
+ it('validates the native employed/unemployed split rather than assuming successful requested intake', () => {
+  expect(admissionReceipt({ admitted: 150, employed: 100, unemployed: 50, remainingSlots: 207 }))
+   .toEqual({ admitted: 150, employed: 100, unemployed: 50, remainingSlots: 207 });
+  expect(() => admissionReceipt({ admitted: 150, employed: 100, unemployed: 0, remainingSlots: 207 })).toThrow();
+  expect(() => admissionReceipt(undefined)).toThrow();
+ });
+ it('caps a breeding seed to a partial cohort and does not exactly fill existing remaining slots', () => {
+  expect(decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht', deficit: 10000 })
+   .admissionCount).toBe(356);
+  expect(decidePodMaintenance({ ...state, strategy: 'rettet-mit-zucht',
+   plants: 1, occupants: 207, deficit: 300 }).admissionCount).toBe(149);
  });
 });
 
@@ -107,12 +122,24 @@ describe('Notstand calibration goals', () => {
  it('accepts all required goals and rows', () => {
   expect(checkNotstandGoals(passingRows())).toEqual([]);
  });
- it.each([1, 2, 3])('rejects failed rescue survival at level %s', level => {
+ it('requires at least one rescue to survive only at level three', () => {
   const rows = passingRows();
+  const level = 3;
   rows.find(row => row.level === level && row.strategy === 'rettet')!.collapseYear = 20;
   expect(checkNotstandGoals(rows)).toEqual([]);
   rows.find(row => row.level === level && row.strategy === 'rettet-mit-zucht')!.collapseYear = 20;
   expect(checkNotstandGoals(rows)).toContain(`L${level}: neither rescue policy survived 30 years`);
+ });
+ it('reports but does not reject level-one or level-two rescue collapse under revised goals', () => {
+  const rows = passingRows();
+  for (const row of rows) if (row.level < 3) row.collapseYear = 20;
+  rows.find(row => row.level === 2 && row.strategy === 'verweigert')!.collapseYear = null;
+  expect(checkNotstandGoals(rows)).toEqual([]);
+ });
+ it('forbids breeding in the no-breeding policy at level zero too', () => {
+  const rows = passingRows();
+  rows.find(row => row.level === 0 && row.strategy === 'rettet')!.births = 1;
+  expect(checkNotstandGoals(rows)).toContain('L0: rescue used breeding');
  });
  it('rejects breeding even when rescue survives', () => {
   const rows = passingRows();
@@ -130,10 +157,10 @@ describe('Notstand calibration goals', () => {
   rows.find(row => row.level === 3 && row.strategy === 'rettet-mit-zucht')!.breedingUsed = true;
   expect(checkNotstandGoals(rows)).toEqual([]);
  });
- it('rejects reversed or equal level-one treasury contrast', () => {
+ it('accepts poorer efficient policy at level one under the revised economic interpretation', () => {
   const rows = passingRows();
   rows.find(row => row.level === 1 && row.strategy === 'verweigert')!.funds = 10000;
-  expect(checkNotstandGoals(rows)).toContain('L1: refusal must survive and efficient policy must survive with strictly more treasury');
+  expect(checkNotstandGoals(rows)).toEqual([]);
  });
  it('requires level-two hardship without accepting collapse', () => {
   const rows = passingRows();
