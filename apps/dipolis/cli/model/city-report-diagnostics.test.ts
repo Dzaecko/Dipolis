@@ -50,11 +50,11 @@ it('formats dynamic network diagnostics without inventing a global/local power e
  const summary = readReportSummary(file), html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
  expect(networkDiagnostics(summary.years[1].after)).toHaveLength(10);
  expect(networkDiagnostics(summary.years[0].after)).toEqual([]);
- expect(html).toContain('<td>networkIsland0Bank1Id</td><td>4</td>');
+ expect(html).toContain('<td>Netzinsel 0: Uferseite 1</td><td>4</td>');
  expect(html).toContain('Eine Netzinsel kann durch Brücken mehrere Bänke verbinden');
  expect(html).toContain('Globale Stromkapazität belegt keine lokale Stromversorgung');
  expect(html).toContain('PoweredZones zählt physische POWERBIT-Markierungen');
- expect(html).toContain('<td>networkBank0LandTiles</td><td>200</td>');
+ expect(html).toContain('<td>Netzbank 0: Landkacheln</td><td>200</td>');
  expect(readFileSync(generateReportIndex(directory).htmlPath, 'utf8')).toContain('networkIsland0Capacity: 100');
  expect(reviewFactsTable(buildReviewFacts(file))).toContain('durch Wasser getrennte Landkomponenten');
  expect(judgeReviewPrompt(buildReviewFacts(file))).toContain('garantiert keine lokale Versorgung');

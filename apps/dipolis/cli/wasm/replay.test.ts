@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { MicropolisSimulator } from '../../src/lib/MicropolisSimulator';
 import { commandBus } from '../../src/lib/CommandBus';
 import { registerMicropolisCommands } from '../../src/lib/micropolisCommands';
-import { createNoopJsCallback } from '../../src/lib/wasm/callbacks';
+import { CityEventLedger, createEventCallback } from '../../src/lib/city-run/city-events';
 import { loadMicropolisMainModule } from '../../src/lib/wasm/node';
 import { readProtocol } from '../../src/lib/city-run/protocol';
 import { advanceMonthsStepwise } from '../../src/lib/city-run/advance';
@@ -24,8 +24,9 @@ async function createCity() {
 	registerMicropolisCommands();
 	const engine = await loadMicropolisMainModule();
 	const m = new engine.Micropolis();
-	m.setCallback(createNoopJsCallback(engine), {});
-	const simulator = { micropolis: m, framesPerSecond: 0, setFramesPerSecond: () => {} } as unknown as MicropolisSimulator;
+	const cityEvents = new CityEventLedger(engine, m);
+	m.setCallback(createEventCallback(engine, cityEvents), {});
+	const simulator = { micropolis: m, cityEvents, framesPerSecond: 0, setFramesPerSecond: () => {} } as unknown as MicropolisSimulator;
 	const dispatch: Dispatch = (id, args) => commandBus.dispatch(id, { source: 'script', simulator, args });
 	return { m, dispatch };
 }

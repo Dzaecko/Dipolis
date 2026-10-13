@@ -142,7 +142,7 @@ export function cityDiagnosticsOverview(report?: JsonObject | null): Array<[stri
 }
 export const networkDiagnosticNote = 'Bank-IDs bezeichnen zusammenhängende, durch Wasser getrennte Landkomponenten, keine Himmelsrichtungen oder Koordinaten. Eine Netzinsel kann durch Brücken mehrere Bänke verbinden. PoweredZones zählt physische POWERBIT-Markierungen, keine garantierte lokale Kapazitätsdeckung. Globale Stromkapazität belegt keine lokale Stromversorgung. Insel-IDs gelten nur für den aktuellen Snapshot. Verbindungsschätzungen ändern weder Karte noch Kasse.';
 const networkFieldLabels: Record<string, string> = {
- Id: 'Netzinsel-ID (nur aktueller Snapshot)', BankCount: 'Uferseiten-Anzahl', Capacity: 'Kapazität',
+ Id: 'Netzinsel-ID (nur aktueller Snapshot)', BankCount: 'Uferseiten-Anzahl', LandTiles: 'Landkacheln', Capacity: 'Kapazität',
  BioCapacity: 'Bio-Kapazität', ConductiveTiles: 'Leitfähige Kacheln', ZoneCount: 'Zonen',
  PoweredZones: 'Physisch versorgte Zonen', HumanPopulation: 'Menschen-Bewohnerpunkte',
  AiPopulation: 'KI-Bewohnerpunkte', AiDemand: 'KI-Strombedarf', Demand: 'Strombedarf',
@@ -160,7 +160,7 @@ function networkDiagnosticLabel(key: string): string {
  const match = /^network(Island|Bank)(\d+)([A-Za-z0-9]+)$/.exec(key);
  if (!match) return key;
  const [, kind, index, suffix] = match;
- if (kind === 'Island' && suffix.startsWith('Bank') && /^\d+Id$/.test(suffix))
+ if (kind === 'Island' && /^Bank\d+Id$/.test(suffix))
   return `Netzinsel ${index}: Uferseite ${suffix.slice(4, -2)}`;
  return `Netz${kind === 'Island' ? 'insel' : 'bank'} ${index}: ${networkFieldLabels[suffix] ?? suffix}`;
 }
