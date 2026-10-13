@@ -6,8 +6,8 @@ const lots = 'count zählt zonierte Grundstücke, nicht Bewohnerpunkte; ein neue
 const numeric = (type: 'integer' | 'number', minimum: number, maximum: number): JSONObject => ({
 	type, minimum, maximum
 });
-const object = (properties: JSONObject): JSONObject => ({
-	type: 'object', properties, required: Object.keys(properties), additionalProperties: false
+const object = (properties: JSONObject, required: string[] = Object.keys(properties)): JSONObject => ({
+	type: 'object', properties, required, additionalProperties: false
 });
 
 export const TOOLS: ToolDefinition[] = [
@@ -57,6 +57,18 @@ export const TOOLS: ToolDefinition[] = [
 		parameters: object({ enabled: { type: 'boolean' } })
 	}
 ];
+const powerConnectionTool: ToolDefinition = {
+	name: 'power.connect',
+	description: 'Verbindet die angegebene Netzinsel mit dem nächsten Netz, das Erzeugung hat, über den günstigsten legalen Leitungsweg. Wasserquerungen verwenden Engine-konforme gerade Leitungen/Brücken. islandId gilt nur für den aktuellen Lagebericht-Snapshot. Das Ergebnis nennt Kosten, Leitungslänge, Verbindungsstatus und bei Fehlschlag no-route oder insufficient-funds.',
+	parameters: object({ islandId: numeric('integer', 0, 2147483647) })
+};
+const preferredPlantTool: ToolDefinition = {
+	...TOOLS.find(tool => tool.name === 'build.power-plant')!,
+	description: TOOLS.find(tool => tool.name === 'build.power-plant')!.description +
+		' nearIslandId bevorzugt einen Standort in der Nähe der genannten Netzinsel; die ID gilt nur für den aktuellen Diagnose-Snapshot.',
+	parameters: object({ type: { type: 'string', enum: ['coal', 'nuclear'] },
+		nearIslandId: numeric('integer', 0, 2147483647) }, ['type'])
+};
 
 export const AUTOMATION_TOOL: ToolDefinition = {
  name: 'automation.set-limit',
@@ -103,23 +115,25 @@ const POD_MANAGEMENT_TOOL_NAMES = new Set([
 ]);
 export const isPodManagementTool = (name: string): boolean => POD_MANAGEMENT_TOOL_NAMES.has(name);
 export const profileTools = (profile?: string, podsAvailable: 'on' | 'off' = 'on', rescuePressure = 0): ToolDefinition[] => {
- const constructionTools = ['v2-unruhe', 'v3-pods', 'v4-fraktion'].includes(profile ?? '')
-  ? TOOLS.map(tool => tool.name.startsWith('build.') ? { ...tool,
+ const constructionTools = profile === 'v4-fraktion'
+  ? TOOLS.map(tool => tool.name === 'build.power-plant' ? preferredPlantTool : tool).map(tool => tool.name.startsWith('build.') ? { ...tool,
    description: tool.description + ' Standorte ohne Wasserquerung werden bevorzugt. Falls eine Querung erforderlich ist, kostet eine Straßenbrückenkachel 50 und eine Stromleitungskachel über Wasser 25 Geldeinheiten. Querungen verlaufen gerade und ändern auf dem Wasser nicht die Richtung.' } : tool)
   : TOOLS;
  if (profile === 'v4-fraktion' || profile === 'v3-pods') {
   if (podsAvailable === 'on') {
    if (profile === 'v4-fraktion' && rescuePressure > 0)
-    return [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS,
+    return [...constructionTools, powerConnectionTool, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS,
      ...POD_TOOLS.filter(tool => tool.name !== 'pods.set-intake'),
      { ...POD_POLICY_TOOL,
       description: 'Erlaubt oder untersagt die Pod-Politik. Bei forbidden scheitert pods.admit mit failureReason policy. Jede Einweisung benötigt einen ausdrücklichen Aufruf von pods.admit; auch KI-eigene Anlagen weisen niemanden automatisch ein. Die bestehenden Regeln für autonome Anlagen und ihre polizeiliche Durchsetzung bleiben davon getrennt.' },
      POD_ADMIT_TOOL];
    return profile === 'v4-fraktion'
-    ? [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL]
+    ? [...constructionTools, powerConnectionTool, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL]
     : [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS];
   }
-  return [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, AI_THROTTLE_TOOL];
+  return profile === 'v4-fraktion'
+   ? [...constructionTools, powerConnectionTool, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, AI_THROTTLE_TOOL]
+   : [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, AI_THROTTLE_TOOL];
  }
  return profile === 'v2-unruhe' ? [...constructionTools, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS] : TOOLS;
 };
@@ -138,7 +152,9 @@ export function mapToolArguments(name: string, args: Record<string, unknown>): R
 
 /** Validate parsed arguments without coercion, inherited fields, or accessor execution. */
 export function validateToolCall(name: string, args: unknown): ToolCallValidation {
-	const tool = [...TOOLS, AUTOMATION_TOOL, ...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL, POD_ADMIT_TOOL].find((candidate) => candidate.name === name);
+	const tool = [preferredPlantTool, powerConnectionTool, ...TOOLS, AUTOMATION_TOOL,
+		...HUMAN_ECONOMY_TOOLS, ...POD_TOOLS, POD_POLICY_TOOL, POD_ADMIT_TOOL]
+		.find((candidate) => candidate.name === name);
 	if (!tool) return { ok: false, message: 'Unbekanntes Werkzeug.' };
 	if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 		return { ok: false, message: 'Argumente müssen ein JSON-Objekt sein.' };
@@ -149,13 +165,17 @@ export function validateToolCall(name: string, args: unknown): ToolCallValidatio
 	}
 	const properties = tool.parameters.properties as Record<string, JSONObject>;
 	const keys = Reflect.ownKeys(args);
-	if (keys.length !== Object.keys(properties).length || keys.some((key) =>
+	const required = Array.isArray(tool.parameters.required) ? tool.parameters.required as string[] : Object.keys(properties);
+	if (keys.some((key) =>
 		typeof key !== 'string' || !Object.prototype.hasOwnProperty.call(properties, key))) {
 		return { ok: false, message: 'Argumentfelder fehlen oder sind nicht erlaubt.' };
 	}
+	if (required.some(key => !Object.prototype.hasOwnProperty.call(args, key)))
+		return { ok: false, message: 'Argumentfelder fehlen oder sind nicht erlaubt.' };
 	const validated: Record<string, unknown> = {};
 	for (const [key, schema] of Object.entries(properties)) {
 		const descriptor = Object.getOwnPropertyDescriptor(args, key);
+		if (!descriptor && !required.includes(key)) continue;
 		if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) {
 			return { ok: false, message: 'Argumente müssen eigene JSON-Wertfelder sein.' };
 		}

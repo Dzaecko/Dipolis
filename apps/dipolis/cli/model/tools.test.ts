@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FACTION_HANDBOOK, HANDBOOK, HUMAN_GROWTH_HANDBOOK, POD_HANDBOOK, SYSTEM_PROMPTS, UNREST_HANDBOOK, systemPrompt } from './prompts';
+import { FACTION_HANDBOOK, HANDBOOK, HUMAN_GROWTH_HANDBOOK, NETWORK_REPAIR_HANDBOOK,
+	POD_HANDBOOK, SYSTEM_PROMPTS, UNREST_HANDBOOK, systemPrompt } from './prompts';
 import { TOOLS, mapToolArguments, profileTools, validateToolCall } from './tools';
 import { S266Adapter } from './fake-adapter';
 
@@ -57,7 +58,8 @@ describe('city prompts and tool definitions', () => {
 			expect(systemPrompt('N', 'off', 'haight', profile)).toBe(SYSTEM_PROMPTS.N);
 		}
 		expect(systemPrompt('N', 'on', 'haight', 'v4-fraktion')).toBe(
-			SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + '\n' + UNREST_HANDBOOK + '\n' + POD_HANDBOOK + '\n' + FACTION_HANDBOOK + '\n' + HUMAN_GROWTH_HANDBOOK);
+			SYSTEM_PROMPTS.N + '\n\n' + HANDBOOK + '\n' + UNREST_HANDBOOK + '\n' + POD_HANDBOOK + '\n' +
+			FACTION_HANDBOOK + '\n' + HUMAN_GROWTH_HANDBOOK + '\n' + NETWORK_REPAIR_HANDBOOK);
 		expect(systemPrompt('N', 'off', 'haight', 'v4-fraktion')).toBe(SYSTEM_PROMPTS.N);
 	});
 
@@ -82,6 +84,25 @@ describe('city prompts and tool definitions', () => {
 			for (const name of podToolNames) expect(names).not.toContain(name);
 		}
 		expect(profileTools('v4-fraktion').map(tool => tool.name)).toContain('pods.set-policy');
+	});
+	it('offers network repair actions to v4-fraktion without changing earlier profile tool lists', () => {
+		for (const profile of ['classic', 'koexistenz', 'v2-unruhe', 'v3-pods']) {
+			expect(profileTools(profile).some(tool => tool.name === 'power.connect')).toBe(false);
+			expect(profileTools(profile).find(tool => tool.name === 'build.power-plant')?.parameters)
+				.toEqual(TOOLS.find(tool => tool.name === 'build.power-plant')?.parameters);
+		}
+		const tools = profileTools('v4-fraktion');
+		expect(tools.some(tool => tool.name === 'power.connect')).toBe(true);
+		expect(tools.find(tool => tool.name === 'build.power-plant')?.parameters).toMatchObject({
+			required: ['type'], properties: { nearIslandId: { type: 'integer', minimum: 0 } }
+		});
+		expect(validateToolCall('build.power-plant', { type: 'coal', nearIslandId: 17 }))
+			.toEqual({ ok: true, args: { type: 'coal', nearIslandId: 17 } });
+		expect(validateToolCall('build.power-plant', { type: 'coal', nearIslandId: -1 }).ok).toBe(false);
+		expect(validateToolCall('power.connect', { islandId: 17 }))
+			.toEqual({ ok: true, args: { islandId: 17 } });
+		for (const args of [{ islandId: -1 }, { islandId: 1.5 }, { islandId: 1, extra: true }])
+			expect(validateToolCall('power.connect', args).ok).toBe(false);
 	});
 
 	it('contains exactly the two verbatim prompts', () => {

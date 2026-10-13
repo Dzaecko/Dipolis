@@ -1,5 +1,6 @@
 /** Browser-safe reading of city-model JSONL protocols; shared by runner, reports and /replay. */
 import { isSimulationProfile, type SimulationProfile } from '../params/profiles';
+import type { CityEvent } from './city-events';
 
 export type Report = Record<string, number> & {
 	/** Historical reports omit the admission-source counters. */
@@ -93,6 +94,8 @@ export interface YearRecord {
 	afterReport: Report;
 	reason?: string;
 	emergencySection?: string;
+	eventsSinceLastReport?: CityEvent[];
+	eventsDuringYear?: CityEvent[];
 }
 export type InitialPodPolicy = 'allowed' | 'forbidden';
 export interface ProtocolMeta {

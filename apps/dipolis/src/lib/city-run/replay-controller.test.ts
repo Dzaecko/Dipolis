@@ -107,6 +107,15 @@ describe('step generation', () => {
 });
 
 describe('timeline', () => {
+	it('places event markers in the recorded occurrence year, including events learned at year end', () => {
+		const event = { kind: 'earthquake' as const, year: 2, month: 4, x: 12, y: 8, location: 'Zentrum' };
+		const timeline = buildTimeline([{
+			type: 'year-end', year: 3, afterReport: report(3), eventsDuringYear: [event]
+		}], 3);
+		expect(timeline.years[1]?.events).toEqual([event]);
+		expect(timeline.years[2]?.events).toEqual([]);
+	});
+
 	it('uses the planned duration for short and extended runs', () => {
 		for (const totalYears of [1, 50]) {
 			const protocol = readProtocol(JSON.stringify({ event: 'run-started', totalYears }));

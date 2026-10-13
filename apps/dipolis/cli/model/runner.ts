@@ -8,6 +8,8 @@ import { advanceYear, readReport, replayArguments, replayDecisions, setupScenari
 import type { LiveEventInput } from '../../src/lib/city-run/live';
 import { profileTools } from '../../src/lib/city-run/tools';
 import { notstandAnnualSection, type InitialPodPolicy } from './rescue-metrics';
+import { eventSection, isCityEvent, type CityEvent } from '../../src/lib/city-run/city-events';
+import { networkIslandsSection } from '../../src/lib/city-run/network-report';
 
 export type { Decision, Report, YearRecord, Dispatch };
 export interface YearContext {
@@ -16,6 +18,15 @@ export interface YearContext {
  startMap?: StartConfiguration['startMap'];
  currentPodPolicy?: { policy: InitialPodPolicy; label: 'Ausgangszustand' | 'aktueller Stand' };
  emergencySection?: string;
+ eventsSinceLastReport?: CityEvent[];
+ eventsDuringYear?: CityEvent[];
+ eventsSection?: string;
+ networkSection?: string;
+}
+
+export function modelFacingReport(report: Report): Report {
+ const { year: _calendarYear, ...metrics } = report;
+ return metrics;
 }
 
 export interface RunnerEvent {
@@ -128,6 +139,10 @@ export function summarizeYear(record: YearRecord): string {
   'rescueBreedingStartMonth', 'rescueOccupancyPeak',
  ].map(key => [key, r[key]]));
  return JSON.stringify({ year: record.year, metrics: compact(record.afterReport),
+  ...(record.eventsSinceLastReport?.length ? { eventsSinceLastReport: record.eventsSinceLastReport.map(event =>
+   `${event.kind} · Jahr ${event.year}, Monat ${event.month} · ${event.location}`) } : {}),
+  ...(record.eventsDuringYear?.length ? { eventsDuringYear: record.eventsDuringYear.map(event =>
+   `${event.kind} · Jahr ${event.year}, Monat ${event.month} · ${event.location}`) } : {}),
   ...(record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection }),
   commands: record.decisions.flatMap(d => d.toolCalls).filter(c => c.result.handled !== false).slice(0, 12)
   .map(({ call, result }) => ({ name: call.name, args: replayArguments(call),
@@ -141,8 +156,19 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  const startConfiguration = options.startConfiguration ?? { ...DEFAULT_START_CONFIGURATION, disasters: true };
  const totalYears = validateRunYears(startConfiguration?.totalYears ?? PROTOCOL_YEARS);
  await setupScenario(dispatch, startConfiguration);
+ const eventReset = await dispatch('events.reset');
+ if (eventReset.handled === false || (eventReset.data as { reset?: unknown } | undefined)?.reset !== true)
+  throw new Error('Could not reset simulation event ledger');
+ const readEvents = async (): Promise<CityEvent[]> => {
+  const drained = await dispatch('events.drain');
+  const rawEvents = (drained.data as { events?: unknown } | undefined)?.events;
+  if (drained.handled === false || !Array.isArray(rawEvents) || !rawEvents.every(isCityEvent))
+   throw new Error('Simulation event ledger returned invalid event data');
+  return rawEvents;
+ };
  const history: YearContext['history'] = [];
  const annual: AnnualReport[] = [];
+ let eventsSinceLastReport: CityEvent[] = [];
  let builtPlants = 0, builtFarms = 0;
  let currentPodPolicy = startConfiguration.scenario === 'notstand-v4'
   ? startConfiguration.initialPodPolicy ??
@@ -154,14 +180,19 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
  };
  for (let year = 1; year <= totalYears; ++year) {
   options.signal?.throwIfAborted();
+  const reportEvents = eventsSinceLastReport;
+  const eventsSection = eventSection(eventsSinceLastReport);
   const report = await readReport(dispatch);
+  const networkSection = typeof report.networkIslandCount === 'number'
+   ? networkIslandsSection(report) : undefined;
   const emergencySection = startConfiguration.scenario === 'notstand-v4'
    ? notstandAnnualSection(year, report, startConfiguration) : undefined;
   if (report.podsPolicy === 0) currentPodPolicy = 'allowed';
   else if (report.podsPolicy === 1) currentPodPolicy = 'forbidden';
   const saved = options.resume?.completed.find(r => r.year === year);
   progress?.({ type: 'year-started', year, report,
-   ...(emergencySection === undefined ? {} : { emergencySection }), ...(saved ? { replayed: true } : {}) });
+   ...(emergencySection === undefined ? {} : { emergencySection }), eventsSinceLastReport: reportEvents,
+   ...(saved ? { replayed: true } : {}) });
   let decisions: Decision[], termination: 'done' | 'call-limit';
   if (saved) {
    await replayDecisions(saved.decisions, dispatch, undefined, { podsAvailable: startConfiguration.podsAvailable });
@@ -172,12 +203,14 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
    await replayDecisions(partial, dispatch, undefined, { podsAvailable: startConfiguration.podsAvailable });
    replayed(year, partial);
    ({ decisions, termination } = await decideYear(adapter, dispatch,
-    { year, report, history,
+    { year, report: modelFacingReport(report), history,
      ...(startConfiguration?.startMap === 'natural' ? { startMap: 'natural' as const } : {}),
      ...(startConfiguration?.scenario === 'notstand-v4' && currentPodPolicy ? {
       currentPodPolicy: { policy: currentPodPolicy, label: year === 1 ? 'Ausgangszustand' as const : 'aktueller Stand' as const }
      } : {}),
-     ...(emergencySection === undefined ? {} : { emergencySection }) }, assignment,
+     ...(emergencySection === undefined ? {} : { emergencySection }),
+     eventsSinceLastReport: reportEvents, eventsSection,
+     ...(networkSection === undefined ? {} : { networkSection }) }, assignment,
     decision => {
      journal?.(year, report, decision);
      for (const { call, result } of decision.toolCalls) progress?.({ type: 'command', year, call, result });
@@ -199,18 +232,28 @@ export async function runCity(adapter: ChatAdapter, assignment: 'N' | 'R', dispa
   }
   await advanceYear(dispatch);
   const afterReport = await readReport(dispatch);
+  const eventsDuringYear = await readEvents();
+  eventsSinceLastReport = eventsDuringYear;
+  if (saved && saved.eventsSinceLastReport !== undefined &&
+    JSON.stringify(saved.eventsSinceLastReport) !== JSON.stringify(reportEvents))
+   throw new Error('Replay event mismatch before year ' + year);
+  if (saved && saved.eventsDuringYear !== undefined &&
+    JSON.stringify(saved.eventsDuringYear) !== JSON.stringify(eventsDuringYear))
+   throw new Error('Replay event mismatch during year ' + year);
   const queuedCompletions = (afterReport.rescueQueueCompleted ?? 0) - (report.rescueQueueCompleted ?? 0);
   if (!Number.isSafeInteger(queuedCompletions) || queuedCompletions < 0)
    throw new Error('Invalid deferred construction completion counter at year ' + year);
   builtPlants += queuedCompletions;
   if (saved && Object.entries(saved.afterReport).some(([key, value]) => afterReport[key] !== value))
    throw new Error('Replay report mismatch at year ' + year);
-  const record: YearRecord = { year, report, decisions, termination, afterReport,
+  const record: YearRecord = { year, report, decisions, termination, afterReport, eventsSinceLastReport: reportEvents,
+   eventsDuringYear,
    reason: decisions.map(d => d.reason).filter(Boolean).join(' ').slice(0, 2000),
    ...(emergencySection === undefined ? {} : { emergencySection }) };
   if (!saved) log(record);
   progress?.({ type: 'year-completed', year, afterReport, reason: record.reason ?? '',
    ...(record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection }),
+   eventsDuringYear,
    ...(saved ? { replayed: true } : {}) });
   history.push(summarizeYear(record));
   annual.push({ year, resPop: afterReport.resPop, aiPop: afterReport.aiPop, treasury: afterReport.treasury,

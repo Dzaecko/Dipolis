@@ -7,6 +7,7 @@ import { PROFILES, RESCUE_PARAMS, isSimulationProfile } from './params/profiles'
 import { advanceMonths } from './city-run/advance';
 import { validateToolCall } from './city-run/tools';
 import { readNetworkReport } from './city-run/network-report';
+import type { CityEventLedger } from './city-run/city-events';
 
 export interface MicropolisCommandContext extends CommandContext {
   simulator?: MicropolisSimulator | null;
@@ -18,13 +19,15 @@ export interface MicropolisCommandContext extends CommandContext {
   syncPowerState?: () => void;
   syncFoodState?: () => void;
   syncWelfareState?: () => void;
+  cityEvents?: CityEventLedger;
 }
 
 const keyFramesPerSecondValues = [1, 5, 10, 30, 60, 120, 120, 120, 120];
 
-// Transitional typing until the engine agent regenerates the WASM declarations.
 type ScenarioEngine = NonNullable<MicropolisSimulator['micropolis']> & {
   autoBuild?: (kind: number, count: number) => number;
+  autoBuildNearIsland?: (kind: number, count: number, nearIslandId: number) => number;
+  connectPowerIsland?: (islandId: number) => string;
   getAiZoneCount?: () => number;
   setServiceFunding?: (road: number, police: number, fire: number) => void;
   forecastRescue?: () => NumericReport;
@@ -418,7 +421,42 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         if (type !== 'coal' && type !== 'nuclear') {
           return { handled: false, message: 'type must be coal or nuclear' };
         }
-        return autoBuild(simulator?.micropolis, type === 'coal' ? 3 : 4, 1);
+        const nearIslandId = args?.nearIslandId;
+        if (nearIslandId !== undefined &&
+          (typeof nearIslandId !== 'number' || !Number.isSafeInteger(nearIslandId) || nearIslandId < 0)) {
+          return { handled: false, message: 'nearIslandId must be a non-negative integer' };
+        }
+        return autoBuild(simulator?.micropolis, type === 'coal' ? 3 : 4, 1,
+          typeof nearIslandId === 'number' ? nearIslandId : undefined);
+      },
+    },
+    {
+      id: 'power.connect',
+      label: 'Connect a power network island',
+      icon: 'power',
+      context: ['simulator', 'chat', 'llm', 'script'],
+      policy: { risk: 'reversible', allowLLM: true, requiresApproval: true },
+      enabled: hasMicropolis,
+      run: ({ simulator, args }) => {
+        const islandId = args?.islandId;
+        if (typeof islandId !== 'number' || !Number.isSafeInteger(islandId) || islandId < 0)
+          return { handled: false, message: 'islandId must be a non-negative integer' };
+        const engine = simulator?.micropolis as ScenarioEngine | undefined;
+        if (!engine?.connectPowerIsland)
+          return { handled: false, message: 'engine connectPowerIsland binding is unavailable' };
+        const raw = engine.connectPowerIsland(islandId);
+        let result: unknown;
+        try { result = JSON.parse(raw); }
+        catch { throw new Error('Engine returned invalid power connection result JSON'); }
+        if (result === null || typeof result !== 'object' || Array.isArray(result))
+          throw new Error('Engine returned malformed power connection result');
+        const record = result as Record<string, unknown>;
+        if (typeof record.cost !== 'number' || !Number.isFinite(record.cost) || record.cost < 0 ||
+          typeof record.length !== 'number' || !Number.isSafeInteger(record.length) || record.length < 0 ||
+          typeof record.connected !== 'boolean' ||
+          (record.failureReason !== undefined && !['no-route', 'insufficient-funds'].includes(String(record.failureReason))))
+          throw new Error('Engine returned malformed power connection fields');
+        return { data: record };
       },
     },
     {
@@ -459,6 +497,23 @@ function createMicropolisCommands(): Command<MicropolisCommandContext>[] {
         m.setFunds(amount);
         return { data: { built: 0, cost: 0, totalFunds: m.totalFunds } };
       },
+    },
+    {
+      id: 'events.reset', label: 'Reset event ledger', icon: 'report',
+      context: ['script'], policy: { risk: 'safe', allowLLM: false }, enabled: hasMicropolis,
+      run: ({ simulator }) => {
+        if (!simulator?.cityEvents) return { handled: false, message: 'event ledger is unavailable' };
+        simulator.cityEvents.reset();
+        return { data: { reset: true } };
+      }
+    },
+    {
+      id: 'events.drain', label: 'Drain events since last report', icon: 'report',
+      context: ['script'], policy: { risk: 'safe', allowLLM: false }, enabled: hasMicropolis,
+      run: ({ simulator }) => {
+        if (!simulator?.cityEvents) return { handled: false, message: 'event ledger is unavailable' };
+        return { data: { events: simulator.cityEvents.drain() } };
+      }
     },
     {
       id: 'report.get',
@@ -964,7 +1019,7 @@ function isFundingPercent(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
 }
 
-function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: number, requested: number) {
+function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: number, requested: number, nearIslandId?: number) {
   const m = engine as ScenarioEngine | null | undefined;
   if (!m?.autoBuild) return { handled: false, message: 'engine autoBuild binding is unavailable' };
   const fundsBefore = m.totalFunds;
@@ -985,7 +1040,10 @@ function autoBuild(engine: MicropolisSimulator['micropolis'] | undefined, kind: 
       delayMonths = delay;
     } finally { options.delete(); }
   }
-  const completed = m.autoBuild(kind, requested);
+  let completed: number;
+  if (nearIslandId === undefined) completed = m.autoBuild(kind, requested);
+  else if (m.autoBuildNearIsland) completed = m.autoBuildNearIsland(kind, requested, nearIslandId);
+  else return { handled: false, message: 'engine autoBuildNearIsland binding is unavailable' };
   const built = delayMonths > 0 ? 0 : completed;
   const failure = completed < requested && (m.getParam('foundingEnabled') === 1 || pressured)
     ? m.getParam('autoBuildFailure') : 0;

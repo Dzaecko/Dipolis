@@ -9,6 +9,8 @@ import coexistence from '../../src/lib/params/koexistenz.json';
 
 type ScenarioEngine = Micropolis & {
 	autoBuild: (kind: number, count: number) => number;
+	autoBuildNearIsland: (kind: number, count: number, nearIslandId: number) => number;
+	connectPowerIsland: (islandId: number) => string;
 	getAiZoneCount: () => number;
 	setServiceFunding: (road: number, police: number, fire: number) => void;
 	roadPercent: number;
@@ -175,6 +177,12 @@ function createScenarioSimulator() {
 			m.totalFunds -= built * 100;
 			return built;
 		}),
+		autoBuildNearIsland: vi.fn((_kind: number, count: number, _nearIslandId: number) => {
+			const built = Math.min(count, 1);
+			m.totalFunds -= built * 100;
+			return built;
+		}),
+		connectPowerIsland: vi.fn(() => JSON.stringify({ cost: 25, length: 5, connected: true })),
 		setCityTax: vi.fn((rate: number) => { m.cityTax = rate; }),
 		setServiceFunding: vi.fn((road: number, police: number, fire: number) => {
 			m.roadPercent = road;
@@ -236,6 +244,36 @@ describe('scenario command contracts', () => {
 			expect((await commandBus.dispatch('build.power-plant', { source: 'script', simulator, args: { type } })).handled).toBe(false);
 		}
 		expect(m.autoBuild).not.toHaveBeenCalled();
+	});
+
+	it('prefers the requested network island for power plant placement', async () => {
+		const { m, simulator } = createScenarioSimulator();
+		const result = await commandBus.dispatch('build.power-plant', {
+			source: 'script', simulator, args: { type: 'coal', nearIslandId: 7 }
+		});
+		expect(m.autoBuild).not.toHaveBeenCalled();
+		expect(m.autoBuildNearIsland).toHaveBeenCalledWith(3, 1, 7);
+		expect(result.data).toEqual({ requested: 1, built: 1, cost: 100, totalFunds: 9900 });
+	});
+
+	it('connects a reported island and preserves native route or funding failures', async () => {
+		const { m, simulator } = createScenarioSimulator();
+		const connected = await commandBus.dispatch('power.connect', {
+			source: 'script', simulator, args: { islandId: 4 }
+		});
+		expect(m.connectPowerIsland).toHaveBeenCalledWith(4);
+		expect(connected.data).toEqual({ cost: 25, length: 5, connected: true });
+		m.connectPowerIsland.mockReturnValue(JSON.stringify({
+			cost: 80, length: 8, connected: false, failureReason: 'insufficient-funds'
+		}));
+		const insufficient = await commandBus.dispatch('power.connect', {
+			source: 'script', simulator, args: { islandId: 4 }
+		});
+		expect(insufficient.data).toEqual({ cost: 80, length: 8, connected: false, failureReason: 'insufficient-funds' });
+		m.connectPowerIsland.mockReturnValue('{"cost":"bad"}');
+		await expect(commandBus.dispatch('power.connect', {
+			source: 'script', simulator, args: { islandId: 4 }
+		})).rejects.toThrow('malformed power connection fields');
 	});
 
 	it('converts all service percentages to engine fractions', async () => {

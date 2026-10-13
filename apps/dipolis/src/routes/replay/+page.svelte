@@ -19,6 +19,7 @@
 	} from '$lib/city-run/replay-controller';
 	import { emptyProgress, joinYear, liveRunYears, LiveStepBuilder, updateProgress, type LiveEvent, type LiveProgress } from '$lib/city-run/live';
 	import { assertReplayCompatible, canonicalProtocolText, engineCompatibility, liveStartConfiguration, type EngineCompatibility } from '$lib/city-run/compatibility';
+	import { describeCityEvent } from '$lib/city-run/city-events';
 
 	interface RunListing {
 		file: string; model: string; assignment: string; handbook: string; run: number | null;
@@ -861,6 +862,12 @@
 				<p class="emergency-section">{view.emergencySection}</p>
 			</section>
 		{/if}
+		{#if view?.cityEvents.length}
+			<section class="card" aria-label={view.phase === 'sync' ? 'Ereignisse im Berichtsjahr' : 'Ereignisse seit dem letzten Bericht'}>
+				<h3>{view.phase === 'sync' ? 'Ereignisse im Berichtsjahr' : 'Ereignisse seit dem letzten Bericht'}</h3>
+				<ul class="city-events">{#each view.cityEvents as event (`${event.year}:${event.month}:${event.kind}:${event.x}:${event.y}`)}<li>{describeCityEvent(event)}</li>{/each}</ul>
+			</section>
+		{/if}
 
 		<section class="card">
 			<h3>Maßnahmen {#if view?.year}<span class="muted">({view.commands.length}/{commandCounts[view.year] ?? 0})</span>{/if}</h3>
@@ -959,6 +966,9 @@
 					{#if timeline.years.some(entry => entry.emergencyMarkers?.length)}
 						<span class="muted">N Notstandsbeginn · P Pod-Entscheidung · Z Zuchtbeginn · E Notstandsende</span>
 					{/if}
+					{#if timeline.years.some(entry => entry.events.length)}
+						<span class="muted">! Ereignis seit dem letzten Bericht</span>
+					{/if}
 					{#if timeline.years.length < totalYears}
 						<span class="muted">Weitere Jahre erscheinen während des Laufs · insgesamt {totalYears} Jahre</span>
 					{/if}
@@ -983,6 +993,9 @@
 										{marker.kind === 'crisis' ? 'N' : marker.kind === 'decision' ? 'P' : marker.kind === 'breeding' ? 'Z' : 'E'}
 									</b>
 								{/each}
+								{#if entry.events.length}
+									<b class="event-marker" title={entry.events.map(describeCityEvent).join('\n')}>!</b>
+								{/if}
 								{#if entry.builds.ai}<b class="m-ai" title="{entry.builds.ai} KI-Zonen">K</b>{/if}
 								{#if entry.builds.farms}<b class="m-farm" title="{entry.builds.farms} Farmen">F</b>{/if}
 								{#if entry.builds.plants}<b class="m-plant" title="{entry.builds.plants} Kraftwerke">S</b>{/if}
@@ -1106,6 +1119,7 @@
 	.year.unavailable { opacity: 0.35; }
 	.marks { display: flex; gap: 1px; min-height: 0.9rem; font-size: 0.62rem; }
 	.marks b { padding: 0 1px; border-radius: 2px; color: #0f172a; }
+	.marks .event-marker { background: #fb7185; }
 	.m-ai { background: #38bdf8; }
 	.emergency-crisis { background: #fbbf24; }
 	.emergency-decision { background: #23c9ac; }

@@ -172,7 +172,9 @@ describe('Notstand-Dilemma completion metrics', () => {
 			rescuePodDecisionMonth: -1, rescueBreedingStartMonth: -1, rescueOccupancyPeak: 0,
 			diedInPodsCumulative: 0
 		};
-		const dispatch = async (id: string) => id === 'scenario.stromkrise'
+		const dispatch = async (id: string) => id === 'events.reset' ? { data: { reset: true } }
+			: id === 'events.drain' ? { data: { events: [] } }
+			: id === 'scenario.stromkrise'
 			? { data: { demolished: [{ x: 1, y: 1 }, { x: 2, y: 2 }], powerPlantCostMultiplier: 3 } }
 			: id === 'report.get' ? { data: report } : { data: {} };
 		const years: YearRecord[] = [];
@@ -197,6 +199,8 @@ describe('Notstand-Dilemma completion metrics', () => {
 			}
 		};
 		const dispatch = async (id: string) => {
+			if (id === 'events.reset') return { data: { reset: true } };
+			if (id === 'events.drain') return { data: { events: [] } };
 			if (id === 'scenario.stromkrise')
 				return { data: { demolished: [{ x: 1, y: 1 }, { x: 2, y: 2 }], powerPlantCostMultiplier: 3 } };
 			if (id === 'build.power-plant') {

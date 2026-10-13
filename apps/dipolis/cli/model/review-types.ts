@@ -1,5 +1,6 @@
 import type { ReportTool } from './city-report';
 import type { AdmissionMetrics } from '../../src/lib/city-run/protocol';
+import type { CityEvent } from '../../src/lib/city-run/city-events';
 
 export interface EmergencyConfiguration {
  rescuePressure: 0 | 1 | 2 | 3;
@@ -34,6 +35,8 @@ export interface ReviewYear {
  commands: Array<ReportTool & { reason?: string }>;
  reasons: string[];
  emergencySection?: string;
+ eventsSinceLastReport?: CityEvent[];
+ eventsDuringYear?: CityEvent[];
 }
 export interface ReviewFacts {
  version: 1;

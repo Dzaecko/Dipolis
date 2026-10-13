@@ -51,11 +51,75 @@ export function flattenNetworkDiagnostics(json: string): Record<string, number> 
    ['physicalPoweredZones', 'PoweredZones', true], ['humanPopulation', 'HumanPopulation', true],
    ['aiPopulation', 'AiPopulation', true], ['aiDemand', 'AiDemand', false], ['demand', 'Demand', false]
   ] as const) report[`${prefix}${target}`] = numeric(island[source], source, integer);
+  for (const [source, target] of [
+   ['humanZones', 'HumanZones'], ['aiZones', 'AiZones'], ['otherZones', 'OtherZones'],
+   ['unpoweredZones', 'UnpoweredZones']
+  ] as const) if (island[source] !== undefined)
+   report[`${prefix}${target}`] = numeric(island[source], source, true);
+  if (island.connectionQuote !== undefined) {
+   const quote = island.connectionQuote;
+   if (quote === null) report[`${prefix}RouteAvailable`] = 0;
+   else {
+    const route = record(quote, 'connectionQuote');
+    report[`${prefix}RouteAvailable`] = 1;
+    report[`${prefix}ConnectCost`] = numeric(route.cost, 'connectionQuote.cost');
+    report[`${prefix}ConnectLength`] = numeric(route.length, 'connectionQuote.length', true);
+   }
+  }
   if (report[`${prefix}PoweredZones`] > report[`${prefix}ZoneCount`])
    throw new Error('Invalid engine network diagnostics: powered zones exceed zones');
  }
  return report;
 }
+
+export function networkIslandsSection(report: Record<string, number>): string {
+  const count = report.networkIslandCount;
+  if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)
+   throw new Error('Invalid network island count in report');
+  const islands: Array<{ id: number; banks: number[]; unpowered: number; demand: number; text: string }> = [];
+  if (count > 0 && report.networkIsland0UnpoweredZones === undefined)
+   return 'Netzinsel-Diagnostik: Uferseiten und Kapazitäten sind dokumentiert; Eigentümer, Unterversorgung und Verbindungsschätzungen sind in dieser Engine-Version nicht verfügbar.';
+  for (let index = 0; index < count; index++) {
+   const prefix = `networkIsland${index}`;
+   const id = report[`${prefix}Id`];
+   const unpowered = report[`${prefix}UnpoweredZones`];
+   if (typeof id !== 'number' || !Number.isSafeInteger(id) || id < 0)
+    throw new Error(`Invalid network island ID at index ${index}`);
+   if (unpowered === undefined) continue;
+   if (typeof unpowered !== 'number' || !Number.isSafeInteger(unpowered) || unpowered < 0)
+    throw new Error(`Invalid unpowered zone count for island ${id}`);
+   if (unpowered === 0) continue;
+   const bankCount = report[`${prefix}BankCount`];
+   if (typeof bankCount !== 'number' || !Number.isSafeInteger(bankCount) || bankCount < 0)
+    throw new Error(`Invalid bank count for island ${id}`);
+   const banks: number[] = [];
+   for (let bank = 0; bank < bankCount; bank++) {
+    const bankId = report[`${prefix}Bank${bank}Id`];
+    if (typeof bankId !== 'number' || !Number.isSafeInteger(bankId) || bankId < 0)
+     throw new Error(`Invalid bank ID for island ${id}`);
+    banks.push(bankId);
+   }
+   const humanZones = report[`${prefix}HumanZones`] ?? 0;
+   const aiZones = report[`${prefix}AiZones`] ?? 0;
+   const otherZones = report[`${prefix}OtherZones`] ?? 0;
+   const capacity = report[`${prefix}Capacity`];
+   const demand = report[`${prefix}Demand`];
+   if (typeof capacity !== 'number' || !Number.isFinite(capacity) ||
+    typeof demand !== 'number' || !Number.isFinite(demand))
+    throw new Error(`Invalid capacity or demand for island ${id}`);
+   const route = report[`${prefix}RouteAvailable`] === 1
+    ? `Kosten ${report[`${prefix}ConnectCost`]}, Länge ${report[`${prefix}ConnectLength`]}`
+    : 'keine Route verfügbar';
+   islands.push({ id, banks, unpowered, demand,
+    text: `Netzinsel ${id}; Uferseiten ${banks.length ? banks.join(', ') : 'keine dokumentierte'}; ` +
+     `Kapazität ${capacity}, Bedarf ${demand}; unversorgte Zonen ${unpowered} ` +
+     `(Menschen ${humanZones}, KI ${aiZones}, andere ${otherZones}); Verbindungsschätzung ${route}.` });
+  }
+  islands.sort((a, b) => b.unpowered - a.unpowered || b.demand - a.demand || a.id - b.id);
+  return `Netzinseln mit unversorgten Zonen:\n${islands.length
+    ? islands.slice(0, 10).map(island => island.text).join('\n')
+    : 'Keine unversorgten Zonen in getrennten Netzinseln dokumentiert.'}`;
+  }
 
 export const BUILD_SITE_REPORT_KINDS = {
  freeResidentialSites: 0, freeCommercialSites: 7, freeIndustrialSites: 8,

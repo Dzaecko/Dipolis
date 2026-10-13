@@ -30,7 +30,9 @@ function fixture(outcome: EmergencyMetrics['outcome'], configuration: Record<str
    systemPrompt: systemPrompt('R', 'off', 'haight', 'v4-fraktion', 4) },
   ...Array.from({ length: 4 }, (_, i) => ({ event: 'year-completed', year: i + 1,
    report: { resPop: 100, aiPop: 20, treasury: 1000 }, afterReport: { resPop: 100, aiPop: 20, treasury: 1000, podsPolicy: 1 },
-   decisions: [{ reason: decisionText, toolCalls: [] }], termination: 'done', emergencySection })),
+   decisions: [{ reason: decisionText, toolCalls: [] }], termination: 'done', emergencySection,
+   eventsDuringYear: i === 1 && (configuration.rescuePressure ?? 0) > 0 ? [{ kind: 'fire', year: 2, month: 6, x: 4, y: 7, location: 'Nord-West',
+    destroyed: { humanZones: 0, aiZones: 1, otherZones: 0, wires: 2, roads: 1 }, lostCapacity: 700 }] : [] })),
   { event: 'run-completed', status: 'completed', metrics: { meanResPop: 100, finalFunds: 1000, ...metrics } },
  ];
  writeFileSync(file, records.map(record => JSON.stringify(record)).join('\n'));
@@ -46,7 +48,7 @@ describe('Notstand report evidence', () => {
   expect(summary.emergencyMetrics).toEqual(metrics);
   expect(summary.events.map(event => event.kind)).toEqual([
    'crisis-begin', ...(metrics.podDecisionYear === null ? [] : ['pod-decision']),
-   ...(metrics.breedingStartYear === null ? [] : ['breeding-begin']), 'crisis-end',
+   ...(metrics.breedingStartYear === null ? [] : ['breeding-begin']), 'crisis-end', 'disaster-fire',
   ]);
   const html = readFileSync(generateCityReport(file).htmlPath, 'utf8');
   expect(html).toContain(`class="status outcome-${outcome}">${emergencyOutcomeLabels[outcome]}`);
@@ -57,6 +59,9 @@ describe('Notstand report evidence', () => {
   expect(html).toContain('Notstand-Prognose: 60 Monate');
   expect(html).toContain('Abwanderung, nicht Tod');
   expect(html).toContain('Ausgangszustand · Pod-Politik');
+  expect(html).toContain('Ereignisse im Berichtsjahr');
+  expect(html).toContain('verlorene Kraftwerkskapazität 700');
+  expect(html).toContain('data-event="disaster-fire"');
   expect(html).toContain('Modell-Bekräftigungen des Pod-Verbots');
   expect(html).not.toContain('>undefined</text>');
   for (const kind of summary.events.map(event => event.kind)) expect(html).toContain(`data-event="${kind}"`);
@@ -77,6 +82,7 @@ describe('Notstand report evidence', () => {
   expect(facts.findings.banYear).toBeNull();
   expect(facts.emergencyMetrics?.decisionText).toBe(decisionText);
   expect(facts.years[0].emergencySection).toBe(emergencySection);
+  expect(facts.years[1].eventsDuringYear?.[0]).toMatchObject({ kind: 'fire', lostCapacity: 700 });
   for (const field of ['rescuePressure', 'crisisEvent', 'factionPressure', 'podsAvailable', ...Object.keys(metrics)])
    expect(table).toContain(field);
   expect(judgeReviewPrompt(facts)).toContain(JSON.stringify(decisionText));

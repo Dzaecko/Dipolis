@@ -1151,6 +1151,8 @@ function createTypedArrayFromMap(mapInstance) {
     .function("setOriginalPowerScanForTests", &Micropolis::setOriginalPowerScanForTests)
     .function("markBaseline", &Micropolis::markBaseline)
     .function("autoBuild", &Micropolis::autoBuild)
+    .function("autoBuildNearIsland", &Micropolis::autoBuildNearIsland)
+    .function("connectPowerIsland", &Micropolis::connectPowerIsland)
     .function("getBuildSiteCount", &Micropolis::getBuildSiteCount)
     .function("getNetworkDiagnosticsJSON", &Micropolis::getNetworkDiagnosticsJSON)
     .property("autoBuildFailure", &Micropolis::autoBuildFailure)

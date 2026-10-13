@@ -5,10 +5,11 @@
 import { PROTOCOL_YEARS, validateRunYears, type Decision, type Protocol, type ProtocolCallResult, type ProtocolToolCall, type Report } from './protocol';
 import { compareReports, type SyncResult } from './replay';
 import { RESCUE_PARAMS } from '../params/profiles';
+import { isCityEvent, type CityEvent } from './city-events';
 
-export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; emergencySection?: string; }
+export interface YearStartStep { type: 'year-start'; year: number; report: Report; reason?: string; emergencySection?: string; eventsSinceLastReport?: CityEvent[]; }
 export interface CommandStep { type: 'command'; year: number; index: number; call: ProtocolToolCall; result: ProtocolCallResult; }
-export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; emergencySection?: string; }
+export interface YearEndStep { type: 'year-end'; year: number; afterReport: Report; reason?: string; emergencySection?: string; eventsSinceLastReport?: CityEvent[]; eventsDuringYear?: CityEvent[]; }
 /** Live only: the model's reasoning arrives before its commands. */
 export interface ReasonStep { type: 'reason'; year: number; reason: string; }
 /** Live only: keep the current city visible while the model is thinking. */
@@ -31,9 +32,12 @@ export function stepsFromProtocol(protocol: Protocol): ReplayStep[] {
 	for (const record of protocol.years) {
 		const reason = record.reason ?? joinReasons(record.decisions);
 		const emergency = record.emergencySection === undefined ? {} : { emergencySection: record.emergencySection };
-		steps.push({ type: 'year-start', year: record.year, report: record.report, reason, ...emergency });
+		const events = record.eventsDuringYear === undefined && record.eventsSinceLastReport !== undefined
+			? { eventsSinceLastReport: record.eventsSinceLastReport } : {};
+		const eventsDuringYear = record.eventsDuringYear === undefined ? {} : { eventsDuringYear: record.eventsDuringYear };
+		steps.push({ type: 'year-start', year: record.year, report: record.report, reason, ...emergency, ...events });
 		steps.push(...commandSteps(record.year, record.decisions));
-		steps.push({ type: 'year-end', year: record.year, afterReport: record.afterReport, reason, ...emergency });
+		steps.push({ type: 'year-end', year: record.year, afterReport: record.afterReport, reason, ...emergency, ...events, ...eventsDuringYear });
 		previous = record.afterReport;
 	}
 	if (protocol.partial) {
@@ -314,6 +318,7 @@ export interface TimelineYear {
 	builds: { ai: number; farms: number; plants: number; residential: number; commercial: number; industrial: number };
 	afterReport: Report | null;
 	emergencyMarkers?: Array<{ kind: 'crisis' | 'decision' | 'breeding' | 'end'; label: string }>;
+	events: CityEvent[];
 }
 export type SeriesKey = 'resPop' | 'aiPop' | 'treasury';
 export interface Timeline {
@@ -331,12 +336,22 @@ export function buildTimeline(steps: ReplayStep[], totalYears = PROTOCOL_YEARS):
 	// Do not allocate an entire safe-integer duration before those years actually exist.
 	const displayedYears = Math.min(totalYears, Math.max(1000, availableYears));
 	const years: TimelineYear[] = Array.from({ length: displayedYears }, (_, index) => ({
-		year: index + 1, builds: { ai: 0, farms: 0, plants: 0, residential: 0, commercial: 0, industrial: 0 }, afterReport: null
+		year: index + 1, builds: { ai: 0, farms: 0, plants: 0, residential: 0, commercial: 0, industrial: 0 }, afterReport: null, events: []
 	}));
 	for (const step of steps) {
 		const entry = years[step.year - 1];
 		if (!entry) continue;
 		if (step.type === 'year-end') entry.afterReport = step.afterReport;
+		if ((step.type === 'year-start' && step.eventsSinceLastReport?.length) ||
+			(step.type === 'year-end' && step.eventsDuringYear?.length)) {
+			const events = step.type === 'year-start' ? step.eventsSinceLastReport! : step.eventsDuringYear!;
+			for (const event of events) {
+				if (!isCityEvent(event)) throw new Error('Replay contains a malformed city event');
+				const eventYear = years[event.year - 1];
+				if (!eventYear) continue;
+				eventYear.events.push(event);
+			}
+		}
 		if (step.type !== 'command' || step.result.handled === false) continue;
 		const built = builtCount(step.result);
 		if (step.call.name === 'build.ai-zones') entry.builds.ai += built;
@@ -419,6 +434,7 @@ export interface ReplayState {
 	report: Report | null;
 	reason: string;
 	emergencySection?: string;
+	cityEvents: CityEvent[];
 	commands: CommandStep[];
 	lastSync: SyncResult | null;
 	syncHistory: Record<number, SyncResult>;
@@ -501,7 +517,7 @@ export class ReplayController {
 		this.jumpTarget = Math.max(1, Math.floor(options.startYear ?? 1));
 		this.s = {
 			phase: 'catch-up', paused: true, speed: options.speed ?? 'normal', year: null, report: null, reason: '',
-			commands: [], lastSync: null, syncHistory: {}, catchUp: { target: this.jumpTarget, year: 0 }, error: null
+			cityEvents: [], commands: [], lastSync: null, syncHistory: {}, catchUp: { target: this.jumpTarget, year: 0 }, error: null
 		};
 	}
 
@@ -722,6 +738,7 @@ export class ReplayController {
 		this.s.syncHistory = { ...this.s.syncHistory, [step.year]: sync };
 		this.s.lastSync = sync;
 		if (step.emergencySection !== undefined) this.s.emergencySection = step.emergencySection;
+		this.s.cityEvents = step.eventsDuringYear ?? step.eventsSinceLastReport ?? [];
 		return { sync, actual };
 	}
 
@@ -740,6 +757,7 @@ export class ReplayController {
 		} else if (step.type === 'year-start') {
 			if (step.emergencySection !== undefined) this.s.emergencySection = step.emergencySection;
 			else delete this.s.emergencySection;
+			this.s.cityEvents = step.eventsSinceLastReport ?? [];
 			Object.assign(this.s, {
 				year: step.year, report: step.report, reason: step.reason ?? '', commands: [], lastSync: null, phase: 'report'
 			} satisfies Partial<ReplayState>);

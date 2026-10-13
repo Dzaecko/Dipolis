@@ -551,6 +551,8 @@ export interface Micropolis extends ClassHandle {
   setOriginalPowerScanForTests(_0: boolean): void;
   markBaseline(): void;
   autoBuild(_0: number, _1: number): number;
+  autoBuildNearIsland(_0: number, _1: number, _2: number): number;
+  connectPowerIsland(_0: number): string;
   getBuildSiteCount(_0: number): number;
   getNetworkDiagnosticsJSON(): string;
   getAiZoneCount(): number;

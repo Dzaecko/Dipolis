@@ -5,11 +5,14 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { ChatAdapter } from './adapter';
-import { decideYear, summarizeYear, type YearContext } from './runner';
+import { decideYear, modelFacingReport, summarizeYear, type YearContext } from './runner';
 import { protocolFilename } from './protocol-path';
 
 const context: YearContext = { year: 1, report: { resPop: 3585, cashFlow: -100 }, history: [] };
 describe('city model runner authorization and annual loop', () => {
+ it('keeps the engine calendar year out of the model-facing report', () => {
+  expect(modelFacingReport({ year: 1915, resPop: 98 })).toEqual({ resPop: 98 });
+ });
  it('offers and executes counted admissions only at positive pressure', async () => {
   for (const pressure of [0, 3] as const) {
    let turns = 0;

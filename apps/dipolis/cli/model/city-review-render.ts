@@ -67,8 +67,12 @@ export function loadCityReview(protocolPath: string, summary: ReportSummary): Lo
    (facts.totalYears === undefined ? 30 : facts.totalYears) !== summary.totalYears ||
    facts.version !== 1 || !['assignment', 'model', 'handbook', 'profile', 'startMap'].every(k => string(facts[k])) ||
    facts.complete !== !summary.partial || !Array.isArray(facts.years) || facts.years.length !== summary.years.length ||
-   !facts.years.every((y, i) => record(y) && fields(y, ['year', 'completed', 'metrics', 'chartMetrics', 'commands', 'reasons'], ['emergencySection']) &&
+   !facts.years.every((y, i) => record(y) && fields(y, ['year', 'completed', 'metrics', 'chartMetrics', 'commands', 'reasons'], ['emergencySection', 'eventsSinceLastReport', 'eventsDuringYear']) &&
     (y.emergencySection === undefined || string(y.emergencySection) && y.emergencySection === summary.years[i].emergencySection) &&
+    (y.eventsSinceLastReport === undefined || Array.isArray(y.eventsSinceLastReport) &&
+     JSON.stringify(y.eventsSinceLastReport) === JSON.stringify(summary.years[i].eventsSinceLastReport ?? [])) &&
+    (y.eventsDuringYear === undefined || Array.isArray(y.eventsDuringYear) &&
+     JSON.stringify(y.eventsDuringYear) === JSON.stringify(summary.years[i].eventsDuringYear ?? [])) &&
     y.year === summary.years[i].year && y.completed === summary.years[i].completed && metrics(y.metrics) && metrics(y.chartMetrics) &&
     strings(y.reasons) && Array.isArray(y.commands) && y.commands.every(c => record(c) && fields(c, ['call', 'result'], ['reason']) &&
      (c.reason === undefined || string(c.reason)) && record(c.call) && string(c.call.name)))) throw new Error('Ungültige Struktur der Nachbetrachtung.');

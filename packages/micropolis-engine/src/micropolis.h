@@ -2719,9 +2719,23 @@ public:
     void setOriginalPowerScanForTests(bool enabled);
     void markBaseline();
     int autoBuild(int kind, int count);
-    int planAutoBuild(int kind, int count, bool inspect);
+    int planAutoBuild(int kind, int count, bool inspect, int nearIslandId = -1);
+    // Coal, nuclear, or bio plants; -1 retains the ordinary placement order.
+    int autoBuildNearIsland(int kind, int count, int nearIslandId);
+    // IDs refer to the current physical-network diagnostics snapshot, not persistent networks.
+    // Connection length is cardinal route steps; an unfunded result includes the full quote.
+    std::string connectPowerIsland(int islandId);
+    struct PowerConnectionQuote {
+        int cost, length;
+        bool routeExists;
+    };
+    PowerConnectionQuote stagePowerIslandConnection(int islandId, ToolEffects &effects);
     int getBuildSiteCount(int kind);
-    std::string getNetworkDiagnosticsJSON() const;
+    // Stages and discards native ToolEffects to quote routes, without applying them.
+    // connectionQuote is {cost,length}, or null when no legal generation route exists.
+    // humanZones/aiZones count residential centers; otherZones counts remaining centers.
+    // unpoweredZones counts centers without the physical PWRBIT.
+    std::string getNetworkDiagnosticsJSON();
     static constexpr Quad COAL_POWER_STRENGTH = 700L;
     static constexpr Quad NUCLEAR_POWER_STRENGTH = 2000L;
     static constexpr Quad SOLAR_POWER_STRENGTH = 1000L;

@@ -2,6 +2,7 @@
 
 import type { MainModule } from '../types/micropolisengine.d.js';
 import type { Micropolis, Callback, JSCallback } from '../types/micropolisengine.d.js';
+import type { CityEventLedger } from './city-run/city-events';
 import { loadMicropolisBrowserModule } from '$lib/wasm/browser';
 import { createMapMopViews } from '$lib/wasm/views';
 import coexistenceParams from './params/koexistenz.json';
@@ -55,6 +56,7 @@ export class MicropolisSimulator {
 	micropolisengine: MainModule | null = null;
     micropolis: Micropolis | null = null;
     callback: JSCallback | null = null;
+    cityEvents?: CityEventLedger;
     mapData: Uint16Array | null = null;
     mopData: Uint16Array | null = null;
     cityFileName = '/cities/haight.cty';

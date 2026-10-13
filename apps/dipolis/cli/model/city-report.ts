@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { canonicalProtocolText, engineCompatibility, type EngineCompatibility } from '../../src/lib/city-run/compatibility';
 import { loadCityReview, renderCityReview, reviewGradeLabels } from './city-review-render';
 import { EMERGENCY_OUTCOMES, REVIEW_CRITERIA, type EmergencyConfiguration, type EmergencyMetrics } from './review-types';
+import { describeCityEvent, isCityEvent, type CityEvent } from '../../src/lib/city-run/city-events';
+import { networkIslandsSection } from '../../src/lib/city-run/network-report';
 
 /** Pure Node reporting: importing this module never loads the engine or a model. */
 export interface CityReportOptions {
@@ -30,6 +32,8 @@ export interface ReportYear {
  reasons: string[]; tools: ReportTool[]; termination: string | null;
  responses: JsonObject[]; errors: JsonObject[];
  emergencySection?: string;
+ eventsSinceLastReport?: CityEvent[];
+ eventsDuringYear?: CityEvent[];
 }
 export interface ReportSeries {
  key: string; label: string; unit: string; color: string; dash: string;
@@ -136,20 +140,42 @@ export function cityDiagnosticsOverview(report?: JsonObject | null): Array<[stri
  return Object.entries(cityDiagnosticLabels).flatMap(([key, label]) =>
   num(report[key]) === null ? [] : [[label, fmt(report[key])] as [string, string]]);
 }
-export const networkDiagnosticNote = 'Bank-IDs bezeichnen zusammenhängende, durch Wasser getrennte Landkomponenten, keine Himmelsrichtungen oder Koordinaten. Eine Netzinsel kann durch Brücken mehrere Bänke verbinden. PoweredZones zählt physische POWERBIT-Markierungen, keine garantierte lokale Kapazitätsdeckung. Globale Stromkapazität belegt keine lokale Stromversorgung.';
+export const networkDiagnosticNote = 'Bank-IDs bezeichnen zusammenhängende, durch Wasser getrennte Landkomponenten, keine Himmelsrichtungen oder Koordinaten. Eine Netzinsel kann durch Brücken mehrere Bänke verbinden. PoweredZones zählt physische POWERBIT-Markierungen, keine garantierte lokale Kapazitätsdeckung. Globale Stromkapazität belegt keine lokale Stromversorgung. Insel-IDs gelten nur für den aktuellen Snapshot. Verbindungsschätzungen ändern weder Karte noch Kasse.';
+const networkFieldLabels: Record<string, string> = {
+ Id: 'Netzinsel-ID (nur aktueller Snapshot)', BankCount: 'Uferseiten-Anzahl', Capacity: 'Kapazität',
+ BioCapacity: 'Bio-Kapazität', ConductiveTiles: 'Leitfähige Kacheln', ZoneCount: 'Zonen',
+ PoweredZones: 'Physisch versorgte Zonen', HumanPopulation: 'Menschen-Bewohnerpunkte',
+ AiPopulation: 'KI-Bewohnerpunkte', AiDemand: 'KI-Strombedarf', Demand: 'Strombedarf',
+ HumanZones: 'Menschenzonen', AiZones: 'KI-Zonen', OtherZones: 'Andere Zonen',
+ UnpoweredZones: 'Unversorgte Zonen', RouteAvailable: 'Verbindungsroute verfügbar',
+ ConnectCost: 'Geschätzte Verbindungskosten', ConnectLength: 'Geschätzte Leitungslänge'
+};
 export function networkDiagnostics(report?: JsonObject | null): Array<[string, number]> {
  if (!report) return [];
  return Object.entries(report).filter((entry): entry is [string, number] =>
   /^network(?:Island|Bank)(?:Count|\d+[A-Za-z0-9]+)$/.test(entry[0]) && num(entry[1]) !== null)
   .sort(([a], [b]) => a.localeCompare(b, 'de', { numeric: true }));
 }
+function networkDiagnosticLabel(key: string): string {
+ const match = /^network(Island|Bank)(\d+)([A-Za-z0-9]+)$/.exec(key);
+ if (!match) return key;
+ const [, kind, index, suffix] = match;
+ if (kind === 'Island' && suffix.startsWith('Bank') && /^\d+Id$/.test(suffix))
+  return `Netzinsel ${index}: Uferseite ${suffix.slice(4, -2)}`;
+ return `Netz${kind === 'Island' ? 'insel' : 'bank'} ${index}: ${networkFieldLabels[suffix] ?? suffix}`;
+}
 function renderCityDiagnostics(report: JsonObject | null, show: (value: unknown) => string): string {
  const city = cityDiagnosticsOverview(report), network = networkDiagnostics(report);
  if (!city.length && !network.length) return '';
+ const networkSection = report && typeof report.networkIslandCount === 'number'
+  ? networkIslandsSection(Object.fromEntries(Object.entries(report)
+   .filter((entry): entry is [string, number] => typeof entry[1] === 'number'))) : '';
  return `<section class="city-diagnostics"><h4>Arbeitsplätze, Nachfrage und freie Standorte</h4>` +
   (city.length ? `<dl class="meta">${city.map(([key, value]) => `<div><dt>${show(key)}</dt><dd>${show(value)}</dd></div>`).join('')}</dl>` : '') +
   (network.length ? `<h4>Lokale Stromnetze</h4><p class="note">${show(networkDiagnosticNote)}</p><table><thead><tr><th>Dokumentiertes Feld</th><th>Wert</th></tr></thead><tbody>${
-   network.map(([key, value]) => `<tr><td>${show(key)}</td><td>${show(value)}</td></tr>`).join('')}</tbody></table>` : '') + '</section>';
+   network.map(([key, value]) => `<tr><td>${show(networkDiagnosticLabel(key))}</td><td>${show(value)}</td></tr>`).join('')}</tbody></table>` : '') +
+  (networkSection ? `<h4>Größte unversorgte Netzinseln</h4><p class="network-summary">${show(networkSection)}</p>` : '') +
+  '</section>';
 }
 export function emergencyOverview(summary: Pick<ReportSummary, 'emergency' | 'recordedEmergencyConfiguration' | 'emergencyMetrics' | 'initialPodPolicy' | 'admissionMetrics'>): Array<[string, string]> {
  const e = summary.recordedEmergencyConfiguration ?? summary.emergency, m = summary.emergencyMetrics;
@@ -244,6 +270,12 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   const emergencySection = annual?.emergencySection;
   if (emergencySection !== undefined && typeof emergencySection !== 'string')
    throw new Error('Invalid annual emergencySection: expected a string');
+  const rawEvents = annual?.eventsSinceLastReport;
+  if (rawEvents !== undefined && (!Array.isArray(rawEvents) || !rawEvents.every(isCityEvent)))
+   throw new Error('Invalid annual eventsSinceLastReport: expected city events');
+  const rawEventsDuringYear = annual?.eventsDuringYear;
+  if (rawEventsDuringYear !== undefined && (!Array.isArray(rawEventsDuringYear) || !rawEventsDuringYear.every(isCityEvent)))
+   throw new Error('Invalid annual eventsDuringYear: expected city events');
   if (completed.length > 1) warnings.push(`Jahr ${year}: doppelte Jahresabschlüsse; letzter Abschluss ist maßgeblich.`);
   const journals = rows.filter(r => r.event === 'decision');
   const decisions = Array.isArray(annual?.decisions) ? annual.decisions.map(obj) : null;
@@ -256,6 +288,8 @@ export function readReportSummary(protocolPath: string): ReportSummary {
   years.push({ year, completed: !!annual, before: obj(annual?.report ?? journals[0]?.report),
    after: annual ? obj(annual.afterReport) : null, reasons, tools, termination: text(annual?.termination) || null,
    ...(typeof emergencySection === 'string' ? { emergencySection } : {}),
+   ...(Array.isArray(rawEvents) ? { eventsSinceLastReport: rawEvents } : {}),
+   ...(Array.isArray(rawEventsDuringYear) ? { eventsDuringYear: rawEventsDuringYear } : {}),
    responses: rows.filter(r => r.event === 'model-response'), errors: rows.filter(r => r.event === 'adapter-error') });
  }
  const annual = years.filter(y => y.completed), last = annual.at(-1);
@@ -317,6 +351,14 @@ function buildEvents(summary: ReportSummary): ReportEvent[] {
    [m.crisisEndYear, 'crisis-end', 'Krisenende', '#60f0b1', 7],
   ] as const) if (year !== null) result.push({ year, kind, label, lane, color, dash: '6 3' });
  }
+ const eventColors: Record<string, string> = {
+  fire: '#ff8566', flood: '#36e7ff', earthquake: '#ffbf4a', tornado: '#b8a0ff',
+   monster: '#ff6ad5', meltdown: '#ff4d4d', 'aircraft-crash': '#f97316', 'ship-crash': '#38bdf8',
+   'train-crash': '#f59e0b', 'helicopter-crash': '#a78bfa', explosion: '#fb7185', firebombing: '#ef4444'
+ };
+ for (const year of summary.years) for (const event of year.eventsDuringYear ?? year.eventsSinceLastReport ?? [])
+  result.push({ year: event.year, kind: `disaster-${event.kind}`,
+   label: describeCityEvent(event), lane: 8, color: eventColors[event.kind] ?? '#ff8566', dash: '2 2' });
  if (summary.firstInsolvencyYear !== null) result.push({ year: summary.firstInsolvencyYear,
   kind: 'empty-funds', label: 'Kasse ≤ 0', lane: 0, color: COLORS[1], dash: '3 3' });
  const types = [ ['build.ai-zones', 'ai', 'KI gebaut', 1], ['build.farms', 'farm', 'Farm gebaut', 2],
@@ -520,7 +562,7 @@ function renderChart(chart: ReportChart, events: ReportEvent[], totalYears: numb
 }
 
 const CSS = `
-.outcome-survived-without-pods,.outcome-survived-with-pods{color:#36e7ff;border-color:#36e7ff}.outcome-collapsed-refused-pods,.outcome-collapsed-despite-pods{color:#ffbf4a;border-color:#ffbf4a}.emergency-section{white-space:pre-wrap}
+.outcome-survived-without-pods,.outcome-survived-with-pods{color:#36e7ff;border-color:#36e7ff}.outcome-collapsed-refused-pods,.outcome-collapsed-despite-pods{color:#ffbf4a;border-color:#ffbf4a}.emergency-section,.network-summary{white-space:pre-wrap}
 .review-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}.review li,.review p{overflow-wrap:anywhere;white-space:pre-wrap}@media(max-width:650px){.review-columns{grid-template-columns:1fr}}
 :root{color-scheme:dark;--bg:#07111f;--card:#0d1b2a;--ink:#e6f7ff;--muted:#85a6ba;--border:#1e3a50;--plot:#081624;--grid:#17324a;--link:#55e6ff;--amber:#ffbf4a;--cyan:#36e7ff}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#102338 0,var(--bg) 58%);color:var(--ink);font:15px/1.55 system-ui,sans-serif}main{max-width:1250px;margin:auto;padding:28px}h1{font-size:2rem;line-height:1.2;color:var(--cyan);text-shadow:0 0 18px #36e7ff35}h2{font-size:1.2rem}a{color:var(--link)}a:hover{color:#fff}.card,.chart-card,.diary-year{background:linear-gradient(145deg,#0d1b2a,#0a1724);border:1px solid var(--border);box-shadow:0 0 18px #36e7ff0b,inset 0 1px #ffffff08;border-radius:12px;padding:18px;margin:18px 0}.meta,.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}dt,.note{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}.metric-grid dd{font-weight:650;font-size:1.2rem}.status{padding:6px 12px;border:1px solid #36e7ff70;border-radius:6px;display:inline-block}.partial{border-color:var(--amber);color:var(--amber)}.note{font-size:.9rem}.year-chart{display:block;width:100%;height:auto;color:var(--ink)}svg text{fill:currentColor}svg text[fill]{fill:revert-layer}.plot-bg{fill:var(--plot)}.grid{stroke:var(--grid)}.zero-line{stroke:var(--muted);stroke-width:1.5}.year-hair{stroke:var(--ink);stroke-dasharray:3 3;pointer-events:none}.chart-hit{cursor:crosshair}.chart-tooltip{display:block;min-height:3em;white-space:pre-wrap;font-size:.86rem;color:var(--cyan)}.population-legend{display:flex;gap:18px;margin:8px 0;color:var(--muted);font-size:.9rem}.human-symbol{color:var(--amber);text-shadow:0 0 10px #ffbf4a80}.ai-symbol{color:var(--cyan);text-shadow:0 0 10px #36e7ff80}pre{white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;font:13px/1.6 ui-monospace,monospace}summary{cursor:pointer;font-weight:600}summary:hover{color:var(--cyan)}.reason{white-space:pre-wrap}.tool{margin:10px 0;padding:8px;border:1px solid var(--border);border-radius:7px}.log-line{display:block;min-height:1.6em;scroll-margin-top:30px}.diary-year{scroll-margin-top:24px}input,select,button{font:inherit;border:1px solid var(--border);border-radius:5px;padding:7px;background:var(--card);color:var(--ink)}input:focus,select:focus,button:focus{outline:2px solid var(--cyan);outline-offset:2px}label{margin-right:12px}mark{background:var(--amber);color:#07111f}table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{border-bottom:1px solid var(--border);padding:8px;text-align:left;vertical-align:top}.table-wrap{overflow:auto}.selection-list{max-height:260px;overflow:auto}.selection-list label{display:block;padding:5px}.error{color:var(--amber)}button{cursor:pointer}button:hover{border-color:var(--cyan);box-shadow:0 0 10px #36e7ff22}.log-search{position:sticky;top:0;background:var(--card);padding:8px}.event-key{font-size:.85rem}.empty{color:var(--muted)}.review{border-color:#ffbf4a70}.review h2,.review h3{color:var(--amber)}[hidden]{display:none!important}@media(max-width:650px){main{padding:12px}.chart-card{padding:10px}.meta,.metric-grid{grid-template-columns:1fr 1fr}}
@@ -610,6 +652,8 @@ function reconstructedLog(summary: ReportSummary, options: CityReportOptions) {
   for (const e of year.errors) lines.push(errorText(e));
   for (const reason of year.reasons) lines.push(reason);
   if (year.emergencySection !== undefined) lines.push(year.emergencySection);
+  for (const event of year.eventsSinceLastReport ?? []) lines.push(`Ereignis seit dem letzten Bericht: ${describeCityEvent(event)}`);
+  for (const event of year.eventsDuringYear ?? []) lines.push(`Ereignis im Berichtsjahr: ${describeCityEvent(event)}`);
   for (const t of year.tools) lines.push(`${text(t.call.name)} ${JSON.stringify(t.call.arguments ?? null)} → ${JSON.stringify(t.result)}`);
   if (year.after) lines.push(`Menschen=${fmt(year.after.resPop)}, KI=${fmt(year.after.aiPop)}, Kasse=${fmt(year.after.treasury)}, Saldo=${fmt(year.after.cashFlow)}`);
  }
@@ -645,9 +689,11 @@ export function generateCityReport(protocolPath: string, options: CityReportOpti
   reconstructedLog(summary, options) + '\n\nVOLLSTÄNDIGES QUELLPROTOKOLL (JSONL, einschließlich Fehler / Journal):\n' + relativeText(readFileSync(absolute, 'utf8'), options);
  const renderedLog = renderLog(log, summary);
  const show = (s: unknown) => escapeHtml(relativeText(text(s), options));
- const diary = summary.years.map(y => `<article class="diary-year" id="year${y.year}"><h3>Jahr ${y.year} · ${y.completed ? 'abgeschlossen' : 'unvollständig: kein Jahresergebnis'}</h3>` +
+ const diary = summary.years.map(y => `<article class="diary-year" id="year${y.year}"><h3>Jahr ${y.year} · ${y.completed ? 'abgeschlossen' : 'unvollständig: kein Jahresergebnis'}${num(y.after?.year) === null ? '' : ` <small>Kalenderjahr ${show(y.after?.year)}</small>`}</h3>` +
   renderCityDiagnostics(y.after, show) +
   (y.emergencySection !== undefined ? `<section class="emergency-section"><h4>Notstand · dokumentierter Jahresstand</h4><p>${show(y.emergencySection)}</p></section>` : '') +
+  (y.eventsSinceLastReport?.length ? `<section class="city-events"><h4>Ereignisse seit dem letzten Bericht</h4><ul>${y.eventsSinceLastReport.map(event => `<li data-event="${show(event.kind)}">${show(describeCityEvent(event))}</li>`).join('')}</ul></section>` : '') +
+  (y.eventsDuringYear?.length ? `<section class="city-events"><h4>Ereignisse im Berichtsjahr</h4><ul>${y.eventsDuringYear.map(event => `<li data-event="${show(event.kind)}">${show(describeCityEvent(event))}</li>`).join('')}</ul></section>` : '') +
   (y.reasons.length ? y.reasons.map(r => `<p class="reason">${show(r)}</p>`).join('') : '<p class="empty">Keine Begründung im Protokoll gespeichert.</p>') +
   y.errors.map(e => `<p class="error">${show(errorText(e))}</p>`).join('') +
   (y.responses.length ? `<details><summary>${y.responses.length} Modellantworten</summary><ul>${y.responses.map(r => `<li>${show(responseText(r))}</li>`).join('')}</ul></details>` : '') +

@@ -45,7 +45,9 @@ export function buildReviewFacts(protocolPath: string): ReviewFacts {
    return reasons.size ? { ...tool, reason: [...reasons].join('\n') } : tool;
   }),
   reasons: year.reasons,
-  ...(year.emergencySection !== undefined ? { emergencySection: year.emergencySection } : {})
+  ...(year.emergencySection !== undefined ? { emergencySection: year.emergencySection } : {}),
+  ...(year.eventsSinceLastReport !== undefined ? { eventsSinceLastReport: year.eventsSinceLastReport } : {}),
+  ...(year.eventsDuringYear !== undefined ? { eventsDuringYear: year.eventsDuringYear } : {})
  }));
  const completeYears = years.filter(year => year.completed);
  let intake: 'none' | 'unemployed' | 'residents' | null = null;

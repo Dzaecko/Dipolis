@@ -1,5 +1,32 @@
 # Dipolis model runner
 
+## Power-network recovery and events
+
+The `v4-fraktion` profile exposes `power.connect { islandId }` and allows
+`build.power-plant { type, nearIslandId? }`. Island IDs refer to one current
+network-diagnostics snapshot and must be refreshed after construction, damage, or
+other topology changes. `power.connect` attempts the lowest-cost legal route to
+the nearest power-generating network, including engine-valid straight water
+crossings. Its result contains cost, length, connection status, and either
+`no-route` or `insufficient-funds` when the connection cannot be made.
+`nearIslandId` only affects preferred plant placement; omitting it retains the
+existing placement order.
+
+Situation reports include local network islands, their bank/shore IDs, capacity,
+demand, zone ownership and outage counts, plus a non-mutating estimated
+connection cost where a route exists. The report lists at most ten islands with
+unpowered zones, ordered by the number of affected zones and then demand. A
+global power reserve does not imply that every disconnected island is supplied.
+Annual population values are consistent year-end samples after the engine's
+monthly map-scan census; they are not within-year averages.
+
+`Events since the last report` records engine-reported fires and disasters with
+their simulation year, month and approximate map sector. `Events during the
+reporting year` also records the interval ending in that year, including the
+final year of a run. Neither section recommends an action. The report HTML and
+live/replay timeline use the event's occurrence year rather than the later
+report in which it became available to the model.
+
 ## Notstand-Dilemma: opt-in emergency condition
 
 `--scenario notstand-v4 --profile v4-fraktion` selects an emergency-pressure
